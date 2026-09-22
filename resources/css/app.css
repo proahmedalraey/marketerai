@@ -1,0 +1,517 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   1. الرموز (Design Tokens)
+   لون واحد لكل دور، ولا ألوان خام داخل المكوّنات. تبديل الوضع = تبديل القيم.
+   ========================================================================== */
+@layer base {
+    :root {
+        /* الهوية: برتقالي دافئ. الدرجة 600 هي درجة الأفعال لأنها تحقق 5.1:1 مع الأبيض */
+        --brand-50:  254 245 238;
+        --brand-100: 253 232 215;
+        --brand-200: 250 206 174;
+        --brand-300: 246 172 123;
+        --brand-400: 240 130  70;
+        --brand-500: 234  95  32;
+        --brand-600: 194  65  12;
+        --brand-700: 156  51  11;
+        --brand-800: 124  43  14;
+        --brand-900: 102  38  15;
+
+        /* حياد دافئ مشتق من درجة الهوية — يمنع تنافر الرمادي البارد مع البرتقالي */
+        --app:         250 248 246;
+        --card:        255 255 255;
+        --muted:       246 243 240;
+        --sunken:      241 236 231;
+        --line:        231 225 219;
+        --line-strong: 214 206 198;
+
+        --fg:          28  24  21;   /* 16:1  على البطاقة */
+        --fg-muted:    95  86  79;   /* 7.1:1 */
+        --fg-subtle:  115 106  99;   /* 5.3:1 على البطاقة و 4.8:1 على السطح الخافت */
+        --fg-inverse: 255 255 255;
+
+        --success:   4 120  87;  --success-soft: 236 253 245;  --success-fg:   6  95  70;
+        --warning: 180  83   9;  --warning-soft: 255 247 232;  --warning-fg: 146  64  14;
+        --danger:  185  28  28;  --danger-soft:  254 242 242;  --danger-fg:  153  27  27;
+        --info:     29  78 216;  --info-soft:    239 246 255;  --info-fg:     30  64 175;
+
+        /* ستارة التعتيم فوق الصور والنوافذ.
+           لا تُعاد في .dark عمداً: الستارة داكنة في الوضعين،
+           و--fg ينقلب فلا يصلح لهذا الدور. */
+        --scrim: 24 20 17;
+
+        --ring: var(--brand-500);
+
+        color-scheme: light;
+    }
+
+    .dark {
+        /* داكن دافئ لا رمادي معدني: يُبقي اللوحة منتمية للهوية */
+        --app:         22  18  15;
+        --card:        30  26  22;
+        --muted:       38  32  26;
+        --sunken:      26  22  18;
+        --line:        51  43  36;
+        --line-strong: 71  60  50;
+
+        --fg:        245 240 234;
+        --fg-muted:  181 169 158;   /* 7.5:1 على سطح البطاقة */
+        --fg-subtle: 156 145 134;   /* 5.6:1 على البطاقة و 5:1 فوق تظليل الهوية */
+        --fg-inverse: 22  18  15;
+
+        --success:  52 211 153;  --success-soft:  6  46  36;  --success-fg: 110 231 183;
+        --warning: 251 191  36;  --warning-soft: 56  38   6;  --warning-fg: 253 211 100;
+        --danger:  248 113 113;  --danger-soft:  56  20  20;  --danger-fg:  252 165 165;
+        --info:     96 165 250;  --info-soft:    22  38  74;  --info-fg:    147 197 253;
+
+        color-scheme: dark;
+    }
+
+    /* الحركة تنقل معنى لا زينة: من يطلب تقليلها يحصل على واجهة ساكنة كاملة */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
+    html {
+        scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        @apply bg-app text-fg antialiased;
+    }
+
+    /* أرقام لاتينية داخل نص عربي: عرض ثابت حتى لا ترتجف العدادات */
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* العربية خط متصل: أي tracking يكسر الوصلات، فيُصفَّر على العناوين */
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-semibold text-fg;
+        letter-spacing: 0;
+    }
+
+    [x-cloak] { display: none !important; }
+
+    ::selection { @apply bg-brand-500/20 text-fg; }
+
+    /* حلقة تركيز واحدة لكل الواجهة — لا تُزال أبداً، وتظهر للوحة المفاتيح فقط */
+    :focus-visible {
+        @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-app rounded-md;
+    }
+
+    /* شريط تمرير منسجم مع اللوحة */
+    * { scrollbar-width: thin; scrollbar-color: rgb(var(--line-strong)) transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb {
+        background: rgb(var(--line-strong));
+        border: 3px solid transparent;
+        background-clip: content-box;
+        border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--fg-subtle));
+        background-clip: content-box;
+    }
+}
+
+/* ==========================================================================
+   2. المكوّنات
+   ========================================================================== */
+@layer components {
+
+    /* ---------- الأسطح ---------- */
+    .card {
+        @apply bg-card rounded-2xl border border-line shadow-xs;
+    }
+
+    .card-interactive {
+        @apply card transition duration-200 ease-out hover:border-brand-300 hover:shadow-md
+               motion-safe:hover:-translate-y-0.5;
+    }
+
+    .panel {
+        @apply bg-muted rounded-xl border border-line;
+    }
+
+    /* ---------- الأزرار ---------- */
+    /* min-h-11 = 44px وهو الحد الأدنى لهدف اللمس */
+    .btn {
+        @apply relative inline-flex items-center justify-center gap-2 select-none
+               rounded-xl px-4 min-h-11 text-sm font-semibold cursor-pointer
+               transition duration-150 ease-out
+               disabled:opacity-50 disabled:cursor-not-allowed
+               active:scale-[.98];
+    }
+
+    .btn-primary {
+        @apply btn bg-brand-600 text-white shadow-sm
+               hover:bg-brand-700 hover:shadow-md active:bg-brand-800;
+    }
+
+    .btn-secondary {
+        @apply btn bg-card text-fg border border-line-strong shadow-xs
+               hover:bg-muted hover:border-fg-subtle;
+    }
+
+    .btn-ghost {
+        @apply btn bg-transparent text-fg-muted hover:bg-muted hover:text-fg;
+    }
+
+    .btn-danger {
+        @apply btn bg-danger-soft text-danger-fg border border-danger/25
+               hover:bg-danger hover:text-white hover:border-danger;
+    }
+
+    .btn-sm   { @apply min-h-9 px-3 text-xs rounded-lg gap-1.5; }
+    .btn-lg   { @apply min-h-12 px-6 text-base rounded-2xl; }
+    .btn-icon { @apply px-0 w-11 shrink-0; }
+    .btn-icon.btn-sm { @apply w-9; }
+
+    /* حالة الإرسال: النص يختفي ويظهر الدوّار مكانه دون أن يقفز عرض الزر */
+    .btn[data-busy="true"] { @apply pointer-events-none; }
+    .btn[data-busy="true"] > * { @apply invisible; }
+    .btn[data-busy="true"]::after {
+        content: "";
+        @apply absolute w-4 h-4 rounded-full border-2 border-current border-t-transparent;
+        animation: spin .6s linear infinite;
+    }
+
+    /* ---------- الحقول ---------- */
+    .field {
+        @apply w-full min-h-11 rounded-xl bg-card text-fg placeholder:text-fg-subtle
+               border-line-strong text-sm shadow-xs transition
+               focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25
+               disabled:bg-muted disabled:text-fg-subtle;
+    }
+
+    textarea.field { @apply py-2.5 leading-relaxed min-h-0; }
+    select.field   { @apply pe-9; }
+
+    .field-invalid {
+        @apply border-danger focus:border-danger focus:ring-danger/25;
+    }
+
+    .label {
+        @apply block text-sm font-medium text-fg mb-1.5;
+    }
+
+    .hint {
+        @apply block text-xs text-fg-subtle mt-1.5 leading-relaxed;
+    }
+
+    .error-text {
+        @apply flex items-start gap-1.5 text-xs font-medium text-danger-fg mt-1.5;
+    }
+
+    /* بطاقة اختيار: مساحة النقر تغطي البطاقة كاملة لا الدائرة وحدها */
+    .choice {
+        @apply relative flex gap-3 rounded-xl border border-line bg-card p-3.5 cursor-pointer
+               transition duration-150 ease-out
+               hover:border-brand-300
+               has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50
+               has-[:checked]:ring-1 has-[:checked]:ring-brand-500
+               has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 has-[:focus-visible]:ring-offset-2;
+    }
+
+    .dark .choice { @apply has-[:checked]:bg-brand-500/10; }
+
+    /* ---------- الوسوم ---------- */
+    .chip {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1
+               text-xs font-medium whitespace-nowrap;
+    }
+
+    .chip-neutral { @apply chip bg-muted text-fg-muted; }
+    .chip-brand   { @apply chip bg-brand-50 text-brand-700; }
+    .chip-success { @apply chip bg-success-soft text-success-fg; }
+    .chip-warning { @apply chip bg-warning-soft text-warning-fg; }
+    .chip-danger  { @apply chip bg-danger-soft text-danger-fg; }
+    .chip-info    { @apply chip bg-info-soft text-info-fg; }
+    .chip-quiet   { @apply chip bg-transparent text-fg-subtle border border-line; }
+
+    .dark .chip-brand { @apply bg-brand-500/15 text-brand-300; }
+
+    /* ---------- التنبيهات ---------- */
+    .alert {
+        @apply flex items-start gap-3 rounded-xl border px-4 py-3 text-sm;
+    }
+
+    .alert-success { @apply alert bg-success-soft border-success/25 text-success-fg; }
+    .alert-warning { @apply alert bg-warning-soft border-warning/25 text-warning-fg; }
+    .alert-danger  { @apply alert bg-danger-soft  border-danger/25  text-danger-fg; }
+    .alert-info    { @apply alert bg-info-soft    border-info/25    text-info-fg; }
+
+    /* ---------- التنقل ---------- */
+    .nav-link {
+        @apply relative flex items-center gap-3 rounded-xl px-3 min-h-11 text-sm font-medium
+               text-fg-muted transition duration-150 ease-out
+               hover:bg-muted hover:text-fg;
+    }
+
+    .nav-link-active {
+        @apply bg-brand-50 text-brand-700 font-semibold;
+    }
+
+    /* مؤشر بصري ثانٍ غير اللون — الحالة لا تُنقل باللون وحده */
+    .nav-link-active::before {
+        content: "";
+        @apply absolute end-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-s-full bg-brand-600;
+    }
+
+    .dark .nav-link-active { @apply bg-brand-500/15 text-brand-300; }
+    .dark .nav-link-active::before { @apply bg-brand-400; }
+
+    /* رأس قسم قابل للطي (أكورديون): أيقونة + عنوان، والسهم يدور بدل الظهور والاختفاء */
+    .nav-group-toggle {
+        @apply relative flex items-center justify-between gap-2 w-full rounded-xl px-3 min-h-11 text-sm font-semibold
+               text-fg-muted transition duration-150 ease-out
+               hover:bg-muted hover:text-fg;
+    }
+
+    .nav-group-toggle-active { @apply text-brand-700; }
+    .dark .nav-group-toggle-active { @apply text-brand-300; }
+
+    .nav-group-chevron { @apply w-4 h-4 text-fg-subtle shrink-0 transition-transform duration-200; }
+
+    /* ---------- القائمة الجانبية: الوضع المطوي (أيقونات فقط) ---------- */
+    /*
+       يخص سطح المكتب وحده. الدرج المنسدل على الجوال هو نفس <aside>،
+       فتقييد القاعدة بـ min-width يمنع تسرّب «الطي» إلى الدرج حين يُفتح على شاشة ضيقة.
+    */
+    @media (min-width: 1024px) {
+        #app-sidebar[data-collapsed="true"] {
+            width: 4.5rem;
+        }
+
+        #app-sidebar[data-collapsed="true"] .sidebar-text,
+        #app-sidebar[data-collapsed="true"] .nav-group-chevron,
+        #app-sidebar[data-collapsed="true"] .sidebar-expanded-only {
+            display: none;
+        }
+
+        /*
+           عرض 4.5rem لا يتسع لشعار العلامة وزر الطي جنباً إلى جنب،
+           فيتكدّسان عمودياً بدل أن يفيضا خارج حدود الدرج.
+        */
+        #app-sidebar[data-collapsed="true"] .sidebar-header {
+            flex-direction: column;
+            height: auto;
+            padding: .75rem .5rem;
+            gap: .5rem;
+        }
+
+        #app-sidebar[data-collapsed="true"] .sidebar-brand-link {
+            flex: none;
+        }
+
+        #app-sidebar[data-collapsed="true"] .nav-link,
+        #app-sidebar[data-collapsed="true"] .nav-group-toggle,
+        #app-sidebar[data-collapsed="true"] .sidebar-user-row {
+            justify-content: center;
+            padding-inline: 0;
+        }
+    }
+
+    /* ---------- شبكة المنتجات ---------- */
+    /*
+       عرض البطاقة هو المتغيّر، وعدد الأعمدة نتيجة.
+       auto-fill مع minmax يجعل الشبكة تعيد توزيع نفسها على أي عرض حاوية،
+       فمقبض الحجم يحرّك متغيّراً واحداً بدل أن يبدّل فئات أعمدة لكل نقطة توقف.
+    */
+    .product-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 16rem), 100%), 1fr));
+    }
+
+    .product-card {
+        @apply card flex flex-col overflow-hidden;
+    }
+
+    .product-card__media { @apply relative aspect-[4/3] bg-muted shrink-0; }
+    .product-card__content { @apply flex flex-col flex-1 min-w-0; }
+    .product-card__body { @apply flex-1 min-w-0 p-3; }
+    .product-card__actions { @apply flex items-center gap-1 p-3 pt-0; }
+
+    /* ---------- وضع القائمة ---------- */
+    .product-grid[data-view="list"] {
+        grid-template-columns: 1fr;
+        gap: .625rem;
+    }
+
+    .product-grid[data-view="list"] .product-card { @apply flex-row items-stretch; }
+    .product-grid[data-view="list"] .product-card__media { @apply w-24 sm:w-32 aspect-square; }
+    .product-grid[data-view="list"] .product-card__content { @apply flex-row items-center gap-3 pe-3; }
+    .product-grid[data-view="list"] .product-card__actions { @apply p-0 shrink-0; }
+    .product-grid[data-view="list"] .product-card__desc { -webkit-line-clamp: 1; }
+
+    /* بطاقة الإضافة تتبع الوضع نفسه */
+    .product-add {
+        @apply flex flex-col items-center justify-center gap-2 w-full text-center p-6
+               rounded-2xl border-2 border-dashed border-line-strong transition
+               hover:border-brand-400 hover:bg-brand-50/40 dark:hover:bg-brand-500/5;
+        min-height: 12rem;
+    }
+
+    .product-grid[data-view="list"] .product-add {
+        @apply flex-row gap-3 py-4 px-5;
+        min-height: 0;
+    }
+
+    /* ---------- تدرّج الحجم ---------- */
+    /* كلما ضاقت البطاقة سقط ما هو أقل أهمية، فلا تتكدّس العناصر على بعضها */
+    .product-grid[data-size="xs"] .product-card__desc { display: none; }
+    .product-grid[data-size="xs"] .product-card__body { @apply p-2.5; }
+    .product-grid[data-size="xs"] .product-card__actions { @apply p-2.5 pt-0; }
+    .product-grid[data-size="xs"] .btn-label { display: none; }
+    .product-grid[data-size="sm"] .product-card__desc { -webkit-line-clamp: 1; }
+
+    .product-grid[data-size="lg"] .product-card__body,
+    .product-grid[data-size="xl"] .product-card__body { @apply p-4; }
+    .product-grid[data-size="xl"] .product-card__desc { -webkit-line-clamp: 3; }
+
+    /* بلا سقف، نسبة 4/3 على بطاقة عريضة تعطي صورة بارتفاع شاشة كاملة */
+    .product-grid[data-size="lg"] .product-card__media { max-height: 14rem; }
+    .product-grid[data-size="xl"] .product-card__media { max-height: 16rem; }
+
+    /* في القائمة يعود الوصف دائماً مهما صغر الحجم */
+    .product-grid[data-view="list"][data-size="xs"] .product-card__desc { display: -webkit-box; }
+    .product-grid[data-view="list"] .btn-label { display: inline; }
+
+    /* ---------- مقبض حجم البطاقة ---------- */
+    /* المدخل الأصلي لا يرث ألوان النظام، فنرسم المسار والمقبض يدوياً */
+    .card-size-range {
+        @apply appearance-none bg-transparent cursor-pointer;
+        height: 1.25rem;
+    }
+
+    .card-size-range::-webkit-slider-runnable-track {
+        @apply rounded-full;
+        height: .25rem;
+        background: rgb(var(--line-strong));
+    }
+
+    .card-size-range::-moz-range-track {
+        @apply rounded-full;
+        height: .25rem;
+        background: rgb(var(--line-strong));
+    }
+
+    .card-size-range::-webkit-slider-thumb {
+        @apply appearance-none rounded-full shadow-sm;
+        width: .875rem;
+        height: .875rem;
+        margin-top: -.3125rem;
+        background: rgb(var(--brand-600));
+        border: 2px solid rgb(var(--card));
+    }
+
+    .card-size-range::-moz-range-thumb {
+        @apply rounded-full shadow-sm border-0;
+        width: .875rem;
+        height: .875rem;
+        background: rgb(var(--brand-600));
+        border: 2px solid rgb(var(--card));
+    }
+
+    .card-size-range:focus-visible::-webkit-slider-thumb {
+        @apply ring-2 ring-brand-500 ring-offset-2 ring-offset-muted;
+    }
+
+    /* ---------- صفحة «كتابة المحتوى» ---------- */
+    /*
+       صف الاختيار: العنوان المرقّم والقيمة المختارة في سطر واحد كما عند المنافس.
+       القائمة الأصلية تغطي الصف كله شفافة، فأي نقرة فيه تفتحها، وتبقى هي
+       ما يصل إليه قارئ الشاشة ولوحة المفاتيح.
+    */
+    .select-row {
+        @apply relative flex items-center gap-3 min-h-[3.25rem] rounded-xl border border-line bg-card ps-4 pe-10
+               transition duration-150 ease-out hover:border-line-strong
+               focus-within:border-fg focus-within:ring-1 focus-within:ring-fg;
+    }
+
+    .select-row-label { @apply shrink-0 text-[13px] font-semibold text-fg-muted; }
+    .select-row-value { @apply min-w-0 truncate text-[15px] text-fg; }
+    .select-row-chevron { @apply pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle; }
+
+    .select-row-native {
+        @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none;
+    }
+
+    .select-row-invalid { @apply border-danger ring-1 ring-danger/30; }
+
+    /* بطاقة المنصة: شعار فوق الاسم، والمختارة بلون الهوية */
+    .platform-tile {
+        @apply relative flex flex-col items-center justify-center gap-1.5 min-h-[4.75rem] rounded-xl border border-line bg-card
+               px-2 py-3 text-[13px] text-fg-muted cursor-pointer select-none transition duration-150 ease-out
+               hover:border-line-strong hover:text-fg
+               has-[:checked]:border-brand-300 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-600 has-[:checked]:font-bold
+               has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 has-[:focus-visible]:ring-offset-2;
+    }
+
+    .platform-tile > svg { @apply w-6 h-6 text-fg-subtle transition; }
+    .platform-tile:has(:checked) > svg { @apply text-brand-600; }
+
+    .dark .platform-tile { @apply has-[:checked]:bg-brand-500/10 has-[:checked]:text-brand-300; }
+    .dark .platform-tile:has(:checked) > svg { @apply text-brand-300; }
+
+    /* زر الإنشاء داكن كما عند المنافس؛ ينقلب فاتحاً في الوضع الداكن */
+    .btn-dark {
+        @apply btn bg-fg text-fg-inverse shadow-sm hover:bg-fg/85 active:bg-fg/75;
+    }
+
+    /* وسم رقم الشريحة أو المشهد في النتيجة */
+    .step-pill {
+        @apply inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700;
+    }
+
+    .dark .step-pill { @apply bg-brand-500/15 text-brand-300; }
+
+    /* ---------- أدوات ---------- */
+    .skeleton {
+        @apply relative overflow-hidden bg-muted rounded-lg;
+    }
+
+    .skeleton::after {
+        content: "";
+        @apply absolute inset-0;
+        background: linear-gradient(90deg, transparent, rgb(var(--card) / .65), transparent);
+        animation: shimmer 1.6s infinite;
+    }
+
+    .divider { @apply h-px bg-line border-0; }
+
+    /* حافة زجاجية للرأس الثابت */
+    .glass {
+        @apply bg-card/85 backdrop-blur-xl backdrop-saturate-150;
+    }
+
+    /* رابط تخطي للوحة المفاتيح وقارئات الشاشة */
+    .skip-link {
+        @apply sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[100]
+               focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-brand-600 focus:text-white
+               focus:font-semibold focus:shadow-lg;
+    }
+}
+
+@layer utilities {
+    /* احترام مناطق الأمان على الجوال */
+    .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .pt-safe { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+
+    .grid-auto-fill {
+        grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
