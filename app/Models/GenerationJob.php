@@ -24,6 +24,8 @@ class GenerationJob extends Model
         return [
             'payload' => 'array',
             'result' => 'array',
+            'credits_held' => 'decimal:1',
+            'credits_charged' => 'decimal:1',
             'status' => JobStatus::class,
             'started_at' => 'datetime',
             'finished_at' => 'datetime',

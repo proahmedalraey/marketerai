@@ -8,6 +8,7 @@ use App\Http\Controllers\ContentGeneratorController;
 use App\Http\Controllers\ContentPlanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImageStudioController;
+use App\Http\Controllers\MediaFolderController;
 use App\Http\Controllers\PlatformSettingsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImportController;
@@ -99,6 +100,13 @@ Route::middleware(['auth', 'brand.ready'])->group(function () {
     Route::post('/studio', [ImageStudioController::class, 'store'])->name('studio.generate');
     Route::post('/studio/carousel/{contentItem}', [ImageStudioController::class, 'carousel'])->name('studio.carousel');
     Route::post('/studio/{contentItem}/attach', [ImageStudioController::class, 'attach'])->name('studio.attach');
+    Route::post('/studio/media/{mediaAsset}/regenerate', [ImageStudioController::class, 'regenerate'])->name('studio.regenerate');
+    Route::post('/studio/uploads', [ImageStudioController::class, 'upload'])->name('studio.uploads');
+    Route::delete('/studio/media/{mediaAsset}', [ImageStudioController::class, 'destroy'])->name('studio.media.destroy');
+    Route::post('/studio/media/{mediaAsset}/move', [ImageStudioController::class, 'move'])->name('studio.media.move');
+    Route::post('/studio/media/{mediaAsset}/pin', [ImageStudioController::class, 'pin'])->name('studio.media.pin');
+    Route::post('/studio/folders', [MediaFolderController::class, 'store'])->name('studio.folders.store');
+    Route::delete('/studio/folders/{folder}', [MediaFolderController::class, 'destroy'])->name('studio.folders.destroy');
 
     // استطلاع حالة المهام
     Route::get('/api/jobs/{job}', [JobStatusController::class, 'show'])->name('api.jobs.show');

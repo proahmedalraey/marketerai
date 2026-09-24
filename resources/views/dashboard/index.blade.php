@@ -135,9 +135,9 @@
             icon="check-circle" tone="success" :href="route('content.plan', ['status' => 'ready'])"
         />
         <x-stat
-            label="النقاط المتبقية" :value="number_format($stats['credits'])"
+            label="النقاط المتبقية" :value="\App\Support\Credits::format($stats['credits'])"
             icon="coins" tone="{{ $pct >= 80 ? 'warning' : 'brand' }}"
-            hint="استُهلك {{ number_format($used) }} من {{ number_format($stats['allowance']) }}"
+            hint="استُهلك {{ \App\Support\Credits::format($used) }} من {{ \App\Support\Credits::format($stats['allowance']) }}"
             class="col-span-2 lg:col-span-1"
         />
     </div>
@@ -239,8 +239,8 @@
 
         <x-section title="استهلاك النقاط" icon="coins">
             <div class="flex items-end justify-between gap-2 mb-3">
-                <span class="text-2xl font-bold text-fg tnum leading-none">{{ number_format($stats['credits']) }}</span>
-                <span class="text-xs text-fg-subtle">متبقية من {{ number_format($stats['allowance']) }}</span>
+                <span class="text-2xl font-bold text-fg tnum leading-none">{{ \App\Support\Credits::format($stats['credits']) }}</span>
+                <span class="text-xs text-fg-subtle">متبقية من {{ \App\Support\Credits::format($stats['allowance']) }}</span>
             </div>
 
             <div
@@ -253,7 +253,7 @@
                      style="width: {{ $pct }}%"></div>
             </div>
 
-            <p class="hint">استُهلك {{ number_format($used) }} نقطة ({{ $pct }}%) هذا الشهر.</p>
+            <p class="hint">استُهلك {{ \App\Support\Credits::format($used) }} نقطة ({{ $pct }}%) هذا الشهر.</p>
         </x-section>
 
         <x-section title="إجراءات سريعة" icon="zap">

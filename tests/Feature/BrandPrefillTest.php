@@ -76,7 +76,7 @@ class BrandPrefillTest extends TestCase
             ->assertJsonPath('fields.advantages', "وكلاء لعلامات عالمية\nتوصيل مجاني للمقاهي داخل المدينة\nالبيع بالجملة والتجزئة")
             ->assertJsonPath('credits_charged', 1);
 
-        $this->assertSame(99, $brand->refresh()->credit_balance);
+        $this->assertEquals(99, $brand->refresh()->credit_balance);
 
         // ما يصل للنموذج: نص الصفحة ووصفها، لا الشيفرة ولا قائمة التنقل
         $prompt = $this->ai->lastRequest()->prompt;
@@ -98,7 +98,7 @@ class BrandPrefillTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('message', fn ($m) => str_contains($m, 'تعذّرت قراءة الصفحة') && str_contains($m, 'لم تُخصم'));
 
-        $this->assertSame(100, $brand->refresh()->credit_balance);
+        $this->assertEquals(100, $brand->refresh()->credit_balance);
         $this->assertSame([], $this->ai->requests, 'لا استدعاء للنموذج على صفحة فارغة');
     }
 
@@ -112,7 +112,7 @@ class BrandPrefillTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('message', fn ($m) => str_contains($m, 'نفدت الحصة'));
 
-        $this->assertSame(100, $brand->refresh()->credit_balance);
+        $this->assertEquals(100, $brand->refresh()->credit_balance);
     }
 
     public function test_nothing_found_on_the_page_is_reported_not_filled_with_blanks(): void

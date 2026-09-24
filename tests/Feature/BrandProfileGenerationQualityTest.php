@@ -212,7 +212,7 @@ class BrandProfileGenerationQualityTest extends TestCase
         $job = GenerationJob::withoutBrandScope()->latest('id')->firstOrFail();
 
         $this->assertSame(JobStatus::Failed, $job->status);
-        $this->assertSame(100, $this->brand->refresh()->credit_balance, 'النقطتان أُرجعتا');
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance, 'النقطتان أُرجعتا');
         $this->assertSame(1, BrandProfile::forBrand($this->brand)->count(), 'لا نسخة فارغة');
     }
 
@@ -223,7 +223,7 @@ class BrandProfileGenerationQualityTest extends TestCase
         // الطابور الحقيقي غير متزامن: نحجز ونشغّل المهمة يدوياً كما يفعل العامل
         Queue::fake();
         $this->actingAs($this->user)->post('/brand/profile/regenerate');
-        $this->assertSame(98, $this->brand->refresh()->credit_balance, 'الحجز قبل التشغيل');
+        $this->assertEquals(98, $this->brand->refresh()->credit_balance, 'الحجز قبل التشغيل');
 
         $job = GenerationJob::withoutBrandScope()->latest('id')->firstOrFail();
         $worker = new GenerateBrandProfileJob($job->id);
@@ -238,7 +238,7 @@ class BrandProfileGenerationQualityTest extends TestCase
         }
 
         $this->assertSame(JobStatus::Failed, $job->refresh()->status);
-        $this->assertSame(100, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance);
     }
 
     // ================================================================
@@ -281,7 +281,7 @@ class BrandProfileGenerationQualityTest extends TestCase
         $this->assertSame(2, $profile->quality['attempts']);
         $this->assertSame([], $profile->visibleIssues());
 
-        $this->assertSame(100, $this->brand->refresh()->credit_balance, 'التصحيح على حسابنا: الأول مجاني ولم يُخصم شيء');
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance, 'التصحيح على حسابنا: الأول مجاني ولم يُخصم شيء');
     }
 
     public function test_a_paid_regeneration_is_charged_once_even_with_a_correction(): void
@@ -291,7 +291,7 @@ class BrandProfileGenerationQualityTest extends TestCase
         $this->ai->replyWith($this->badOutput(), ProfileFixtures::modelOutput());
         $this->actingAs($this->user)->post('/brand/profile/regenerate');
 
-        $this->assertSame(98, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(98, $this->brand->refresh()->credit_balance);
     }
 
     public function test_if_the_correction_fails_too_the_problems_are_shown_on_the_page(): void

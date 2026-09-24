@@ -34,8 +34,8 @@ class CreditServiceTest extends TestCase
 
         $held = $credits->hold($brand, 'content.carousel');
 
-        $this->assertSame(2, $held);
-        $this->assertSame(98, $credits->balance($brand));
+        $this->assertEquals(2, $held);
+        $this->assertEquals(98, $credits->balance($brand));
     }
 
     public function test_hold_fails_when_balance_is_short(): void
@@ -54,11 +54,11 @@ class CreditServiceTest extends TestCase
 
         // حجزنا لست صور ونجحت أربع فقط
         $held = $credits->hold($brand, 'image.standard_1k', 6);
-        $this->assertSame(94, $credits->balance($brand));
+        $this->assertEquals(94, $credits->balance($brand));
 
         $credits->settle($brand, $held, 4, null, 'image.standard_1k');
 
-        $this->assertSame(96, $credits->balance($brand));
+        $this->assertEquals(96, $credits->balance($brand));
     }
 
     public function test_refund_returns_everything_on_failure(): void
@@ -69,6 +69,6 @@ class CreditServiceTest extends TestCase
         $held = $credits->hold($brand, 'content.carousel', 3);
         $credits->refund($brand, $held, null, 'content.carousel');
 
-        $this->assertSame(50, $credits->balance($brand));
+        $this->assertEquals(50, $credits->balance($brand));
     }
 }

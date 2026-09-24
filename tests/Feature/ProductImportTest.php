@@ -193,7 +193,7 @@ class ProductImportTest extends TestCase
 
         $this->assertSame('completed', $job->status->value, $job->error ?? '');
         $this->assertSame(1, $job->result['total']);
-        $this->assertSame($before, $this->brand->fresh()->credit_balance, 'الاكتشاف يجب أن يكون مجانياً');
+        $this->assertEquals($before, $this->brand->fresh()->credit_balance, 'الاكتشاف يجب أن يكون مجانياً');
     }
 
     public function test_importing_selected_products_charges_one_credit_each(): void
@@ -215,7 +215,7 @@ class ProductImportTest extends TestCase
         $this->assertStringContainsString('المميزات', $product->spec_sheet);
         $this->assertSame('https://cdn.example.com/a.jpg', $product->images()->first()->url());
 
-        $this->assertSame($before - 1, $this->brand->fresh()->credit_balance);
+        $this->assertEquals($before - 1, $this->brand->fresh()->credit_balance);
     }
 
     public function test_reimporting_the_same_product_updates_instead_of_duplicating(): void
@@ -263,7 +263,7 @@ class ProductImportTest extends TestCase
         $this->assertNotEmpty($response->json('features'));
         $this->assertSame(['https://cdn.example.com/s.jpg'], $response->json('image_urls'));
 
-        $this->assertSame($before - 1, $this->brand->fresh()->credit_balance);
+        $this->assertEquals($before - 1, $this->brand->fresh()->credit_balance);
     }
 
     public function test_single_url_import_charges_nothing_when_the_page_is_unreadable(): void
@@ -276,7 +276,7 @@ class ProductImportTest extends TestCase
             ->postJson('/products/import/single', ['url' => 'https://shop.example.com/missing'])
             ->assertStatus(422);
 
-        $this->assertSame($before, $this->brand->fresh()->credit_balance);
+        $this->assertEquals($before, $this->brand->fresh()->credit_balance);
     }
 
     // ================= أنماط سلة الحقيقية =================
@@ -445,7 +445,7 @@ class ProductImportTest extends TestCase
         ])->assertOk();
 
         $this->assertNotEmpty($response->json('summary'));
-        $this->assertSame($before - 1, $this->brand->fresh()->credit_balance);
+        $this->assertEquals($before - 1, $this->brand->fresh()->credit_balance);
     }
 
     public function test_imported_image_urls_are_attached_without_downloading(): void

@@ -120,7 +120,7 @@ class ProfilePlaceholderTest extends TestCase
         $this->actingAs($this->user)->post('/brand/profile/regenerate')->assertSessionHasNoErrors();
 
         $profile = $this->active();
-        $this->assertSame(100, $this->brand->refresh()->credit_balance, 'النص التجريبي خلل عندنا لا خطأ التاجر');
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance, 'النص التجريبي خلل عندنا لا خطأ التاجر');
         $this->assertFalse($profile->isPlaceholder());
         $this->assertSame(ProfileFixtures::modelOutput()['sales_summary'], $profile->technical['sales_summary'],
             'الإجابات لم تتغير، لكن نسخة تجريبية ليس فيها ما يُبقى');
@@ -136,14 +136,14 @@ class ProfilePlaceholderTest extends TestCase
         // «حفظ فقط»: مجاني ولا يولّد
         $this->answer(['audience' => 'أصحاب المقاهي في جدة'], ['regenerate' => '0'])->assertSessionHasNoErrors();
         $this->assertSame(1, GenerationJob::where('type', 'brand_profile')->count());
-        $this->assertSame(100, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance);
 
         // «حفظ وإعادة توليد»: خطوة واحدة
         $ai->replyWith(ProfileFixtures::modelOutput());
         $this->answer(['audience' => 'أصحاب المقاهي في الرياض'], ['regenerate' => '1'])->assertSessionHasNoErrors();
 
         $this->assertSame(2, GenerationJob::where('type', 'brand_profile')->count());
-        $this->assertSame(98, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(98, $this->brand->refresh()->credit_balance);
         $this->assertSame('أصحاب المقاهي في الرياض', $this->active()->answers['audience']);
     }
 

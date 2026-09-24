@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import registerContentCalendar from './content-calendar';
 import registerContentEditor from './content-editor';
 import registerContentWriter from './content-writer';
+import registerImageStudio from './image-studio';
 import registerOperations from './operations';
 
 /* ==========================================================================
@@ -153,6 +154,11 @@ Alpine.data('productsIndex', (config = {}) => ({
     chooser: false,
     form: null,      // { mode: 'create'|'edit', id, type, data }
     previews: [],
+
+    // معرض صور العنصر أثناء التعديل
+    existingImages: [],
+    removedImageIds: [],
+    reference: '',
     selected: [],
 
     // استيراد رابط واحد داخل النموذج
@@ -185,8 +191,14 @@ Alpine.data('productsIndex', (config = {}) => ({
 
     init() {
         // إعادة فتح النافذة بعد فشل التحقق، أو عند الوصول برابط ?add / ?edit
-        if (config.initial?.form) this.form = config.initial.form;
-        else if (config.initial?.chooser) this.chooser = true;
+        if (config.initial?.form) {
+            this.form = config.initial.form;
+
+            // هذا المسار لا يمر بـ startEdit، فلا بد من تحميل المعرض صراحة
+            if (this.form.mode === 'edit') this.hydrateGallery(this.products[this.form.id]);
+        } else if (config.initial?.chooser) {
+            this.chooser = true;
+        }
 
         this.$watch('modalOpen', (open) =>
             document.documentElement.classList.toggle('overflow-hidden', open));
@@ -258,7 +270,7 @@ Alpine.data('productsIndex', (config = {}) => ({
 
     startCreate(type) {
         this.chooser = false;
-        this.previews = [];
+        this.resetGallery();
         this.resetImport();
         this.form = { mode: 'create', id: null, type, data: this.blank(type) };
     },
@@ -267,8 +279,10 @@ Alpine.data('productsIndex', (config = {}) => ({
         const product = this.products[id];
         if (!product) return;
 
-        this.previews = [];
+        this.resetGallery();
         this.resetImport();
+
+        this.hydrateGallery(product);
 
         // العناصر التي سبقت هذا الحقل ترث جمهور العلامة بدل أن تفتح فارغة
         const data = { ...product, audience: product.audience || this.brandAudience };
@@ -279,8 +293,71 @@ Alpine.data('productsIndex', (config = {}) => ({
     close() {
         this.chooser = false;
         this.form = null;
-        this.previews = [];
+        this.resetGallery();
         this.resetImport();
+    },
+
+    // ---------- معرض الصور ----------
+    /** يملأ المعرض بصور العنصر ويضبط المرجع البصري على المحفوظ. */
+    hydrateGallery(product) {
+        this.existingImages = (product?.images || []).map((image) => ({ ...image }));
+
+        const reference = this.existingImages.find((image) => image.is_reference)
+            ?? this.existingImages[0];
+
+        this.reference = reference ? `existing:${reference.id}` : '';
+    },
+
+    resetGallery() {
+        this.previews = [];
+        this.existingImages = [];
+        this.removedImageIds = [];
+        this.reference = '';
+    },
+
+    /** الصور الباقية بعد ما وُسم للحذف — الحذف الفعلي لا يقع إلا عند الحفظ. */
+    get keptImages() {
+        return this.existingImages.filter((image) => ! this.removedImageIds.includes(image.id));
+    },
+
+    /**
+     * المعرض الموحّد: الموجود ثم المستورد ثم المرفوع حديثاً.
+     * مفتاح كل صورة يخبر الخادم أيها اختار المستخدم مرجعاً بصرياً.
+     */
+    get gallery() {
+        return [
+            ...this.keptImages.map((image) => ({ key: `existing:${image.id}`, url: image.url, id: image.id, kind: 'existing' })),
+            ...this.importedImages.map((url) => ({ key: `url:${url}`, url, kind: 'url' })),
+            ...this.previews.map((preview, index) => ({ key: `new:${index}`, url: preview.url, name: preview.name, kind: 'new' })),
+        ];
+    },
+
+    get galleryFull() {
+        return this.gallery.length >= this.maxImages;
+    },
+
+    isReference(key) {
+        return this.reference === key
+            || (this.reference === '' && this.gallery[0]?.key === key);
+    },
+
+    setReference(key) {
+        this.reference = key;
+    },
+
+    removeGalleryImage(item) {
+        if (item.kind === 'existing') this.removedImageIds.push(item.id);
+        else if (item.kind === 'url') this.removeImportedImage(item.url);
+        else this.previews = this.previews.filter((preview) => preview.url !== item.url);
+
+        // المرجع المحذوف ينتقل لأول صورة باقية بدل أن يبقى معلّقاً على غير موجود
+        if (this.reference === item.key) {
+            this.reference = this.gallery[0]?.key ?? '';
+        }
+    },
+
+    restoreRemovedImages() {
+        this.removedImageIds = [];
     },
 
     resetImport() {
@@ -407,8 +484,11 @@ Alpine.data('productsIndex', (config = {}) => ({
     },
 
     previewImages(event) {
+        // المرفوع يُقص على المساحة المتبقية لا على الحد الأقصى كاملاً
+        const room = Math.max(0, this.maxImages - this.keptImages.length - this.importedImages.length);
+
         this.previews = Array.from(event.target.files)
-            .slice(0, this.maxImages)
+            .slice(0, room)
             .map((file) => ({ name: file.name, url: URL.createObjectURL(file) }));
     },
 
@@ -650,6 +730,7 @@ window.pollJob = function (jobId, { onUpdate, onDone, interval = 2000, timeout =
 registerContentEditor(Alpine);
 registerContentWriter(Alpine);
 registerContentCalendar(Alpine);
+registerImageStudio(Alpine);
 registerOperations(Alpine);
 
 window.Alpine = Alpine;

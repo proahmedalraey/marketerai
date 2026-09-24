@@ -168,7 +168,7 @@ class BrandProfilePageTest extends TestCase
         $job = GenerationJob::withoutBrandScope()->where('type', 'brand_profile')->firstOrFail();
         $response->assertRedirect(route('brand.profile', ['job' => $job->uuid]));
 
-        $this->assertSame(100, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance);
         $this->assertSame(BrandProfileGenerator::BASELINE_NOTE, BrandProfile::forBrand($this->brand)->first()->constraints()[0]);
     }
 
@@ -180,7 +180,7 @@ class BrandProfilePageTest extends TestCase
             ->assertRedirect(route('brand.profile'));
 
         $this->assertSame(1, BrandProfile::forBrand($this->brand)->count(), 'التعديل لا يولّد تلقائياً');
-        $this->assertSame(100, $this->brand->refresh()->credit_balance, 'التعديل مجاني');
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance, 'التعديل مجاني');
 
         $html = $this->actingAs($this->user)->get('/brand/profile')->getContent();
         $this->assertStringContainsString('الأوصاف لا تعكس آخر تعديلاتك', $html);
@@ -188,7 +188,7 @@ class BrandProfilePageTest extends TestCase
         // إعادة التوليد تزيل التنبيه وتكلّف
         $this->actingAs($this->user)->post('/brand/profile/regenerate');
 
-        $this->assertSame(98, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(98, $this->brand->refresh()->credit_balance);
         $this->assertStringNotContainsString(
             'الأوصاف لا تعكس آخر تعديلاتك',
             $this->actingAs($this->user)->get('/brand/profile')->getContent(),

@@ -119,7 +119,7 @@ class ContentProofreadTest extends TestCase
 
         $this->generate();
 
-        $this->assertSame(100 - (int) config('credits.costs')['content.post'], $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100 - (int) config('credits.costs')['content.post'], $this->brand->refresh()->credit_balance);
     }
 
     public function test_the_merchant_sees_what_was_corrected(): void

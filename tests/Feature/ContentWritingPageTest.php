@@ -101,7 +101,7 @@ class ContentWritingPageTest extends TestCase
             ->assertSessionHasErrors('items.0.format');
 
         $this->assertSame(0, GenerationJob::count());
-        $this->assertSame(20, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(20, $this->brand->refresh()->credit_balance);
     }
 
     public function test_a_video_needs_its_duration(): void
@@ -171,7 +171,7 @@ class ContentWritingPageTest extends TestCase
         $this->assertTrue($item->withFilming());
         $this->assertCount(3, $item->scenes());
         $this->assertSame('reel_script', $item->template);
-        $this->assertSame(2, 20 - $this->brand->refresh()->credit_balance);
+        $this->assertEquals(2, 20 - $this->brand->refresh()->credit_balance);
 
         // المدة التي اختارها التاجر حقيقة عن المحتوى: «30 ثانية» ليست رقماً مخترعاً
         $this->assertTrue($item->quality['passes'], json_encode($item->quality['issues'] ?? [], JSON_UNESCAPED_UNICODE));
@@ -268,7 +268,7 @@ class ContentWritingPageTest extends TestCase
             ->assertSessionHas('batch_sent', true);
 
         $this->assertSame(2, GenerationJob::count());
-        $this->assertSame(20 - 1 - 2, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(20 - 1 - 2, $this->brand->refresh()->credit_balance);
         $this->assertSame(['image', 'carousel'], ContentItem::orderBy('id')->pluck('variant')->all());
     }
 
@@ -280,7 +280,7 @@ class ContentWritingPageTest extends TestCase
             ->assertSessionHasErrors('credits');
 
         $this->assertSame(0, GenerationJob::count(), 'لا تُنفَّذ أول الدفعة وتتوقف في منتصفها');
-        $this->assertSame(3, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(3, $this->brand->refresh()->credit_balance);
     }
 
     public function test_a_batch_has_a_ceiling(): void
@@ -369,7 +369,7 @@ class ContentWritingPageTest extends TestCase
 
         $this->assertSame(['reels', '45', 'emirati'], [$retried->variant, $retried->options['option'], $retried->options['dialect']]);
         $this->assertStringContainsString('بلهجة إماراتية', $this->ai->lastRequest()->system);
-        $this->assertSame(20 - 2 - 2, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(20 - 2 - 2, $this->brand->refresh()->credit_balance);
     }
 
     public function test_deleting_a_draft_returns_to_the_writing_page(): void

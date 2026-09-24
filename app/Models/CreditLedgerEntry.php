@@ -15,6 +15,14 @@ class CreditLedgerEntry extends Model
         'reason', 'operation', 'note',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'delta' => 'decimal:1',
+            'balance_after' => 'decimal:1',
+        ];
+    }
+
     public function generationJob(): BelongsTo
     {
         return $this->belongsTo(GenerationJob::class);

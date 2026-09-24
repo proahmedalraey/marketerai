@@ -39,8 +39,8 @@
 
     $brandName = $currentBrand->name ?? config('app.name');
 
-    $balance   = (int) ($currentBrand->credit_balance ?? 0);
-    $allowance = (int) ($currentBrand->credits_allowance ?? 0);
+    $balance   = (float) ($currentBrand->credit_balance ?? 0);
+    $allowance = (float) ($currentBrand->credits_allowance ?? 0);
     $remaining = $allowance > 0 ? max(0, min(100, round($balance / $allowance * 100))) : 0;
     $low       = $allowance > 0 && $remaining <= 20;
 @endphp
@@ -196,7 +196,7 @@
                         رصيد النقاط
                     </span>
                     <span class="text-sm font-bold tnum {{ $low ? 'text-warning-fg' : 'text-fg' }}">
-                        {{ number_format($balance) }}
+                        {{ \App\Support\Credits::format($balance) }}
                     </span>
                 </div>
 
@@ -215,7 +215,7 @@
                 </div>
 
                 <p class="mt-2 text-[11px] {{ $low ? 'text-warning-fg' : 'text-fg-subtle' }}">
-                    متبقٍ {{ $remaining }}% من {{ number_format($allowance) }} نقطة هذا الشهر
+                    متبقٍ {{ $remaining }}% من {{ \App\Support\Credits::format($allowance) }} نقطة هذا الشهر
                 </p>
             </div>
         </div>

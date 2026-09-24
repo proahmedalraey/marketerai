@@ -41,6 +41,25 @@ return [
         'image.high_1k' => 4,
         'image.standard_2k' => 2,
         'image.high_2k' => 14,
+
+        // مصفوفة استوديو الصور الجديدة (دقة × جودة) — تحل محل الأربعة أعلاه في /studio فقط.
+        // القديمة تبقى لصفحة الكاروسيل (content/show.blade.php) دون مساس.
+        'image.1k_low' => 0.5,
+        'image.1k_medium' => 1,
+        'image.1k_high' => 4,
+        'image.1k_very_high' => 7,
+        'image.1k_max' => 16,
+        'image.2k_low' => 1,
+        'image.2k_medium' => 2,
+        'image.2k_high' => 8,
+        'image.2k_very_high' => 14.5,
+        'image.2k_max' => 32,
+        'image.4k_low' => 1.5,
+        'image.4k_medium' => 3.5,
+        'image.4k_high' => 13.5,
+        'image.4k_very_high' => 23.5,
+        'image.4k_max' => 53.5,
+
         'voice.minute' => 2,
         'video.short' => 20,
     ],

@@ -10,6 +10,7 @@ use App\Services\Products\SpecSheetBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -226,6 +227,11 @@ class ProductController extends Controller
             // روابط صور قادمة من استيراد رابط واحد — تُخزَّن كمرجع لا كملف
             'image_urls' => ['nullable', 'array', 'max:6'],
             'image_urls.*' => ['url', 'max:2000'],
+
+            // معرض الصور: ما وُسم للحذف، وأي صورة اختارها المستخدم مرجعاً بصرياً
+            'removed_image_ids' => ['nullable', 'array'],
+            'removed_image_ids.*' => ['integer'],
+            'reference' => ['nullable', 'string', 'max:2100'],
         ];
 
         $data = $request->validate($rules, [], [
@@ -251,7 +257,7 @@ class ProductController extends Controller
 
         // سعر «قبل الخصم» لا يكون أقل من الحالي: هذا ليس خصماً بل خطأ إدخال
         if (isset($data['compare_at_price'], $data['price']) && (float) $data['compare_at_price'] <= (float) $data['price']) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'compare_at_price' => 'السعر قبل الخصم يجب أن يكون أعلى من السعر الحالي.',
             ]);
         }
@@ -264,7 +270,10 @@ class ProductController extends Controller
 
         $data['sale_ends_at'] = filled($data['compare_at_price'] ?? null) ? ($data['sale_ends_at'] ?? null) : null;
 
-        unset($data['images'], $data['image_urls'], $data['installment_providers'], $data['installment_count']);
+        unset(
+            $data['images'], $data['image_urls'], $data['installment_providers'],
+            $data['installment_count'], $data['removed_image_ids'], $data['reference'],
+        );
 
         // الوصف المكتوب أو المولّد يبقى كما هو؛ الاشتقاق للفارغ فقط
         $data['summary'] = filled($data['summary'] ?? null)
@@ -299,62 +308,152 @@ class ProductController extends Controller
         }
     }
 
+    /**
+     * الحذف أولاً ثم الإضافة: بترتيب معكوس قد يُرفض رفعُ صورة
+     * بحجة بلوغ الحد الأقصى، بينما المستخدم أفسح لها مكاناً بالحذف.
+     */
     protected function syncImages(Request $request, Product $product): void
     {
-        $this->syncRemoteImages($request, $product);
+        $this->removeMarkedImages($request, $product);
 
-        if (! $request->hasFile('images')) {
+        $byUrl = $this->syncRemoteImages($request, $product);
+        $byIndex = $this->syncUploadedImages($request, $product);
+
+        $this->applyReferenceImage($request, $product, $byUrl, $byIndex);
+    }
+
+    /**
+     * الحذف يمر عبر علاقة المنتج لا عبر النموذج مباشرة،
+     * فمعرّف يخص منتجاً آخر لا يُحذف مهما أرسله المتصفح.
+     */
+    protected function removeMarkedImages(Request $request, Product $product): void
+    {
+        $ids = array_filter((array) $request->input('removed_image_ids', []));
+
+        if ($ids === []) {
             return;
+        }
+
+        foreach ($product->images()->whereIn('id', $ids)->get() as $image) {
+            if ($image->path) {
+                Storage::disk($image->disk)->delete($image->path);
+            }
+
+            $image->delete();
+        }
+
+        $product->load('images');
+    }
+
+    /** @return array<int, int> فهرس الملف المرفوع ← معرّف الصورة */
+    protected function syncUploadedImages(Request $request, Product $product): array
+    {
+        if (! $request->hasFile('images')) {
+            return [];
         }
 
         $max = self::MAX_IMAGES[$product->type->value] ?? 6;
         $existing = $product->images()->count();
         $position = $product->images()->max('position') ?? -1;
+        $created = [];
 
-        foreach ($request->file('images') as $file) {
+        foreach ($request->file('images') as $index => $file) {
             if ($existing >= $max) {
                 break;
             }
 
             $path = $file->store("brands/{$product->brand_id}/products", 'public');
 
-            $product->images()->create([
+            $created[$index] = $product->images()->create([
                 'disk' => 'public',
                 'path' => $path,
                 'position' => ++$position,
-                'is_reference' => $existing === 0,
-            ]);
+                'is_reference' => false,
+            ])->id;
 
             $existing++;
         }
+
+        return $created;
     }
 
-    /** صور مستوردة برابطها: لا ملف محلياً، والعرض والتوليد يقرآن original_url. */
-    protected function syncRemoteImages(Request $request, Product $product): void
+    /**
+     * المرجع البصري: الصورة التي تُمرَّر لنموذج توليد الصور.
+     * يصل كمفتاح نصي لأن المستخدم قد يختار صورة لم تُحفظ بعد.
+     *
+     * @param  array<string, int>  $byUrl
+     * @param  array<int, int>  $byIndex
+     */
+    protected function applyReferenceImage(Request $request, Product $product, array $byUrl, array $byIndex): void
+    {
+        $images = $product->images()->orderBy('position')->get();
+
+        if ($images->isEmpty()) {
+            return;
+        }
+
+        [$kind, $value] = array_pad(explode(':', (string) $request->input('reference', ''), 2), 2, null);
+
+        $chosen = match ($kind) {
+            'existing' => (int) $value,
+            'new' => $byIndex[(int) $value] ?? null,
+            'url' => $byUrl[$value] ?? null,
+            default => null,
+        };
+
+        // اختيار غير صالح أو صورة حُذفت للتو: نرجع لأول صورة بدل ترك المنتج بلا مرجع
+        $target = $images->firstWhere('id', $chosen) ?? $images->first();
+
+        /*
+         * تحديثان على مستوى الاستعلام لا على النموذج.
+         * لو صفّرنا الكل ثم نادينا $target->update(true) لما صدر استعلام أصلاً:
+         * النموذج مُحمَّل بقيمة true من قبل التصفير، فيراها Eloquent غير متغيّرة
+         * ويتخطاها — فيخرج المنتج بلا مرجع بصري عند أي حفظ لا يغيّر الاختيار.
+         */
+        $product->images()->whereKeyNot($target->id)->update(['is_reference' => false]);
+        $product->images()->whereKey($target->id)->update(['is_reference' => true]);
+    }
+
+    /**
+     * صور مستوردة برابطها: لا ملف محلياً، والعرض والتوليد يقرآن original_url.
+     *
+     * @return array<string, int> الرابط ← معرّف الصورة
+     */
+    protected function syncRemoteImages(Request $request, Product $product): array
     {
         $urls = array_filter((array) $request->input('image_urls', []));
 
         if ($urls === []) {
-            return;
+            return [];
         }
 
-        $existing = $product->images()->pluck('original_url')->filter()->all();
+        $existing = $product->images()->pluck('original_url', 'id')->filter();
         $position = $product->images()->max('position') ?? -1;
         $max = self::MAX_IMAGES[$product->type->value] ?? 6;
+        $created = [];
 
         foreach (array_slice($urls, 0, $max) as $url) {
-            if (in_array($url, $existing, true) || $product->images()->count() >= $max) {
+            // الرابط الموجود مسبقاً يُعاد مفتاحه حتى يصلح مرجعاً دون أن يتكرر
+            if ($id = $existing->search($url)) {
+                $created[$url] = (int) $id;
+
                 continue;
             }
 
-            $product->images()->create([
+            if ($product->images()->count() >= $max) {
+                continue;
+            }
+
+            $created[$url] = $product->images()->create([
                 'disk' => 'public',
                 'path' => '',
                 'original_url' => $url,
                 'position' => ++$position,
-                'is_reference' => $position === 0,
-            ]);
+                'is_reference' => false,
+            ])->id;
         }
+
+        return $created;
     }
 
     /** الملفات لا تُحذف مع السجل تلقائياً، فنتركها تتراكم إن لم ننظفها هنا. */

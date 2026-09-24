@@ -7,8 +7,8 @@ use RuntimeException;
 class DailyCapReachedException extends RuntimeException
 {
     public function __construct(
-        public readonly int $cap,
-        public readonly int $usedToday
+        public readonly float $cap,
+        public readonly float $usedToday
     ) {
         parent::__construct("بلغت السقف اليومي ({$cap} نقطة). يمكنك المتابعة غداً أو ترقية الباقة.");
     }

@@ -51,6 +51,16 @@
         'installment_count' => (int) (((array) $p->installments)[0]['count'] ?? 4),
         'is_primary' => (bool) $p->is_primary,
         'is_active' => (bool) $p->is_active,
+
+        // المعرض داخل نافذة التعديل يقرأ من هنا
+        'images' => $p->images
+            ->map(fn ($image) => [
+                'id' => $image->id,
+                'url' => $image->url(),
+                'is_reference' => (bool) $image->is_reference,
+            ])
+            ->values()
+            ->all(),
     ];
 
     $payloads = $products->mapWithKeys(fn ($p) => [$p->id => $toPayload($p)])->all();

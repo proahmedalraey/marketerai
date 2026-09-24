@@ -135,8 +135,8 @@
     }
 
     .card-interactive {
-        @apply card transition duration-200 ease-out hover:border-brand-300 hover:shadow-md
-               motion-safe:hover:-translate-y-0.5;
+        @apply card transition duration-200 ease-out hover:border-brand-300 hover:shadow-lg
+               motion-safe:hover:-translate-y-1;
     }
 
     .panel {

@@ -46,6 +46,7 @@ class ImageGenerationService
                     'slide_index' => $input['slide_index'] ?? null,
                     'use_brand_identity' => (bool) ($input['use_brand_identity'] ?? true),
                     'product_id' => $input['product_id'] ?? null,
+                    'reference_asset_id' => $input['reference_asset_id'] ?? null,
                 ],
             ]);
 

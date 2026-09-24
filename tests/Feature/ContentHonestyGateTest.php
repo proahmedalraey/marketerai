@@ -140,7 +140,7 @@ class ContentHonestyGateTest extends TestCase
 
         $this->generate();
 
-        $this->assertSame(100 - (int) config('credits.costs')['content.post'], $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100 - (int) config('credits.costs')['content.post'], $this->brand->refresh()->credit_balance);
     }
 
     public function test_a_clean_draft_is_saved_without_a_correction_request(): void

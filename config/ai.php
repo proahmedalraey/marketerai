@@ -111,11 +111,21 @@ return [
     */
 
     'aspect_ratios' => [
-        '1:1' => ['w' => 1024, 'h' => 1024, 'label' => 'مربع · منشور'],
-        '4:5' => ['w' => 1024, 'h' => 1280, 'label' => 'عمودي · إنستغرام'],
-        '9:16' => ['w' => 1024, 'h' => 1820, 'label' => 'ستوري وريلز'],
-        '16:9' => ['w' => 1820, 'h' => 1024, 'label' => 'عريض · يوتيوب'],
-        '3:4' => ['w' => 1024, 'h' => 1365, 'label' => 'عمودي خفيف'],
+        '1:1' => ['w' => 1024, 'h' => 1024, 'label' => 'مربع · منشور', 'group' => 'square'],
+        '4:5' => ['w' => 1024, 'h' => 1280, 'label' => 'عمودي · إنستغرام', 'group' => 'vertical'],
+        '9:16' => ['w' => 1024, 'h' => 1820, 'label' => 'ستوري وريلز', 'group' => 'vertical'],
+        '16:9' => ['w' => 1820, 'h' => 1024, 'label' => 'عريض · يوتيوب', 'group' => 'horizontal'],
+        '3:4' => ['w' => 1024, 'h' => 1365, 'label' => 'عمودي خفيف', 'group' => 'vertical'],
+
+        // نسب استوديو الصور الجديد (§ب في docs/image-studio-redesign-plan.md) — إضافية لا تمس القديمة أعلاه.
+        '3:2' => ['w' => 1536, 'h' => 1024, 'label' => '3:2', 'group' => 'horizontal'],
+        '4:3' => ['w' => 1365, 'h' => 1024, 'label' => '4:3', 'group' => 'horizontal'],
+        '9:8' => ['w' => 1152, 'h' => 1024, 'label' => '9:8', 'group' => 'horizontal'],
+        '21:9' => ['w' => 2389, 'h' => 1024, 'label' => '21:9', 'group' => 'horizontal'],
+        '27:16' => ['w' => 1728, 'h' => 1024, 'label' => '27:16', 'group' => 'horizontal'],
+        '8:9' => ['w' => 1024, 'h' => 1152, 'label' => '8:9', 'group' => 'vertical'],
+        '16:27' => ['w' => 1024, 'h' => 1728, 'label' => '16:27', 'group' => 'vertical'],
+        '2:3' => ['w' => 1024, 'h' => 1536, 'label' => '2:3', 'group' => 'vertical'],
     ],
 
     'quality_tiers' => [
@@ -124,4 +134,65 @@ return [
         'standard_2k' => ['label' => '2K · جودة متوسطة', 'size' => 2048, 'credits' => 2],
         'high_2k' => ['label' => '2K · جودة ممتازة', 'size' => 2048, 'credits' => 14],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | مصفوفة الدقة × الجودة — استوديو الصور الجديد فقط
+    |--------------------------------------------------------------------------
+    | تحل محل quality_tiers في /studio فقط (تحقق ImageStudioController::store()).
+    | صفحة الكاروسيل (content/show.blade.php) تبقى على quality_tiers القديمة.
+    | المفتاح المركّب "{resolution}_{quality}" يصل كما هو إلى ImageGenerationService
+    | ويُبنى منه مفتاح تكلفة "image.{quality}" في config/credits.php دون أي تغيير
+    | في منطق الخدمة نفسها.
+    */
+
+    'resolutions' => [
+        '1k' => ['label' => '1K', 'hint' => 'حتى 1024 بكسل', 'size' => 1024],
+        '2k' => ['label' => '2K', 'hint' => 'حتى 2048 بكسل', 'size' => 2048],
+        '4k' => ['label' => '4K', 'hint' => 'حتى 3840 بكسل', 'size' => 3840],
+    ],
+
+    'quality_levels' => [
+        'low' => ['label' => 'جودة منخفضة', 'hint' => 'مسودات وتجربة أفكار بسرعة وبأقل تكلفة'],
+        'medium' => ['label' => 'جودة متوسطة', 'hint' => 'متوازنة للمنشورات والاستخدام اليومي'],
+        'high' => ['label' => 'جودة عالية', 'hint' => 'تفاصيل أوضح ونصوص أدق لصور المنتجات'],
+        'very_high' => ['label' => 'جودة عالية جداً', 'hint' => 'دقة متقدمة للإعلانات والصور المصقولة'],
+        'max' => ['label' => 'جودة قصوى', 'hint' => 'أعلى جودة ممكنة للحملات — الأبطأ'],
+    ],
+
+    'image_quality_matrix' => [
+        '1k_low' => ['resolution' => '1k', 'level' => 'low', 'size' => 1024, 'credits' => 0.5],
+        '1k_medium' => ['resolution' => '1k', 'level' => 'medium', 'size' => 1024, 'credits' => 1],
+        '1k_high' => ['resolution' => '1k', 'level' => 'high', 'size' => 1024, 'credits' => 4],
+        '1k_very_high' => ['resolution' => '1k', 'level' => 'very_high', 'size' => 1024, 'credits' => 7],
+        '1k_max' => ['resolution' => '1k', 'level' => 'max', 'size' => 1024, 'credits' => 16],
+        '2k_low' => ['resolution' => '2k', 'level' => 'low', 'size' => 2048, 'credits' => 1],
+        '2k_medium' => ['resolution' => '2k', 'level' => 'medium', 'size' => 2048, 'credits' => 2],
+        '2k_high' => ['resolution' => '2k', 'level' => 'high', 'size' => 2048, 'credits' => 8],
+        '2k_very_high' => ['resolution' => '2k', 'level' => 'very_high', 'size' => 2048, 'credits' => 14.5],
+        '2k_max' => ['resolution' => '2k', 'level' => 'max', 'size' => 2048, 'credits' => 32],
+        '4k_low' => ['resolution' => '4k', 'level' => 'low', 'size' => 3840, 'credits' => 1.5],
+        '4k_medium' => ['resolution' => '4k', 'level' => 'medium', 'size' => 3840, 'credits' => 3.5],
+        '4k_high' => ['resolution' => '4k', 'level' => 'high', 'size' => 3840, 'credits' => 13.5],
+        '4k_very_high' => ['resolution' => '4k', 'level' => 'very_high', 'size' => 3840, 'credits' => 23.5],
+        '4k_max' => ['resolution' => '4k', 'level' => 'max', 'size' => 3840, 'credits' => 53.5],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | نماذج استوديو الصور المعروضة — شكلية حالياً (قرار §2 في الجلسة)
+    |--------------------------------------------------------------------------
+    | التبديل بينها في الواجهة لا يغيّر المزوّد الفعلي؛ التوليد يستخدم دوماً
+    | image_provider أعلاه. التوجيه الفعلي موثّق في docs/image-studio-redesign-plan.md.
+    */
+
+    'studio_models' => [
+        'nano_banana_2' => ['label' => 'Nano Banana 2', 'hint' => 'متوازن · حتى 4K'],
+        'gpt_image_sunburst' => ['label' => 'GPT Image 2.5 – Sunburst', 'hint' => 'أعلى دقة، للحملات والصور المصقولة'],
+        'gpt_image_flare' => ['label' => 'GPT Image 2.5 – Flare', 'hint' => 'سريع ومتوازن، للاستخدام اليومي'],
+        'grok_imagine' => ['label' => 'Grok Imagine', 'hint' => 'سريع'],
+        'grok_imagine_2' => ['label' => 'Grok Imagine 2.0', 'hint' => 'دقة أعلى، أبطأ'],
+    ],
+
+    'studio_default_model' => 'gpt_image_flare',
 ];

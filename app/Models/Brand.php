@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ColorRole;
 use App\Enums\ProductType;
+use App\Services\Content\ContentFacts;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +47,8 @@ class Brand extends Model
             'patterns' => 'array',
             'links' => 'array',
             'store_facts' => 'array',
+            'credit_balance' => 'decimal:1',
+            'credits_allowance' => 'decimal:1',
             'credits_reset_at' => 'datetime',
             'onboarding_completed' => 'boolean',
             'business_type' => ProductType::class,
@@ -56,8 +59,17 @@ class Brand extends Model
     {
         static::creating(function (Brand $brand) {
             $brand->slug ??= static::uniqueSlug($brand->name);
-            $brand->credits_allowance = $brand->credits_allowance ?: config('credits.monthly_allowance');
-            $brand->credit_balance = $brand->credit_balance ?: $brand->credits_allowance;
+
+            // الكاست decimal:1 يُرجع نصاً مثل "0.0" وهو truthy خلافاً للصفر الصحيح،
+            // لذا فحص رقمي صريح بدل ?: حتى لا يُفلت رصيد ابتدائي صفري من قيمته الافتراضية.
+            if ((float) $brand->credits_allowance <= 0) {
+                $brand->credits_allowance = config('credits.monthly_allowance');
+            }
+
+            if ((float) $brand->credit_balance <= 0) {
+                $brand->credit_balance = $brand->credits_allowance;
+            }
+
             $brand->credits_reset_at ??= now()->addMonth();
         });
     }
@@ -156,7 +168,7 @@ class Brand extends Model
             $text('delivery') !== '' ? 'التوصيل والشحن: '.$text('delivery') : null,
             match ($facts['free_shipping'] ?? null) {
                 'always' => 'شحن مجاني لكل الطلبات',
-                'over' => $over > 0 ? 'شحن مجاني للطلبات فوق '.\App\Services\Content\ContentFacts::canonical((string) $over).' ريال' : null,
+                'over' => $over > 0 ? 'شحن مجاني للطلبات فوق '.ContentFacts::canonical((string) $over).' ريال' : null,
                 default => null,
             },
             $text('branches') !== '' ? 'الفروع: '.$text('branches') : null,

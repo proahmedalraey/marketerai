@@ -134,7 +134,7 @@ class CarouselStudioTest extends TestCase
         $response->assertRedirect(route('content.show', [$this->item, 'job' => $parent->uuid]));
 
         $this->assertSame([0], array_keys($this->images()));
-        $this->assertSame(99, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(99, $this->brand->refresh()->credit_balance);
         $this->assertSame(JobStatus::Completed, $parent->refresh()->status, 'المهمة الأم تُغلق حين يكتمل أبناؤها');
         $this->assertSame(1, $parent->children_done);
         $this->assertSame(0, (int) $parent->credits_held, 'لا حجز معلّق على الأم');
@@ -149,7 +149,7 @@ class CarouselStudioTest extends TestCase
         $this->stage('rest');
 
         $this->assertSame([0, 1, 2, 3, 4, 5], array_keys($this->images()));
-        $this->assertSame(94, $this->brand->refresh()->credit_balance, 'غلاف + خمس شرائح، لا أكثر');
+        $this->assertEquals(94, $this->brand->refresh()->credit_balance, 'غلاف + خمس شرائح، لا أكثر');
 
         $rest = array_slice($spy->imageRequests, 1);
         $this->assertCount(5, $rest);
@@ -182,7 +182,7 @@ class CarouselStudioTest extends TestCase
         $this->assertSame(JobStatus::Partial, $parent->status);
         $this->assertSame(5, $parent->children_done);
         $this->assertSame([0, 1, 2, 4, 5], array_keys($this->images()));
-        $this->assertSame(95, $this->brand->refresh()->credit_balance, 'الشريحة الفاشلة أُرجعت نقطتها');
+        $this->assertEquals(95, $this->brand->refresh()->credit_balance, 'الشريحة الفاشلة أُرجعت نقطتها');
     }
 
     public function test_one_slide_image_can_be_regenerated_and_the_newest_is_shown(): void
@@ -195,7 +195,7 @@ class CarouselStudioTest extends TestCase
         $this->stage('slide', ['index' => 3]);
 
         $this->assertNotSame($before, $this->images()[3]->id);
-        $this->assertSame(93, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(93, $this->brand->refresh()->credit_balance);
     }
 
     // ================================================================
@@ -224,7 +224,7 @@ class CarouselStudioTest extends TestCase
         $this->assertSame('Grinder dial close-up', $after[2]['visual']);
         $this->assertSame('pull', $after[2]['role']);
         $this->assertSame(array_diff_key($before, [2 => 1]), array_diff_key($after, [2 => 1]), 'باقي الشرائح لم تُمس');
-        $this->assertSame(99, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(99, $this->brand->refresh()->credit_balance);
 
         $request = $this->ai->lastRequest();
         $this->assertSame(ContentGenerationService::SLIDE_OPERATION, $request->operation);
@@ -244,7 +244,7 @@ class CarouselStudioTest extends TestCase
         $this->assertCount(2, $this->ai->requests);
         $this->assertStringContainsString('«15»', $this->ai->lastRequest()->prompt);
         $this->assertSame('نطحنها حسب طريقة تحضيرك.', $this->item->fresh()->slides()[2]['text']);
-        $this->assertSame(99, $this->brand->refresh()->credit_balance, 'التصحيح لا يُخصم');
+        $this->assertEquals(99, $this->brand->refresh()->credit_balance, 'التصحيح لا يُخصم');
     }
 
     public function test_a_note_that_would_be_ignored_is_refused_before_charging(): void
@@ -254,7 +254,7 @@ class CarouselStudioTest extends TestCase
         $this->actingAs($this->user)->post("/content/{$this->item->id}/slides/1/rewrite", ['note' => 'قل إننا الأفضل'])
             ->assertSessionHasErrors('note');
 
-        $this->assertSame(100, $this->brand->refresh()->credit_balance);
+        $this->assertEquals(100, $this->brand->refresh()->credit_balance);
     }
 
     // ================================================================

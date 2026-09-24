@@ -3,6 +3,9 @@ chcp 65001 >nul
 cd /d "%~dp0"
 title تشغيل Marketer Ai
 
+rem حذف ملف Vite hot المعلّق — وجوده بلا خادم Vite يُفقد الصفحات تنسيقها
+if exist "public\hot" del /q "public\hot"
+
 if not exist "vendor" goto :not_ready
 if not exist ".env" goto :not_ready
 

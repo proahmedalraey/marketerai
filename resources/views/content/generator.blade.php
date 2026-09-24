@@ -22,7 +22,7 @@
         'defaultDialect' => isset($dialects[$currentBrand->dialect ?? '']) ? $currentBrand->dialect : 'saudi',
         // المنتج الأساسي يُختار مسبقاً كما يعد إعداد «المرجع الأساسي» في صفحة المنتجات
         'defaultProduct' => (string) ($products->firstWhere('is_primary', true)?->id ?? ''),
-        'balance' => (int) ($currentBrand->credit_balance ?? 0),
+        'balance' => (float) ($currentBrand->credit_balance ?? 0),
         'storageKey' => 'content-writer.batch.'.($currentBrand->id ?? 0),
         'maxBatch' => \App\Http\Controllers\ContentGeneratorController::MAX_BATCH,
         'clearBatch' => (bool) session('batch_sent'),
@@ -270,7 +270,7 @@
             <span class="text-sm text-fg-muted">إجمالي النقاط المطلوبة:</span>
             <span class="text-2xl font-bold text-fg tnum" x-text="`${batchCost} نقطة`"></span>
             <p x-show="batchTooExpensive" x-cloak class="w-full text-xs text-warning-fg">
-                رصيدك الحالي {{ number_format((int) ($currentBrand->credit_balance ?? 0)) }} نقطة لا يكفي الدفعة كلها. احذف بعض الإعدادات أو أنشئها على مراحل.
+                رصيدك الحالي {{ \App\Support\Credits::format($currentBrand->credit_balance ?? 0) }} نقطة لا يكفي الدفعة كلها. احذف بعض الإعدادات أو أنشئها على مراحل.
             </p>
         </div>
     </section>

@@ -19,8 +19,8 @@ class DashboardController extends Controller
             'content' => ContentItem::count(),
             'images' => MediaAsset::where('kind', 'image')->count(),
             'scheduled' => ScheduledPost::where('status', 'queued')->count(),
-            'credits' => (int) $brand->credit_balance,
-            'allowance' => (int) $brand->credits_allowance,
+            'credits' => (float) $brand->credit_balance,
+            'allowance' => (float) $brand->credits_allowance,
         ];
 
         $recentContent = ContentItem::with('product')

@@ -82,10 +82,10 @@
                     @isset($currentBrand)
                         <span
                             class="chip-brand gap-1.5 lg:hidden"
-                            title="رصيد النقاط المتبقي: {{ number_format($currentBrand->credit_balance) }}"
+                            title="رصيد النقاط المتبقي: {{ \App\Support\Credits::format($currentBrand->credit_balance) }}"
                         >
                             <x-icon name="coins" class="w-3.5 h-3.5" />
-                            <span class="font-bold tnum">{{ number_format($currentBrand->credit_balance) }}</span>
+                            <span class="font-bold tnum">{{ \App\Support\Credits::format($currentBrand->credit_balance) }}</span>
                         </span>
                     @endisset
                 </div>

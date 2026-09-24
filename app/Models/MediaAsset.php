@@ -12,14 +12,14 @@ class MediaAsset extends Model
     use BelongsToBrand;
 
     protected $fillable = [
-        'brand_id', 'content_item_id', 'generation_job_id', 'kind',
+        'brand_id', 'content_item_id', 'generation_job_id', 'folder_id', 'is_pinned', 'kind',
         'disk', 'path', 'mime', 'bytes', 'width', 'height',
         'prompt', 'seed', 'meta', 'slide_index',
     ];
 
     protected function casts(): array
     {
-        return ['meta' => 'array'];
+        return ['meta' => 'array', 'is_pinned' => 'boolean'];
     }
 
     public function contentItem(): BelongsTo
@@ -30,6 +30,11 @@ class MediaAsset extends Model
     public function generationJob(): BelongsTo
     {
         return $this->belongsTo(GenerationJob::class);
+    }
+
+    public function folder(): BelongsTo
+    {
+        return $this->belongsTo(MediaFolder::class, 'folder_id');
     }
 
     public function url(): string

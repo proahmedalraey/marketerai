@@ -113,47 +113,84 @@
                         <span x-text="importError"></span>
                     </p>
 
-                    {{-- صور المصدر تُحفظ برابطها مع المنتج --}}
-                    <div x-show="importedImages.length" x-cloak class="mt-3 pt-3 border-t border-line">
-                        <p class="text-xs font-medium text-fg-muted mb-2">
-                            <span x-text="importedImages.length"></span> صورة من المصدر ستُحفظ مع العنصر
-                        </p>
-
-                        <div class="flex flex-wrap gap-2.5">
-                            <template x-for="(url, index) in importedImages" :key="url">
-                                <span class="relative">
-                                    <img :src="url" alt=""
-                                         class="w-16 h-16 rounded-lg object-cover border-2"
-                                         :class="index === 0 ? 'border-brand-500' : 'border-line'">
-
-                                    <input type="hidden" name="image_urls[]" :value="url">
-
-                                    {{-- الأولى هي المرجع البصري في توليد الصور، فنسمّيها --}}
-                                    <span x-show="index === 0"
-                                          class="absolute -bottom-1 inset-x-1 text-center text-[9px] font-bold
-                                                 rounded bg-brand-600 text-white py-px">رئيسية</span>
-
-                                    <button
-                                        type="button"
-                                        @click="removeImportedImage(url)"
-                                        class="absolute -top-2 -end-2 grid place-items-center w-6 h-6 rounded-full
-                                               bg-scrim text-white shadow-md hover:bg-danger transition"
-                                    >
-                                        <x-icon name="close" class="w-3.5 h-3.5" />
-                                        <span class="sr-only">إزالة هذه الصورة</span>
-                                    </button>
-                                </span>
-                            </template>
-                        </div>
-                    </div>
+                    {{-- الصور المستوردة تنزل إلى المعرض بالأسفل، فلا نكررها هنا --}}
+                    <p x-show="importedImages.length" x-cloak class="hint">
+                        <span x-text="importedImages.length"></span> صورة من المصدر أُضيفت إلى المعرض بالأسفل.
+                    </p>
                 </div>
 
                 {{-- ---------- الصور ---------- --}}
+                {{--
+                    معرض واحد يجمع الموجود والمستورد والمرفوع حديثاً.
+                    فصلها إلى ثلاثة أشرطة يخفي على المستخدم كم صورة سيحفظ فعلاً،
+                    ويمنعه من اختيار مرجع بصري من بينها جميعاً.
+                --}}
                 <div>
-                    <span class="label" x-text="labels.images"></span>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span class="label mb-0" x-text="labels.images"></span>
+
+                        <span class="text-xs text-fg-subtle tnum">
+                            <span x-text="gallery.length"></span> من <span x-text="maxImages"></span>
+                        </span>
+                    </div>
+
+                    <div
+                        x-show="gallery.length"
+                        x-cloak
+                        class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mb-3"
+                        role="group"
+                        aria-label="صور العنصر — اختر الصورة الرئيسية أو احذف ما لا تريد"
+                    >
+                        <template x-for="item in gallery" :key="item.key">
+                            <div class="relative aspect-square">
+                                {{-- البطاقة نفسها هي زر اختيار المرجع البصري --}}
+                                <button
+                                    type="button"
+                                    @click="setReference(item.key)"
+                                    :aria-pressed="isReference(item.key) ? 'true' : 'false'"
+                                    :title="isReference(item.key) ? 'هذه هي الصورة الرئيسية' : 'اجعلها الصورة الرئيسية'"
+                                    class="block w-full h-full rounded-xl overflow-hidden border-2 transition"
+                                    :class="isReference(item.key)
+                                        ? 'border-brand-500 ring-2 ring-brand-500/30'
+                                        : 'border-line hover:border-brand-300'"
+                                >
+                                    <img :src="item.url" alt="" class="w-full h-full object-cover">
+
+                                    <span
+                                        x-show="isReference(item.key)"
+                                        class="absolute inset-x-0 bottom-0 bg-brand-600 text-white text-[10px] font-bold text-center py-0.5"
+                                    >رئيسية</span>
+
+                                    <span class="sr-only" x-text="isReference(item.key) ? 'الصورة الرئيسية' : 'اجعلها الصورة الرئيسية'"></span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    @click.stop="removeGalleryImage(item)"
+                                    class="absolute -top-2 -end-2 grid place-items-center w-7 h-7 rounded-full
+                                           bg-scrim text-white shadow-md hover:bg-danger transition"
+                                >
+                                    <x-icon name="close" class="w-4 h-4" />
+                                    <span class="sr-only">حذف هذه الصورة</span>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- الحذف لا يقع إلا عند الحفظ، فالتراجع ممكن ما دامت النافذة مفتوحة --}}
+                    <p x-show="removedImageIds.length" x-cloak class="flex flex-wrap items-center gap-2 text-xs text-warning-fg mb-3">
+                        <x-icon name="alert" class="w-3.5 h-3.5" />
+                        <span>
+                            ستُحذف <span class="tnum" x-text="removedImageIds.length"></span> صورة عند الحفظ.
+                        </span>
+                        <button type="button" @click="restoreRemovedImages()" class="font-semibold underline underline-offset-2 hover:text-fg">
+                            تراجع
+                        </button>
+                    </p>
 
                     <label
-                        class="flex flex-col items-center justify-center gap-1.5 w-full px-4 py-6 rounded-xl cursor-pointer text-center
+                        x-show="! galleryFull"
+                        class="flex flex-col items-center justify-center gap-1.5 w-full px-4 py-5 rounded-xl cursor-pointer text-center
                                border-2 border-dashed border-line-strong bg-muted/40
                                transition hover:border-brand-400 hover:bg-brand-50/40 dark:hover:bg-brand-500/5
                                has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 has-[:focus-visible]:ring-offset-2"
@@ -172,16 +209,20 @@
                         >
                     </label>
 
-                    {{-- معاينة فورية: المستخدم يرى ما اختاره قبل الحفظ لا بعده --}}
-                    <div x-show="previews.length" x-cloak class="flex flex-wrap gap-2 mt-3">
-                        <template x-for="p in previews" :key="p.url">
-                            <img :src="p.url" :alt="p.name" class="w-16 h-16 rounded-xl object-cover border border-line">
-                        </template>
-                    </div>
+                    <p x-show="galleryFull" x-cloak class="hint">
+                        بلغت الحد الأقصى. احذف صورة لتتمكن من إضافة أخرى.
+                    </p>
 
-                    <template x-if="form.mode === 'edit' && products[form.id]">
-                        <p class="hint">الصور الجديدة تُضاف إلى الموجودة ولا تستبدلها.</p>
+                    <p x-show="gallery.length > 1" x-cloak class="hint">
+                        اضغط على أي صورة لجعلها الرئيسية — وهي المرجع البصري في توليد الصور.
+                    </p>
+
+                    {{-- ما يُرسل للخادم: المحذوف، والمرجع المختار --}}
+                    <template x-for="id in removedImageIds" :key="`rm-${id}`">
+                        <input type="hidden" name="removed_image_ids[]" :value="id">
                     </template>
+
+                    <input type="hidden" name="reference" :value="reference">
 
                     @error('images.*')
                         <p class="error-text"><x-icon name="alert-circle" class="w-3.5 h-3.5 mt-px" /><span>{{ $message }}</span></p>

@@ -179,7 +179,7 @@ class AiReliabilityTest extends TestCase
 
         $this->assertSame(JobStatus::Failed, $job->status);
         $this->assertStringContainsString('نفدت الحصة', $job->error);
-        $this->assertSame(100, $brand->refresh()->credit_balance);
+        $this->assertEquals(100, $brand->refresh()->credit_balance);
         Http::assertSentCount(1);
 
         // الرسالة التي تصل للصفحة عبر الاستطلاع
@@ -205,14 +205,14 @@ class AiReliabilityTest extends TestCase
 
         $fresh = GenerationJob::create(['brand_id' => $brand->id, 'type' => 'content', 'status' => JobStatus::Queued, 'payload' => []]);
 
-        $this->assertSame(98, $brand->refresh()->credit_balance);
+        $this->assertEquals(98, $brand->refresh()->credit_balance);
 
         $this->artisan('ai:reap-stuck-jobs')->assertSuccessful();
 
         $this->assertSame(JobStatus::Failed, $stuck->refresh()->status);
         $this->assertSame(JobStatus::Failed, $child->refresh()->status);
         $this->assertSame(JobStatus::Queued, $fresh->refresh()->status);
-        $this->assertSame(100, $brand->refresh()->credit_balance, 'أُرجعت النقاط مرة واحدة');
+        $this->assertEquals(100, $brand->refresh()->credit_balance, 'أُرجعت النقاط مرة واحدة');
     }
 
     public function test_a_worker_returning_after_the_reaper_does_not_run_the_job(): void
