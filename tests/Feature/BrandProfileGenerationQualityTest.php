@@ -106,11 +106,48 @@ class BrandProfileGenerationQualityTest extends TestCase
         $this->assertStringContainsString('لا تُضف أي معلومة غير واردة', $request->system);
         $this->assertStringContainsString('60 كلمة', $request->system);
 
+        // الموجز الاستراتيجي أولاً: النموذج يخطط قبل أن يكتب
         $this->assertSame(
-            ['simple', 'detailed', 'activity_type', 'sales_summary', 'advantages_directives', 'important_notes'],
+            ['brief', 'simple', 'detailed', 'activity_type', 'sales_summary', 'advantages_directives', 'important_notes'],
             array_keys($request->schema['properties']),
         );
         $this->assertSame(BrandProfileGenerator::OPERATION, $request->operation);
+    }
+
+    public function test_the_system_prompt_carries_the_strategist_method(): void
+    {
+        $this->answerWith(ProfileFixtures::modelOutput());
+
+        $system = $this->ai->lastRequest()->system;
+
+        // الوصفان يُنشران للعميل: البرومبت يقولها، لا «هذا الملف لا يُنشر»
+        $this->assertStringContainsString('يُنشران كما هما', $system);
+        $this->assertStringContainsString('الوعد الجوهري', $system);
+        $this->assertStringContainsString('من الميزة إلى الفائدة', $system);
+
+        // العبارات المستهلكة من الإعدادات، فيمنعها البرومبت ويحذّر منها الفحص معاً
+        foreach (config('brand.profile_cliches') as $cliche) {
+            $this->assertStringContainsString($cliche, $system);
+        }
+    }
+
+    public function test_the_brand_tone_shapes_the_descriptions(): void
+    {
+        $this->brand->update(['tone' => 'ودودة وعملية']);
+
+        $this->answerWith(ProfileFixtures::modelOutput());
+
+        $this->assertStringContainsString('ودودة وعملية', $this->ai->lastRequest()->system);
+    }
+
+    public function test_the_strategy_brief_is_not_saved_in_the_profile(): void
+    {
+        $this->answerWith(ProfileFixtures::modelOutput());
+
+        $profile = $this->active();
+
+        $this->assertArrayNotHasKey('brief', (array) $profile->technical);
+        $this->assertStringNotContainsString('الزاوية:', $profile->toPromptFragment());
     }
 
     public function test_the_dialect_is_not_sent_because_descriptions_are_in_standard_arabic(): void

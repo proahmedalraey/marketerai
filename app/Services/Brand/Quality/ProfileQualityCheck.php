@@ -69,6 +69,7 @@ class ProfileQualityCheck
             $this->checkInventedLinks($report, $field, $text, $inputs);
             $this->checkBannedWords($report, $field, $text, $bannedWords);
             $this->checkSuperlatives($report, $field, $text, $inputs);
+            $this->checkCliches($report, $field, $text, $inputs);
             $this->checkPlaceholders($report, $field, $text);
             $this->checkLanguage($report, $field, $text);
         }
@@ -227,6 +228,22 @@ class ProfileQualityCheck
 
             $report->add('superlative', ProfileQualityReport::WARNING, $field,
                 "مبالغة «{$word}»".($fromUser ? ' (وردت في إجابات المستخدم).' : ' لم ترد في الإجابات.'));
+        }
+    }
+
+    /**
+     * عبارة تصلح لأي متجر («وجهة متكاملة»، «تجربة فريدة») لا تقول شيئاً عن هذا المتجر.
+     * تحذير لا خطأ: لا تضر العميل، لكنها أول ما يجعل الوصف قالبياً ضعيفاً.
+     * ما كتبه التاجر نفسه في إجاباته لا نحذّر منه — القرار له.
+     */
+    protected function checkCliches(ProfileQualityReport $report, string $field, string $text, string $inputs): void
+    {
+        foreach ((array) config('brand.profile_cliches', []) as $phrase) {
+            if (($found = ArabicText::find($text, $phrase)) === [] || ArabicText::contains($inputs, $phrase)) {
+                continue;
+            }
+
+            $report->add('cliche', ProfileQualityReport::WARNING, $field, "عبارة مستهلكة «{$found[0]}» تصلح لأي متجر.");
         }
     }
 

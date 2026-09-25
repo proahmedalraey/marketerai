@@ -135,6 +135,32 @@ class ProfileQualityCheckTest extends TestCase
         $this->assertFalse($this->check(['simple' => ProfileFixtures::simple().' مع أفضلية للطلبات المتكررة.'])->has('superlative'));
     }
 
+    public function test_a_generic_cliche_is_a_warning_not_an_error(): void
+    {
+        $report = $this->check(['simple' => 'امدادات القهوة وجهة متكاملة تقدم لك تجربة فريدة لمستلزمات المقاهي.']);
+
+        $cliches = collect($report->issues())->where('code', 'cliche');
+
+        $this->assertCount(2, $cliches, json_encode($report->issues(), JSON_UNESCAPED_UNICODE));
+        $this->assertTrue($report->passes(), 'العبارة المستهلكة تحذير لا خطأ');
+    }
+
+    public function test_a_cliche_the_merchant_wrote_is_not_flagged(): void
+    {
+        // «جودة عالية» ميزته كما كتبها: القرار له، لا لنا
+        $answers = ['advantages' => 'جودة عالية'];
+
+        $this->assertFalse($this->check(['simple' => ProfileFixtures::simple().' بجودة عالية.'], $answers)->has('cliche'));
+        $this->assertTrue($this->check(['simple' => ProfileFixtures::simple().' بجودة عالية.'])->has('cliche'));
+    }
+
+    public function test_the_cliche_list_is_read_from_config(): void
+    {
+        config(['brand.profile_cliches' => ['مورد واحد']]);
+
+        $this->assertTrue($this->check()->has('cliche'), 'القائمة من الإعدادات وحدها: تعديلها يغيّر الفحص بلا نشر كود');
+    }
+
     // ===================== الشكل =====================
 
     public function test_placeholder_or_code_leftovers_are_errors(): void

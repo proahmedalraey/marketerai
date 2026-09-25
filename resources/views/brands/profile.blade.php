@@ -297,7 +297,8 @@
                                 @elseif ($key === 'store_url')
                                     <a href="{{ $v }}" target="_blank" rel="noopener" dir="ltr" class="text-brand-700 dark:text-brand-300 hover:underline break-all">{{ $v }}</a>
                                 @else
-                                    {{ $v }}
+                                    {{-- توجيهات المزايا سطر لكل ميزة: الأسطر تبقى أسطراً --}}
+                                    <span class="whitespace-pre-line">{{ $v }}</span>
                                 @endif
                             </dd>
                         </div>
@@ -317,7 +318,7 @@
                     @foreach ([
                         'activity_type' => ['نوع النشاط', 1, 300],
                         'sales_summary' => ['ملخص المبيعات', 3, 1500],
-                        'advantages_directives' => ['توجيهات المزايا التنافسية', 3, 1500],
+                        'advantages_directives' => ['توجيهات المزايا التنافسية', 5, 1500],
                     ] as $key => [$label, $rows, $max])
                         <x-field :label="$label" :name="'technical.'.$key" :for="'tech-'.$key">
                             <textarea

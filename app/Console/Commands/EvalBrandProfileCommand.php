@@ -132,6 +132,9 @@ class EvalBrandProfileCommand extends Command
 
             if ($this->option('show')) {
                 $this->newLine();
+                // الموجز يشرح لماذا كُتب الوصفان هكذا: ضعفه يسبق ضعفهما
+                $this->line('  — الموجز الاستراتيجي —');
+                $this->line('  '.str_replace("\n", "\n  ", (string) ($draft['brief'] ?? '—')));
                 $this->line('  — المبسط —');
                 $this->line('  '.$draft['simple']);
                 $this->line('  — التفصيلي —');

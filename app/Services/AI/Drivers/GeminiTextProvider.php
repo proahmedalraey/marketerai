@@ -181,6 +181,12 @@ class GeminiTextProvider implements TextProvider
             };
         }
 
+        // بلا ترتيب صريح يكتب Gemini الحقول أبجدياً، فيسبق الملخصُ التخطيطَ الذي
+        // وُضع أولاً عمداً. المزودون الآخرون يلتزمون ترتيب المخطط أصلاً.
+        if (isset($out['properties']) && count($out['properties']) > 1) {
+            $out['propertyOrdering'] = array_keys($out['properties']);
+        }
+
         return $out;
     }
 }

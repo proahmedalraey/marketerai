@@ -39,11 +39,13 @@ class GeminiSchemaTest extends TestCase
 
         app(AiManager::class)->generateText(new TextRequest('system', 'prompt', $schema));
 
-        Http::assertSent(function (Request $request) {
+        Http::assertSent(function (Request $request) use ($schema) {
             $sent = $request['generationConfig']['responseSchema'] ?? null;
 
             return $sent !== null
                 && $sent['type'] === 'OBJECT'
+                // ترتيب المخطط يُرسل صراحة، وإلا كتب Gemini الحقول أبجدياً
+                && $sent['propertyOrdering'] === array_keys($schema['properties'])
                 && ! isset($sent['additionalProperties'])
                 && $sent['properties']['slides']['type'] === 'ARRAY'
                 && $sent['properties']['slides']['items']['type'] === 'OBJECT'
