@@ -30,7 +30,10 @@
         'qualityMatrix' => $qualityMatrix,
         'ratios' => $ratios,
         'models' => $studioModels,
-        'defaultModel' => $defaultModel,
+        'modelCaps' => $modelCaps,
+        'modelsRoutable' => $modelsRoutable,
+        'hasOld' => session()->hasOldInput(),
+        'defaultModel' => old('model', $defaultModel),
         'uploadUrl' => route('studio.uploads'),
         'prompt' => old('prompt', ''),
         'resolution' => $initResolution,
@@ -56,8 +59,9 @@
         <div class="card p-4" x-data="jobTracker(@js($jobUuid), { redirectTo: @js(route('studio.index')) })">
             <div class="flex items-center justify-between gap-2 mb-3">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-fg">
-                    <x-icon name="refresh" class="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                    جارٍ التوليد
+                    <x-icon name="refresh" class="w-4 h-4 text-brand-600 dark:text-brand-400" x-show="!failed" />
+                    <x-icon name="alert" class="w-4 h-4 text-danger" x-show="failed" x-cloak />
+                    <span x-text="failed ? 'تعذّر التوليد' : 'جارٍ التوليد'">جارٍ التوليد</span>
                 </h2>
                 <span class="chip-info" x-text="label">في الانتظار</span>
             </div>
@@ -78,14 +82,26 @@
             <p class="mt-2.5 text-xs leading-relaxed" role="status" aria-live="polite">
                 <span x-show="!finished" class="text-fg-muted">توليد الصور يستغرق وقتاً أطول من النص — ابقَ في الصفحة.</span>
                 <span x-show="finished && !failed && !timedOut" x-cloak class="text-success-fg">اكتمل. نحدّث المعرض…</span>
-                <span x-show="failed" x-cloak class="text-danger-fg" x-text="error || 'تعذّر التوليد وأُرجعت نقاطك.'"></span>
+                <span x-show="failed" x-cloak class="text-danger-fg">
+                    <span x-text="error || 'تعذّر التوليد وأُرجعت نقاطك.'"></span>
+                    <a href="{{ route('studio.index') }}" class="ms-1 font-semibold underline underline-offset-4">إغلاق</a>
+                </span>
                 <span x-show="timedOut" x-cloak class="text-warning-fg">يستغرق أطول من المعتاد. نكمل في الخلفية — حدّث الصفحة بعد دقائق. إن تعذّر التوليد تُرجع نقاطك تلقائياً.</span>
             </p>
 
-            <div x-show="!finished" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                <template x-for="i in 3" :key="i">
-                    <div class="skeleton aspect-square rounded-xl"></div>
-                </template>
+            {{-- هياكل الانتظار بعدد الصور ونسبتها المطلوبة (من payload المهمة) --}}
+            @php
+                $trackedGrid = match (true) {
+                    $trackedCount === 1 => 'grid-cols-1 max-w-[16rem]',
+                    $trackedCount === 2 => 'grid-cols-2 max-w-lg',
+                    default => 'grid-cols-2 sm:grid-cols-4',
+                };
+                [$tw, $th] = array_map('floatval', array_pad(explode(':', $trackedRatio), 2, 1)) + [1, 1];
+            @endphp
+            <div x-show="!finished" class="grid {{ $trackedGrid }} gap-3 mt-4">
+                @for ($i = 0; $i < $trackedCount; $i++)
+                    <div class="skeleton rounded-xl" style="aspect-ratio: {{ $tw ?: 1 }} / {{ $th ?: 1 }}"></div>
+                @endfor
             </div>
         </div>
     @endif
@@ -93,6 +109,13 @@
     @error('credits')
         <div class="alert-danger">{{ $message }}</div>
     @enderror
+
+    {{-- رفض الخادم قبل الحجز (نموذج لا يدعم الدقة/الجودة، وصف فارغ…): بدونه يبدو الضغط بلا أثر --}}
+    @foreach (['quality', 'model', 'prompt', 'aspect_ratio', 'count', 'product_id', 'reference_asset_id'] as $field)
+        @error($field)
+            <div class="alert-danger" role="alert">{{ $message }}</div>
+        @enderror
+    @endforeach
 
     <div x-data="{ activeTab: 'gallery' }">
         <div class="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit mb-3" role="tablist">
@@ -105,7 +128,7 @@
                 <x-icon name="grid" class="w-4 h-4" />
                 المعرض
                 @if ($gallery->isNotEmpty())
-                    <span class="text-xs tnum" :class="activeTab === 'gallery' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ $gallery->count() }}</span>
+                    <span class="text-xs tnum" :class="activeTab === 'gallery' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ $gallery->count() }}{{ $galleryHasMore ? "+" : "" }}</span>
                 @endif
             </button>
 

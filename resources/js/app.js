@@ -336,6 +336,15 @@ Alpine.data('productsIndex', (config = {}) => ({
         return this.gallery.length >= this.maxImages;
     },
 
+    /**
+     * ما يُرسل للخادم يطابق ما يراه المستخدم.
+     * لو تركناه فارغاً لاختار الخادم أول صورة ضمنياً، وهو تطابق
+     * صامت ينكسر أول ما يتغير الترتيب.
+     */
+    get effectiveReference() {
+        return this.reference || this.gallery[0]?.key || '';
+    },
+
     isReference(key) {
         return this.reference === key
             || (this.reference === '' && this.gallery[0]?.key === key);
@@ -456,6 +465,9 @@ Alpine.data('productsIndex', (config = {}) => ({
 
             this.importedImages = data.image_urls || [];
             this.importUrl = '';
+
+            // نجاح جزئي: البيانات وصلت والتحليل وحده تعثّر
+            this.importError = data.warning || '';
         } catch {
             this.importError = 'تعذّر الاتصال بالخادم.';
         } finally {

@@ -76,11 +76,11 @@
                     <div class="relative">
                         <button
                             type="button"
-                            @click="openLightbox({ id: {{ $asset->id }}, url: @js($asset->url()), prompt: @js($asset->prompt), pinned: {{ $asset->is_pinned ? 'true' : 'false' }}, pinUrl: @js(route('studio.media.pin', $asset)) })"
+                            @click="openLightbox({ id: {{ $asset->id }}, url: @js($asset->url()), prompt: @js($asset->prompt), pinned: {{ $asset->is_pinned ? 'true' : 'false' }}, pinUrl: @js(route('studio.media.pin', $asset)), model: @js($studioModelService->labelFor($asset->meta['model'] ?? null)), size: @js($asset->width.'×'.$asset->height) })"
                             class="block w-full"
                         >
                             <img
-                                src="{{ $asset->url() }}"
+                                src="{{ $asset->thumbUrl() }}"
                                 alt="{{ Str::limit($asset->prompt, 100) ?: 'صورة مولّدة' }}"
                                 loading="lazy" decoding="async"
                                 class="aspect-square w-full object-cover bg-muted"
@@ -126,12 +126,24 @@
                         <p class="text-[11px] text-fg-muted line-clamp-2 leading-relaxed">
                             {{ Str::limit($asset->prompt, 90) }}
                         </p>
-                        <p class="text-[10px] text-fg-subtle mt-1.5 tnum" dir="ltr">
-                            {{ $asset->width }}×{{ $asset->height }}
+                        <p class="flex items-center justify-between gap-2 text-[10px] text-fg-subtle mt-1.5">
+                            <span class="tnum" dir="ltr">{{ $asset->width }}×{{ $asset->height }}</span>
+                            @if ($modelLabel = $studioModelService->labelFor($asset->meta['model'] ?? null))
+                                <span class="truncate" title="النموذج المستخدم" dir="ltr">{{ $modelLabel }}</span>
+                            @endif
                         </p>
                     </figcaption>
                 </figure>
             @endforeach
         </div>
+
+        @if ($galleryHasMore)
+            <div class="flex justify-center mt-5">
+                <a href="{{ route('studio.index', array_merge(request()->only(['q', 'sort', 'folder', 'pinned']), ['limit' => $galleryLimit + 60])) }}"
+                   class="btn btn-secondary">
+                    عرض المزيد
+                </a>
+            </div>
+        @endif
     @endif
 </section>

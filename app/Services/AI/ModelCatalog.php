@@ -22,11 +22,12 @@ class ModelCatalog
     {
         $config = config("ai.providers.{$provider}");
 
-        if (! $config || blank($config['api_key'] ?? null)) {
+        // قائمة OpenRouter عامة ولا تحتاج مفتاحاً، فيرى المدير النماذج قبل أن يلصق مفتاحه
+        if (! $config || (blank($config['api_key'] ?? null) && $provider !== 'openrouter')) {
             return null;
         }
 
-        $cacheKey = 'ai_models.'.$provider.'.'.md5($config['api_key'].'|'.$config['base_url']);
+        $cacheKey = 'ai_models.'.$provider.'.'.md5(($config['api_key'] ?? '').'|'.$config['base_url']);
 
         if ($cached = Cache::get($cacheKey)) {
             return $cached;
@@ -37,6 +38,7 @@ class ModelCatalog
                 'gemini' => $this->gemini($config),
                 'openai' => $this->openai($config),
                 'anthropic' => $this->anthropic($config),
+                'openrouter' => $this->openrouter($config),
                 default => null,
             };
         } catch (Throwable) {
@@ -48,6 +50,81 @@ class ModelCatalog
         }
 
         return $models;
+    }
+
+    /**
+     * قدرات نموذج صور في OpenRouter: الخيارات التي يقبلها وقيمها
+     * (aspect_ratio, resolution, quality, input_references...). null = تعذر الجلب.
+     */
+    public function imageParameters(string $model): ?array
+    {
+        $all = $this->openrouterImageModels();
+
+        return $all[$model]['supported_parameters'] ?? null;
+    }
+
+    /** @return array<string, array>  id => بيانات النموذج كما يعيدها OpenRouter */
+    protected function openrouterImageModels(): array
+    {
+        $base = rtrim((string) config('ai.providers.openrouter.base_url'), '/');
+
+        $cacheKey = 'ai_models.openrouter.image_index.'.md5($base);
+
+        if ($cached = Cache::get($cacheKey)) {
+            return $cached;
+        }
+
+        try {
+            $response = Http::timeout(8)->get($base.'/images/models');
+        } catch (Throwable) {
+            return [];
+        }
+
+        // نحتفظ بالقدرات فقط: أوصاف النماذج طويلة ولا حاجة لتخزينها
+        $index = $response->failed() ? [] : collect($response->json('data', []))
+            ->mapWithKeys(fn ($m) => [$m['id'] => ['supported_parameters' => $m['supported_parameters'] ?? []]])
+            ->all();
+
+        // الفشل لا يُخزَّن: القائمة الفارغة المخزنة كانت ستحجب الصور ساعة كاملة
+        if ($index !== []) {
+            Cache::put($cacheKey, $index, now()->addHour());
+        }
+
+        return $index;
+    }
+
+    protected function openrouter(array $config): ?array
+    {
+        $base = rtrim($config['base_url'], '/');
+
+        $response = Http::timeout(10)->get($base.'/models');
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $text = collect($response->json('data', []))
+            // نصوص فقط: نماذج الصور لها قائمتها، والنماذج متعددة المخرجات لا تصلح لكتابة منشور
+            ->filter(fn ($m) => ($m['architecture']['output_modalities'] ?? []) === ['text'])
+            // :batch نسخ غير فورية؛ التوليد هنا ينتظر ردّاً حياً
+            ->reject(fn ($m) => str_ends_with($m['id'], ':batch'))
+            // المنصة تطلب JSON منظماً في كل توليد تقريباً
+            ->filter(fn ($m) => array_intersect(['response_format', 'structured_outputs'], $m['supported_parameters'] ?? []))
+            ->sortByDesc(fn ($m) => $m['created'] ?? 0)
+            ->pluck('id')
+            ->values()
+            ->all();
+
+        // قائمة الصور المخصصة أدق من /models: فيها كل نماذج الصور لا بعضها
+        $image = array_keys($this->openrouterImageModels());
+
+        if ($image === []) {
+            $image = collect($response->json('data', []))
+                ->filter(fn ($m) => in_array('image', $m['architecture']['output_modalities'] ?? [], true))
+                ->pluck('id')->values()->all();
+        }
+
+        return $text === [] ? null : ['text' => $text, 'image' => $image];
     }
 
     protected function gemini(array $config): ?array

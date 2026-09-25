@@ -38,7 +38,14 @@
                 </button>
 
                 <div class="absolute inset-x-0 bottom-0 flex items-center gap-2 p-3 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl">
-                    <p class="flex-1 min-w-0 truncate text-xs text-white/90" x-text="lightbox.prompt"></p>
+                    <div class="flex-1 min-w-0">
+                        <p class="truncate text-xs text-white/90" x-text="lightbox.prompt"></p>
+                        <p class="text-[10px] text-white/60 mt-0.5" dir="ltr" x-show="lightbox.model || lightbox.size">
+                            <span x-text="lightbox.model"></span>
+                            <span x-show="lightbox.model && lightbox.size"> · </span>
+                            <span x-text="lightbox.size"></span>
+                        </p>
+                    </div>
 
                     <button
                         type="button" @click="useAsReference()"

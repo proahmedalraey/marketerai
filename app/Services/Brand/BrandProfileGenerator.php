@@ -117,7 +117,7 @@ class BrandProfileGenerator
 
         if ($draft['simple'] === null || $draft['detailed'] === null) {
             // الفشل يُرجع النقاط كاملة: لا يدفع المستخدم مقابل ملف ناقص
-            $this->credits->refund($brand, (int) $job->credits_held, $job, self::OPERATION, 'إرجاع: مخرج ناقص');
+            $this->credits->refund($brand, (float) $job->credits_held, $job, self::OPERATION, 'إرجاع: مخرج ناقص');
             $job->markFailed('لم يُنتج النموذج الوصفين المطلوبين. أُرجعت النقاط.');
 
             return;
@@ -152,7 +152,7 @@ class BrandProfileGenerator
             $brand->update(['industry' => Str::limit($profile->technical['activity_type'], 120, '')]);
         }
 
-        $held = (int) $job->credits_held;
+        $held = (float) $job->credits_held;
         $this->credits->settle($brand, $held, $held, $job, self::OPERATION);
 
         $job->markCompleted(['brand_profile_id' => $profile->id, 'version' => $profile->version]);

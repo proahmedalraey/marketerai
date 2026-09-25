@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\JobStatus;
 use App\Models\Concerns\BelongsToBrand;
+use App\Support\JobStage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -99,7 +100,12 @@ class GenerationJob extends Model
     public function progress(): int
     {
         if ($this->children_total === 0) {
-            return $this->status->isFinished() ? 100 : ($this->status === JobStatus::Processing ? 50 : 5);
+            if ($this->status->isFinished()) {
+                return 100;
+            }
+
+            // المرحلة الفعلية تعطي تقدماً أصدق من رقم ثابت، وتتحرك الشريطة كلما تقدمت المهمة
+            return $this->status === JobStatus::Processing ? (JobStage::progress($this) ?? 50) : 5;
         }
 
         return (int) round(($this->children_done / max($this->children_total, 1)) * 100);

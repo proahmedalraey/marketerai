@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Services\Credits\CreditService;
 use App\Services\Settings\AiSettings;
 use App\Support\JobSummary;
+use App\Support\QueueHealth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
         View::composer('partials.operations', function ($view) {
             $view->with('operations', JobSummary::collect(GenerationJob::recent()->get()));
         });
+
+        // نبض العامل: كل مهمة تبدأ أو تنتهي تدل على أن عاملاً حياً (تنبيه «الطابور متوقف»)
+        Queue::before(fn () => QueueHealth::beat());
+        Queue::after(fn () => QueueHealth::beat());
+        Queue::failing(fn () => QueueHealth::beat());
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');

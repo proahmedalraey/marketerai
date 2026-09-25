@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use Illuminate\Http\Client\ConnectionException;
 use RuntimeException;
 
 class ProviderException extends RuntimeException
@@ -36,7 +37,8 @@ class ProviderException extends RuntimeException
         $json = json_decode($body, true);
         $json = is_array($json) ? $json : [];
 
-        $exhausted = $status === 429 && static::isQuotaExhausted($body, $json);
+        // 402 (OpenRouter): رصيد الحساب انتهى. يعود بعد شحنه لا بعد ثوانٍ، فلا نعيد المحاولة
+        $exhausted = $status === 402 || ($status === 429 && static::isQuotaExhausted($body, $json));
         $wait = static::retryAfterSeconds($retryAfter, $json);
 
         $retryable = match (true) {
@@ -59,11 +61,19 @@ class ProviderException extends RuntimeException
      * رسالة تصلح للعرض على صاحب المتجر: بلا JSON ولا مصطلحات مزود.
      * التفاصيل الكاملة تبقى في getMessage() وفي السجل.
      */
+    /** حجب المحتوى (SAFETY/content moderation): إعادة الصياغة تنفع، الإعادة كما هي لا. */
+    public function isModeration(): bool
+    {
+        return $this->statusCode === 400
+            && (bool) preg_match('/content moderation|block_reason|safety/i', $this->getMessage());
+    }
+
     public function userMessage(): string
     {
         return match (true) {
             $this->display !== null => $this->display,
             $this->quotaExhausted => 'نفدت الحصة المتاحة لخدمة الذكاء الاصطناعي حالياً. أُرجعت نقاطك — حاول لاحقاً.',
+            $this->isModeration() => 'رفض النموذج الوصف لأسباب تتعلق بسلامة المحتوى. أعد صياغته أو جرّب نموذجاً آخر. أُرجعت نقاطك.',
             $this->statusCode === 429 => 'خدمة الذكاء الاصطناعي مزدحمة الآن. أُرجعت نقاطك — حاول بعد دقيقة.',
             $this->statusCode !== null && $this->statusCode >= 500 => 'خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. أُرجعت نقاطك — حاول بعد قليل.',
             default => 'تعذّر التوليد بسبب خطأ في الطلب. أُرجعت نقاطك.',
@@ -73,12 +83,43 @@ class ProviderException extends RuntimeException
     /** نص رسالة مناسب للعرض من أي استثناء، مزوداً كان أو غيره. */
     public static function messageFor(\Throwable $e): string
     {
-        return $e instanceof self ? $e->userMessage() : 'تعذّر التوليد. أُرجعت نقاطك — جرّب مجدداً.';
+        return match (true) {
+            $e instanceof self => $e->userMessage(),
+            $e instanceof ConnectionException => static::connectionMessage($e),
+            default => 'تعذّر التوليد. أُرجعت نقاطك — جرّب مجدداً.',
+        };
+    }
+
+    /**
+     * الطلب لم يصل للمزود أصلاً (DNS فشل أو رُفض الاتصال): إعادته آمنة ولا تُدفع مرتين.
+     * المهلة (28) وغيرها ليست كذلك: قد يكون المزود نفّذ الطلب وحاسبنا عليه.
+     */
+    public static function isUnreachable(ConnectionException $e): bool
+    {
+        return (bool) preg_match('/cURL error (6|7)(?!\d)/', $e->getMessage());
+    }
+
+    public static function fromConnection(string $provider, ConnectionException $e): self
+    {
+        return new self(
+            "تعذّر الاتصال بمزود {$provider}: ".mb_substr($e->getMessage(), 0, 300),
+            $provider,
+            null,
+            retryable: true,
+            display: static::connectionMessage($e),
+        );
+    }
+
+    protected static function connectionMessage(ConnectionException $e): string
+    {
+        return preg_match('/cURL error 28|timed out/i', $e->getMessage())
+            ? 'استغرق الرد من خدمة الذكاء الاصطناعي أطول من المتوقع فتوقّف الطلب. أُرجعت نقاطك — جرّب مجدداً.'
+            : 'تعذّر الاتصال بخدمة الذكاء الاصطناعي. تحقق من اتصال الإنترنت ثم جرّب مجدداً. أُرجعت نقاطك.';
     }
 
     /**
      * Gemini: quotaId يحوي PerDay · OpenAI: insufficient_quota أو billing ·
-     * Anthropic: رصيد غير كافٍ يأتي 400 لا 429 فلا يمر من هنا.
+     * Anthropic: رصيد غير كافٍ يأتي 400 لا 429 فلا يمر من هنا · OpenRouter: 402 (في fromStatus).
      */
     protected static function isQuotaExhausted(string $body, array $json): bool
     {

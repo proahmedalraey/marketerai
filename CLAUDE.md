@@ -11,6 +11,7 @@ php artisan queue:listen --queue=content,media,default --tries=2 --timeout=600  
 npm run dev                                                              # Vite
 php artisan test                                                         # PHPUnit
 php artisan content:eval                                                 # قياس بوابة الصدق
+php artisan ai:latency                                                   # أين ذهب وقت كل مهمة: ناجح / فاشل / انتظار / باقي
 vendor/bin/pint                                                          # تنسيق الكود (PSR-12)
 ```
 
@@ -19,7 +20,7 @@ vendor/bin/pint                                                          # تن�
 ## قواعد معمارية ملزمة (لا تكسرها)
 
 1. **لا استدعاء نموذج ذكاء داخل طلب HTTP.** كل توليد عبر Job + طابور، يُستطلع من `/api/jobs/{uuid}`.
-2. **لا يستدعي أي كود مزوّد ذكاء مباشرة.** كل شيء يمر عبر `App\Services\AI\AiManager`. الدرايفرات في `app/Services/AI/Drivers/` (anthropic, openai, fake).
+2. **لا يستدعي أي كود مزوّد ذكاء مباشرة.** كل شيء يمر عبر `App\Services\AI\AiManager`. الدرايفرات في `app/Services/AI/Drivers/` (anthropic, openai, gemini, openrouter, fake). المفاتيح والنماذج تُدار من `/settings/ai` (`AiSettings`) وتعلو على `.env`.
 3. **النقاط تُحجز قبل التنفيذ وتُسوّى بعده** — `app/Services/Credits/`. لا خصم مباشر.
 4. **بوابة الصدق (`ContentQualityCheck`) إلزامية بعد كل توليد** — تفحص أي رقم/ادعاء/كود خصم لم يذكره التاجر فعليًا. القواعد في `config/claims.php` و`config/dialects.php`.
 5. **جودة المخرجات من `config/content.php` لا من البرومبت الحر.** الأهداف، المنصات، القوالب، والقواعد الممنوعة كلها هناك — تعديله يغيّر كل التوليدات بلا نشر كود.

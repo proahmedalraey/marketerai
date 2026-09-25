@@ -3,6 +3,7 @@
     في docs/image-studio-redesign-plan.md). باقي النسب الـ13 حقيقية بالكامل.
 --}}
 <div
+    data-popover
     x-show="popover === 'ratio'"
     x-cloak
     x-transition.opacity.duration.150ms

@@ -46,7 +46,7 @@ class GenerateContentJob implements ShouldQueue
         // إرجاع كامل الحجز: المستخدم لا يدفع مقابل فشل عندنا
         app(CreditService::class)->refund(
             $job->brand,
-            (int) $job->credits_held,
+            (float) $job->credits_held,
             $job,
             'content',
             'إرجاع تلقائي بعد فشل المهمة'

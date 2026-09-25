@@ -55,7 +55,7 @@ class GenerateBrandProfileJob implements ShouldQueue
 
         app(CreditService::class)->refund(
             $job->brand,
-            (int) $job->credits_held,
+            (float) $job->credits_held,
             $job,
             BrandProfileGenerator::OPERATION,
             'إرجاع تلقائي بعد فشل المهمة'

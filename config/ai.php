@@ -60,6 +60,24 @@ return [
             'timeout' => 180,
         ],
 
+        /*
+         * OpenRouter: مفتاح واحد لمئات النماذج (Claude وGPT وGemini وDeepSeek وغيرها).
+         * أسماء النماذج بصيغة «مزود/نموذج» مثل google/gemini-3.6-flash؛
+         * والقائمة الحية في صفحة الإعدادات تجلبها من OpenRouter نفسه.
+         */
+        'openrouter' => [
+            'driver' => 'openrouter',
+            'api_key' => env('OPENROUTER_API_KEY'),
+            'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+            'model' => env('OPENROUTER_TEXT_MODEL', 'google/gemini-3.6-flash'),
+            'image_model' => env('OPENROUTER_IMAGE_MODEL', 'google/gemini-3.1-flash-image'),
+            // التفكير يُحسب من نفس السقف (كما في Gemini): سقف صغير يقطع JSON في منتصفه
+            'max_tokens' => 16384,
+            // low | high | off — نموذج لا يدعمه يُعاد الطلب معه بلا ضبط تلقائياً
+            'reasoning' => env('OPENROUTER_REASONING', 'low'),
+            'timeout' => 180,
+        ],
+
         'fake' => [
             'driver' => 'fake',
         ],
@@ -93,6 +111,9 @@ return [
     'proofread' => [
         'enabled' => (bool) env('AI_PROOFREAD', true),
         'provider' => env('AI_PROOFREAD_PROVIDER') ?: null,
+        // نموذج أخف وأسرع للتدقيق فقط (يخص مزود التدقيق أو مزود النص الافتراضي)؛ فارغ = نموذج المزود نفسه.
+        // التدقيق طلب ثانٍ متتابع في كل توليد: نصف زمن الكاروسيل تقريباً كان له.
+        'model' => env('AI_PROOFREAD_MODEL') ?: null,
         // نسبة الكلمات المتغيرة في الحقل (مع حد أدنى كلمتان للشرائح القصيرة)
         'max_changed_share' => 0.2,
         // أطول تعديل واحد بالكلمات: الإملاء كلمة، والنحو كلمتان أو ثلاث
@@ -180,18 +201,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | نماذج استوديو الصور المعروضة — شكلية حالياً (قرار §2 في الجلسة)
+    | نماذج استوديو الصور — توجيه فعلي عبر OpenRouter (2026-09-25)
     |--------------------------------------------------------------------------
-    | التبديل بينها في الواجهة لا يغيّر المزوّد الفعلي؛ التوليد يستخدم دوماً
-    | image_provider أعلاه. التوجيه الفعلي موثّق في docs/image-studio-redesign-plan.md.
+    | كل مفتاح يقابل نموذجاً حقيقياً على OpenRouter (`openrouter`). الاختيار في
+    | الواجهة يُرسَل مع الطلب ويُستخدم فعلاً حين يكون image_provider = openrouter؛
+    | بغيره (Gemini/OpenAI مباشر أو fake) يُتجاهل ويظهر النموذج المُعدّ للقراءة فقط.
+    | قدرات كل نموذج (نسب/دقات/جودات) تُقرأ حياً من OpenRouter (StudioModels).
+    | الأوصاف مبنية على قياس فعلي: Grok Imagine ~7 ثوانٍ، Grok 2.0 ~58 ثانية،
+    | GPT 2.5 ~15-18 ثانية، Nano Banana 2 يدعم حتى 4K.
     */
 
     'studio_models' => [
-        'nano_banana_2' => ['label' => 'Nano Banana 2', 'hint' => 'متوازن · حتى 4K'],
-        'gpt_image_sunburst' => ['label' => 'GPT Image 2.5 – Sunburst', 'hint' => 'أعلى دقة، للحملات والصور المصقولة'],
-        'gpt_image_flare' => ['label' => 'GPT Image 2.5 – Flare', 'hint' => 'سريع ومتوازن، للاستخدام اليومي'],
-        'grok_imagine' => ['label' => 'Grok Imagine', 'hint' => 'سريع'],
-        'grok_imagine_2' => ['label' => 'Grok Imagine 2.0', 'hint' => 'دقة أعلى، أبطأ'],
+        'nano_banana_2' => ['label' => 'Nano Banana 2', 'hint' => 'متوازن · حتى 4K', 'openrouter' => 'google/gemini-3.1-flash-image'],
+        'gpt_image_sunburst' => ['label' => 'GPT Image 2.5 – Sunburst', 'hint' => 'أعلى دقة، للحملات والصور المصقولة', 'openrouter' => 'openai/gpt-image-2.5-sunburst'],
+        'gpt_image_flare' => ['label' => 'GPT Image 2.5 – Flare', 'hint' => 'سريع ومتوازن، للاستخدام اليومي', 'openrouter' => 'openai/gpt-image-2.5-flare'],
+        'grok_imagine' => ['label' => 'Grok Imagine', 'hint' => 'سريع', 'openrouter' => 'x-ai/grok-imagine-image-quality'],
+        'grok_imagine_2' => ['label' => 'Grok Imagine 2.0', 'hint' => 'دقة أعلى، أبطأ', 'openrouter' => 'x-ai/grok-imagine-image-2.0'],
     ],
 
     'studio_default_model' => 'gpt_image_flare',

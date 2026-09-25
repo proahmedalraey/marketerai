@@ -4,6 +4,7 @@
     "من المنتجات" و"الصور المرفوعة مسبقاً" حقيقيان أيضاً.
 --}}
 <div
+    data-popover
     x-show="popover === 'upload'"
     x-cloak
     x-transition.opacity.duration.150ms

@@ -3,6 +3,7 @@
 namespace App\Services\AI\Drivers;
 
 use App\Services\AI\Contracts\TextProvider;
+use App\Services\AI\Drivers\Concerns\WithModelOverride;
 use App\Services\AI\DTO\TextRequest;
 use App\Services\AI\DTO\TextResponse;
 use App\Services\AI\ProviderException;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Http;
 
 class AnthropicTextProvider implements TextProvider
 {
+    use WithModelOverride;
+
     public function __construct(protected array $config) {}
 
     public function name(): string
