@@ -16,6 +16,7 @@ description: منهجية كتابة وتقييم برومبتات «هوية ا
 | `app/Services/Brand/StorePagePrefill.php` | يستخرج الإجابات من صفحة المتجر — جودة المادة الخام |
 | `app/Services/Brand/Quality/ProfileQualityCheck.php` | الفحص الحتمي بعد التوليد. قواعده = قواعد البرومبت |
 | `config/brand.php` → `profile_cliches` | العبارات المستهلكة: يمنعها البرومبت ويحذّر منها الفحص من مصدر واحد |
+| `config/ai.php` → `profile` | نموذج الهوية المخصص (`AI_PROFILE_PROVIDER`/`AI_PROFILE_MODEL`)؛ فارغ = الافتراضي. قارن النماذج بتبديله ثم `brand:eval-profile` |
 | `config/claims.php` | فئات الادعاء (توصيل، مجاني، خصم، ضمان، وكالة…) — خطأ إن لم ترد في الإجابات |
 | `tests/Support/ProfileFixtures.php` | المثال الذهبي: شكل المخرج الذي نريده حرفياً |
 | `php artisan brand:eval-profile --show` | تقييم حي على 4 مشاريع (coffee, consultancy, vague, constrained) |

@@ -150,6 +150,26 @@ class BrandProfileGenerationQualityTest extends TestCase
         $this->assertStringNotContainsString('الزاوية:', $profile->toPromptFragment());
     }
 
+    public function test_the_generation_job_uses_the_profile_model_when_configured(): void
+    {
+        config([
+            'ai.profile.provider' => 'openai',
+            'ai.profile.model' => 'gpt-4.1',
+            'ai.providers.openai.api_key' => 'openai-key',
+        ]);
+
+        $this->answerWith(ProfileFixtures::modelOutput());
+
+        $this->assertSame(['provider' => 'openai', 'model' => 'gpt-4.1'], $this->ai->routes[0]);
+    }
+
+    public function test_by_default_the_generation_job_uses_the_default_provider(): void
+    {
+        $this->answerWith(ProfileFixtures::modelOutput());
+
+        $this->assertSame(['provider' => null, 'model' => null], $this->ai->routes[0]);
+    }
+
     public function test_the_dialect_is_not_sent_because_descriptions_are_in_standard_arabic(): void
     {
         $this->brand->update(['dialect' => 'egyptian']);

@@ -36,13 +36,30 @@ class AiManager
 
     public function __construct(protected AiSettings $settings) {}
 
-    public function text(?string $provider = null): TextProvider
+    /**
+     * @param  string|null  $model  نموذج بعينه بدل نموذج المزود المضبوط (توجيه عملية بعينها)
+     */
+    public function text(?string $provider = null, ?string $model = null): TextProvider
     {
         $this->syncSettings();
 
-        $key = 'text.'.($provider ?? config('ai.text_provider'));
+        $name = $provider ?? config('ai.text_provider');
+        $key = 'text.'.$name.($model ? "@{$model}" : '');
 
-        return $this->resolved[$key] ??= $this->makeTextProvider($provider ?? config('ai.text_provider'));
+        return $this->resolved[$key] ??= $this->makeTextProvider($name, $model);
+    }
+
+    /**
+     * هل يستطيع هذا المزود التوليد الآن؟ بعد تطبيق إعدادات الواجهة،
+     * لأن المفتاح قد يكون محفوظاً فيها لا في ملف البيئة.
+     */
+    public function ready(string $provider): bool
+    {
+        $this->syncSettings();
+
+        $config = config("ai.providers.{$provider}");
+
+        return is_array($config) && (($config['driver'] ?? null) === 'fake' || filled($config['api_key'] ?? null));
     }
 
     public function image(?string $provider = null): ImageProvider
@@ -57,9 +74,9 @@ class AiManager
     /**
      * توليد نص مع إعادة محاولة للأخطاء المؤقتة وتسجيل الاستهلاك.
      */
-    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null): TextResponse
+    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null, ?string $model = null): TextResponse
     {
-        $driver = $this->text($provider);
+        $driver = $this->text($provider, $model);
 
         $response = $this->withRetries(
             fn () => $driver->generate($request),
@@ -161,12 +178,16 @@ class AiManager
         }
     }
 
-    protected function makeTextProvider(string $name): TextProvider
+    protected function makeTextProvider(string $name, ?string $model = null): TextProvider
     {
         $config = config("ai.providers.{$name}");
 
         if (! $config) {
             throw new InvalidArgumentException("مزود النص [{$name}] غير معرّف في config/ai.php");
+        }
+
+        if ($model) {
+            $config['model'] = $model;
         }
 
         return match ($config['driver']) {

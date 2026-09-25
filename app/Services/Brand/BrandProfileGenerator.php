@@ -177,7 +177,7 @@ class BrandProfileGenerator
             // الموجز الاستراتيجي يسبق الحقول، والعربية أثقل توكنزاً
             maxTokens: 3000,
             operation: self::OPERATION,
-        ), $job);
+        ), $job, ...$this->route());
 
         $data = (array) ($response->data ?? []);
 
@@ -191,6 +191,31 @@ class BrandProfileGenerator
             'model' => $response->provider.'/'.$response->model,
             'latency_ms' => $response->latencyMs,
         ];
+    }
+
+    /**
+     * مزود الهوية ونموذجها إن خُصّصا في config('ai.profile')، وإلا الافتراضي.
+     *
+     * مزود مخصص بلا مفتاح يُتجاوز بتحذير في السجل: الأفضل ملف بالنموذج
+     * الافتراضي من مهمة فاشلة تُرجع النقاط ولا تعطي التاجر شيئاً.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    protected function route(): array
+    {
+        $provider = config('ai.profile.provider');
+
+        if (blank($provider)) {
+            return [null, null];
+        }
+
+        if (! $this->ai->ready($provider)) {
+            Log::warning("مزود الهوية [{$provider}] بلا مفتاح API؛ استُخدم مزود النص الافتراضي");
+
+            return [null, null];
+        }
+
+        return [$provider, config('ai.profile.model') ?: null];
     }
 
     /**

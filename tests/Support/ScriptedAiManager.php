@@ -21,6 +21,9 @@ class ScriptedAiManager extends AiManager
     /** @var array<int, TextRequest> */
     public array $requests = [];
 
+    /** المزود والنموذج اللذان طُلبا مع كل طلب (null = الافتراضي). @var array<int, array{provider: ?string, model: ?string}> */
+    public array $routes = [];
+
     /** @var array<int, string|\Throwable> */
     protected array $replies = [];
 
@@ -41,9 +44,10 @@ class ScriptedAiManager extends AiManager
         return $this;
     }
 
-    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null): TextResponse
+    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null, ?string $model = null): TextResponse
     {
         $this->requests[] = $request;
+        $this->routes[] = ['provider' => $provider, 'model' => $model];
 
         $reply = array_shift($this->replies) ?? throw new RuntimeException('لا رد مجهّز لهذا الطلب.');
 
