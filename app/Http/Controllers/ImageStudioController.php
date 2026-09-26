@@ -7,9 +7,11 @@ use App\Models\GenerationJob;
 use App\Models\MediaAsset;
 use App\Models\MediaFolder;
 use App\Models\Product;
+use App\Services\Credits\CreditService;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
 use App\Services\Media\ImageGenerationService;
+use App\Services\Media\PromptEnhancer;
 use App\Services\Media\StudioModels;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -52,6 +54,8 @@ class ImageStudioController extends Controller
             : null;
 
         return view('content.studio', [
+            'enhanceUrl' => route('studio.enhance'),
+            'enhanceCost' => app(CreditService::class)->cost(PromptEnhancer::OPERATION),
             'trackedCount' => min(4, max(1, (int) ($tracked?->payload['count'] ?? 1))),
             'trackedRatio' => (string) ($tracked?->payload['aspect_ratio'] ?? '1:1'),
             'studioModelService' => $models,
@@ -111,6 +115,32 @@ class ImageStudioController extends Controller
         }
 
         return redirect()->route('studio.index', ['job' => $job->uuid]);
+    }
+
+    /**
+     * تحسين وصف الصورة بالذكاء. لا استدعاء نموذج داخل الطلب (قاعدة المشروع §1): يُنشئ مهمة
+     * في الطابور ويعيد رابط استطلاعها، والواجهة تضع النتيجة في حقل الوصف حين تكتمل.
+     */
+    public function enhance(Request $request, PromptEnhancer $enhancer)
+    {
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'min:3', 'max:1500'],
+            'aspect_ratio' => ['nullable', 'in:'.implode(',', array_keys(config('ai.aspect_ratios')))],
+            'product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'reference_asset_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where('brand_id', $this->brand()->id)],
+            'use_brand_identity' => ['nullable', 'boolean'],
+        ], [
+            'prompt.required' => 'اكتب وصفاً أولاً ثم اضغط تحسين.',
+            'prompt.min' => 'الوصف قصير جداً للتحسين.',
+        ]);
+
+        try {
+            $job = $enhancer->dispatch($this->brand(), $data, $request->user()->id);
+        } catch (InsufficientCreditsException|DailyCapReachedException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['uuid' => $job->uuid, 'status_url' => route('api.jobs.show', $job)], 202);
     }
 
     /**

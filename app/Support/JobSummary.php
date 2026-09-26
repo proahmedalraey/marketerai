@@ -23,6 +23,7 @@ class JobSummary
         'slide_text' => ['label' => 'إعادة كتابة شريحة', 'icon' => 'pen'],
         'image' => ['label' => 'توليد صورة', 'icon' => 'image'],
         'carousel_images' => ['label' => 'صور كاروسيل', 'icon' => 'layers'],
+        'prompt_enhance' => ['label' => 'تحسين وصف صورة', 'icon' => 'wand'],
         'brand_profile' => ['label' => 'أوصاف العلامة', 'icon' => 'file-text'],
         'store_scan' => ['label' => 'قراءة متجر', 'icon' => 'store'],
         'product_import' => ['label' => 'استيراد منتجات', 'icon' => 'package'],
@@ -97,7 +98,7 @@ class JobSummary
             'slide_text' => 'إعادة كتابة الشريحة '.((int) ($payload['index'] ?? 0) + 1),
             'store_scan' => 'قراءة متجر '.Str::limit(preg_replace('#^https?://(www\.)?#', '', (string) ($payload['store_url'] ?? '')), 40),
             'product_import' => 'استيراد '.count($payload['products'] ?? []).' منتجاً',
-            'image', 'carousel_images' => Str::limit((string) ($payload['prompt'] ?? ''), 70) ?: (self::TYPES[$job->type]['label'] ?? 'صور'),
+            'image', 'carousel_images', 'prompt_enhance' => Str::limit((string) ($payload['prompt'] ?? ''), 70) ?: (self::TYPES[$job->type]['label'] ?? 'صور'),
             default => self::TYPES[$job->type]['label'] ?? $job->type,
         };
     }

@@ -26,6 +26,7 @@ class JobStage
         'fixing' => ['label' => 'يصحّح ما وجده الفحص', 'progress' => 65],
         'proofreading' => ['label' => 'يراجع الإملاء واللغة', 'progress' => 80],
         'drawing' => ['label' => 'يرسم الصورة', 'progress' => 50],
+        'enhancing' => ['label' => 'يحسّن الوصف', 'progress' => 50],
         'saving' => ['label' => 'يحفظ النتيجة', 'progress' => 92],
     ];
 
@@ -35,6 +36,7 @@ class JobStage
         return match (true) {
             $operation === 'content.correction' => 'fixing',
             $operation === 'content.proofread' => 'proofreading',
+            $operation === 'prompt.enhance' => 'enhancing',
             str_starts_with($operation, 'image') => 'drawing',
             str_starts_with($operation, 'content.'),
             str_starts_with($operation, 'brand.'),

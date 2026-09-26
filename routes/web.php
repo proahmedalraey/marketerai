@@ -102,6 +102,8 @@ Route::middleware(['auth', 'brand.ready'])->group(function () {
     Route::post('/studio/{contentItem}/attach', [ImageStudioController::class, 'attach'])->name('studio.attach');
     Route::post('/studio/media/{mediaAsset}/regenerate', [ImageStudioController::class, 'regenerate'])->name('studio.regenerate');
     Route::post('/studio/uploads', [ImageStudioController::class, 'upload'])->name('studio.uploads');
+    Route::post('/studio/enhance', [ImageStudioController::class, 'enhance'])
+        ->middleware('throttle:20,1')->name('studio.enhance');
     Route::delete('/studio/media/{mediaAsset}', [ImageStudioController::class, 'destroy'])->name('studio.media.destroy');
     Route::post('/studio/media/{mediaAsset}/move', [ImageStudioController::class, 'move'])->name('studio.media.move');
     Route::post('/studio/media/{mediaAsset}/pin', [ImageStudioController::class, 'pin'])->name('studio.media.pin');

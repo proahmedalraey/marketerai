@@ -46,6 +46,14 @@ export default function registerImageStudio(Alpine) {
         uploading: false,
         uploadError: '',
 
+        // تحسين الوصف بالذكاء: مهمة في الطابور نستطلعها، والأصل يبقى للتراجع
+        enhanceUrl: config.enhanceUrl || '',
+        enhanceCost: config.enhanceCost || 0,
+        enhancing: false,
+        enhanceError: '',
+        enhancedFrom: null, // الوصف قبل التحسين
+        enhancedText: null, // ما وضعه التحسين (للتراجع فقط ما دام لم يُعدَّل يدوياً)
+
         init() {
             // رجوع الخادم بخطأ (old input) يعلو المحفوظ محلياً
             if (! config.hasOld) this.restore();
@@ -54,6 +62,10 @@ export default function registerImageStudio(Alpine) {
 
             ['prompt', 'resolution', 'quality', 'autoRatio', 'aspectRatio', 'count', 'useBrandIdentity', 'model']
                 .forEach((key) => this.$watch(key, () => this.persist()));
+
+            // الحقل يكبر مع النص: الوصف المحسَّن فقرة كاملة لا سطر واحد
+            this.$watch('prompt', () => this.$nextTick(() => this.fitPrompt()));
+            this.$nextTick(() => this.fitPrompt());
 
             // الشريط يقع عند حافة الشاشة: القوائم المرتبطة بأزرارها تخرج منها (RTL)
             // فتُقصّ. نزيحها أفقياً بعد ظهورها حتى تبقى داخل الإطار.
@@ -64,6 +76,15 @@ export default function registerImageStudio(Alpine) {
                 this.$nextTick(() => this.keepPopoverInView());
                 setTimeout(() => this.keepPopoverInView(), 120);
             });
+        },
+
+        fitPrompt() {
+            const el = this.$refs.prompt;
+
+            if (! el) return;
+
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight + 2, 200) + 'px';
         },
 
         keepPopoverInView() {
@@ -224,8 +245,111 @@ export default function registerImageStudio(Alpine) {
             this.popover = null;
         },
 
+        // ---------- تحسين الوصف بالذكاء ----------
+        get canEnhance() {
+            return this.prompt.trim().length >= 3 && ! this.enhancing;
+        },
+
+        get canUndoEnhance() {
+            return this.enhancedFrom !== null && this.prompt === this.enhancedText;
+        },
+
+        get enhanceTitle() {
+            if (this.enhancing) return 'يحسّن الوصف…';
+
+            return 'حسّن الوصف بالذكاء الاصطناعي' + (this.enhanceCost > 0 ? ` (${this.enhanceCost} نقطة)` : ' — مجاناً');
+        },
+
+        async enhance() {
+            if (! this.canEnhance || ! this.enhanceUrl) return;
+
+            const original = this.prompt;
+
+            this.enhancing = true;
+            this.enhanceError = '';
+
+            try {
+                const response = await fetch(this.enhanceUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        Accept: 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: original,
+                        aspect_ratio: this.aspectRatio,
+                        product_id: this.referenceMode === 'product' ? this.productId || null : null,
+                        reference_asset_id: this.referenceMode && this.referenceMode !== 'product' ? this.referenceAssetId : null,
+                        use_brand_identity: this.useBrandIdentity,
+                    }),
+                });
+
+                const body = await response.json().catch(() => ({}));
+
+                if (! response.ok) {
+                    const first = Object.values(body.errors || {})[0];
+                    throw new Error(body.message || (Array.isArray(first) ? first[0] : '') || 'تعذّر بدء تحسين الوصف.');
+                }
+
+                const result = await this.pollEnhance(body.status_url);
+
+                // كتب المستخدم شيئاً آخر أثناء الانتظار: لا نمحو ما كتبه
+                if (this.prompt !== original) {
+                    this.enhanceError = 'عدّلت الوصف أثناء التحسين، فلم نستبدله.';
+
+                    return;
+                }
+
+                this.enhancedFrom = original;
+                this.enhancedText = result.prompt;
+                this.prompt = result.prompt;
+                this.$nextTick(() => this.$refs.prompt?.focus());
+            } catch (e) {
+                this.enhanceError = e.message || 'تعذّر تحسين الوصف. حاول مرة أخرى.';
+            } finally {
+                this.enhancing = false;
+            }
+        },
+
+        /** يستطلع المهمة كل ثانية (حتى دقيقتين) ويعيد نتيجتها أو يرمي رسالة الفشل. */
+        async pollEnhance(statusUrl) {
+            for (let i = 0; i < 120; i++) {
+                await new Promise((resolve) => setTimeout(resolve, i < 3 ? 700 : 1000));
+
+                const response = await fetch(statusUrl, { headers: { Accept: 'application/json' } });
+
+                if (! response.ok) throw new Error('تعذّر متابعة تحسين الوصف.');
+
+                const job = await response.json();
+
+                if (['failed', 'cancelled'].includes(job.status)) {
+                    throw new Error(job.error || 'تعذّر تحسين الوصف.');
+                }
+
+                if (['completed', 'partial'].includes(job.status)) {
+                    if (! job.result?.prompt) throw new Error('لم يصل وصف محسَّن.');
+
+                    return job.result;
+                }
+            }
+
+            throw new Error('استغرق التحسين وقتاً أطول من المعتاد. جرّب مرة أخرى.');
+        },
+
+        undoEnhance() {
+            if (! this.canUndoEnhance) return;
+
+            this.prompt = this.enhancedFrom;
+            this.enhancedFrom = null;
+            this.enhancedText = null;
+        },
+
         clearPrompt() {
             this.prompt = '';
+            this.enhancedFrom = null;
+            this.enhancedText = null;
+            this.enhanceError = '';
         },
 
         pickProduct(id) {

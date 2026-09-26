@@ -2,8 +2,8 @@
     شريط التأليف العائم — يطابق تخطيط الصور المرجعية: برومبت + صف أدوات
     (رفع/صوت/تحسين/هوية بصرية/ممحاة/عدد/جودة+دقة/نموذج/نسبة) + زر توليد بتكلفة حية.
 
-    النموذج والصوت وتحسين البرومبت شكلية (قرار §1/§2) — معطّلة بوسم "قريباً".
-    الدقة+الجودة والنسبة وحقول المرجع حقيقية وتُرسَل فعلياً مع النموذج.
+    الصوت شكلي (قرار §1/§2) — معطّل بوسم "قريباً".
+    النموذج والدقة+الجودة والنسبة وحقول المرجع وتحسين الوصف بالذكاء (العصا) حقيقية.
 --}}
 <div class="sticky bottom-4 z-30">
     <form method="POST" action="{{ route('studio.generate') }}" class="card shadow-pop p-3 space-y-2.5">
@@ -58,8 +58,9 @@
             </div>
 
             <textarea
-                id="studio-prompt" name="prompt" x-model="prompt"
-                rows="1" required maxlength="1500"
+                id="studio-prompt" name="prompt" x-model="prompt" x-ref="prompt"
+                rows="1" required maxlength="1500" :readonly="enhancing"
+                :class="enhancing && 'opacity-60'"
                 class="field flex-1 resize-none py-2.5"
                 placeholder="صف المشهد الذي تتخيّله… أو اسحب صورة هنا كمرجع"
             ></textarea>
@@ -69,10 +70,34 @@
                 <span class="sr-only">إدخال صوتي (قريباً)</span>
             </button>
 
-            <button type="button" disabled title="قريباً — تحسين البرومبت بالذكاء" class="btn btn-ghost btn-icon opacity-50 cursor-not-allowed">
-                <x-icon name="wand" class="w-4 h-4" />
-                <span class="sr-only">تحسين البرومبت (قريباً)</span>
+            {{-- تحسين الوصف بالذكاء: مهمة طابور صغيرة (قاعدة §1)، والأصل يُحفظ للتراجع --}}
+            <button
+                type="button" @click="enhance()" :disabled="! canEnhance"
+                :title="enhanceTitle" :aria-busy="enhancing ? 'true' : 'false'"
+                :class="canEnhance ? 'text-brand-700 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950' : 'opacity-50 cursor-not-allowed'"
+                class="btn btn-ghost btn-icon"
+            >
+                <x-icon name="wand" class="w-4 h-4" x-show="! enhancing" />
+                <x-icon name="refresh" class="w-4 h-4 motion-safe:animate-spin" x-show="enhancing" x-cloak />
+                <span class="sr-only">تحسين الوصف بالذكاء الاصطناعي</span>
             </button>
+        </div>
+
+        {{-- حالة تحسين الوصف: جارٍ / تم (مع تراجع) / خطأ --}}
+        <div x-show="enhancing || enhanceError || canUndoEnhance" x-cloak class="flex items-center gap-2 px-1 text-xs" role="status" aria-live="polite">
+            <span x-show="enhancing" class="flex items-center gap-1.5 text-fg-muted">
+                <x-icon name="wand" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                يحسّن الوصف… عادةً بضع ثوانٍ
+            </span>
+            <span x-show="! enhancing && enhanceError" class="flex items-center gap-1.5 text-danger-fg">
+                <x-icon name="alert" class="w-3.5 h-3.5" />
+                <span x-text="enhanceError"></span>
+            </span>
+            <span x-show="! enhancing && ! enhanceError && canUndoEnhance" class="flex items-center gap-2 text-fg-muted">
+                <x-icon name="check" class="w-3.5 h-3.5 text-success-fg" />
+                حُسّن الوصف — راجعه قبل التوليد
+                <button type="button" @click="undoEnhance()" class="font-semibold text-brand-700 dark:text-brand-400 underline underline-offset-4">تراجع</button>
+            </span>
         </div>
 
         {{-- صف الأدوات --}}
