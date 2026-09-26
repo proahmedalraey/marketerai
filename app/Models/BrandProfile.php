@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProductType;
 use App\Enums\ProfileSource;
 use App\Models\Concerns\BelongsToBrand;
+use App\Services\Brand\BrandProfileGenerator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -156,14 +157,88 @@ class BrandProfile extends Model
             || str_contains((string) $this->simple, '[نص تجريبي');
     }
 
+    /** يُحسب مرة لكل نسخة: قد يحتاج استعلاماً عن النسخة التي حُرّرت عليها. */
+    protected ?array $resolvedTechnicalVersions = null;
+
     /**
-     * كتبها برومبت أقدم من الحالي؟ إعادة التوليد حينها تكتب الوصف التقني
-     * من جديد ولو لم تتغير الإجابات. تحرير التاجر ليس من البرومبت: يبقى له.
+     * إصدار البرومبت الذي كتب كل حقل تقني فعلاً، أو «manual» لما حرّره التاجر.
+     *
+     * الحقل الذي بقي من نسخة سابقة يحمل مصدره هو لا ختم النسخة التي بقي فيها:
+     * نسخة وُلدت ببرومبت جديد وأبقت وصفاً قديماً ليست جديدة في ذلك الوصف.
+     * رُصد في توليد حقيقي (2026-09-26): v16 مختومة بالإصدار 3 ووصفها التقني من الإصدار 1.
+     *
+     * @return array<string, int|string>
+     */
+    public function technicalVersions(): array
+    {
+        if ($this->resolvedTechnicalVersions !== null) {
+            return $this->resolvedTechnicalVersions;
+        }
+
+        $fields = array_keys(BrandProfileGenerator::SOURCES);
+
+        // التحرير اليدوي يمسح quality: ما عدّله التاجر له، وما لم يمسّه يرث مصدره
+        // من آخر نسخة كتبتها الآلة قبله — تعديل الوصف المبسط لا يجعل الوصف التقني «يدوياً»
+        if ($this->quality === null || $this->source === ProfileSource::ManualEdit) {
+            $base = static::forBrand($this->brand_id)
+                ->where('version', '<', (int) $this->version)
+                ->whereNotNull('quality')
+                ->orderByDesc('version')
+                ->first();
+
+            $inherited = $base?->technicalVersions() ?? [];
+
+            return $this->resolvedTechnicalVersions = collect($fields)
+                ->mapWithKeys(fn ($field) => [$field => $base && $this->sameTechnical($base, $field)
+                    ? ($inherited[$field] ?? 1)
+                    : 'manual'])
+                ->all();
+        }
+
+        $map = (array) ($this->quality['technical_versions'] ?? []);
+
+        if ($map !== []) {
+            return $this->resolvedTechnicalVersions = collect($fields)
+                ->mapWithKeys(fn ($field) => [$field => $map[$field] ?? 1])
+                ->all();
+        }
+
+        // نسخ ما قبل تتبّع كل حقل: ما بقي من نسخة سابقة مجهول المصدر فيُعدّ قديماً
+        $version = (int) ($this->quality['prompt_version'] ?? 1);
+        $kept = (array) ($this->quality['kept'] ?? []);
+
+        return $this->resolvedTechnicalVersions = collect($fields)
+            ->mapWithKeys(fn ($field) => [$field => in_array($field, $kept, true) ? 1 : $version])
+            ->all();
+    }
+
+    /** يُبقى الحقل عند ثبات إجاباته إن كتبه البرومبت الحالي أو حرّره التاجر. */
+    public function keepsTechnical(string $field): bool
+    {
+        $version = $this->technicalVersions()[$field] ?? 1;
+
+        return $version === 'manual' || (int) $version >= BrandProfileGenerator::PROMPT_VERSION;
+    }
+
+    /**
+     * في وصفها التقني ما كتبه برومبت أقدم من الحالي؟ إعادة التوليد حينها تكتبه
+     * من جديد ولو لم تتغير الإجابات. ما حرّره التاجر ليس من البرومبت: يبقى له.
      */
     public function writtenByOlderPrompt(): bool
     {
-        return $this->source !== ProfileSource::ManualEdit
-            && (int) ($this->quality['prompt_version'] ?? 1) < \App\Services\Brand\BrandProfileGenerator::PROMPT_VERSION;
+        return collect(array_keys(BrandProfileGenerator::SOURCES))
+            ->contains(fn ($field) => ! $this->keepsTechnical($field));
+    }
+
+    protected function sameTechnical(self $other, string $field): bool
+    {
+        if ($field === 'important_notes') {
+            $keys = fn (self $p) => array_map([BrandProfileGenerator::class, 'noteKey'], $p->constraints());
+
+            return $keys($this) === $keys($other);
+        }
+
+        return trim((string) ($this->technical[$field] ?? '')) === trim((string) ($other->technical[$field] ?? ''));
     }
 
     public function projectType(): ProductType

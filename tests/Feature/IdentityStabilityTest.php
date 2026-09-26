@@ -73,6 +73,16 @@ class IdentityStabilityTest extends TestCase
         return BrandProfile::forBrand($this->brand)->active()->firstOrFail();
     }
 
+    /** النسخة النشطة كأن برومبتاً أقدم كتبها قبل تتبّع مصدر كل حقل. */
+    protected function makeActiveLegacy(array $quality = []): void
+    {
+        $profile = $this->active();
+        $profile->update(['quality' => [
+            ...collect($profile->quality)->except(['technical_versions', 'prompt_version'])->all(),
+            ...$quality,
+        ]]);
+    }
+
     /** رد مختلف في كل حقل: إن بقي حقل كما كان، فالبقاء قرار الكود لا صدفة النموذج. */
     protected function differentReply(): array
     {
@@ -120,8 +130,7 @@ class IdentityStabilityTest extends TestCase
     {
         // تحسين البرومبت لا يصل لمن لم تتغير إجاباته إن أُبقي وصفه التقني القديم
         $this->answer(reply: ProfileFixtures::modelOutput());
-        $old = $this->active();
-        $old->update(['quality' => [...$old->quality, 'prompt_version' => 1]]);
+        $this->makeActiveLegacy(['prompt_version' => 1]);
 
         $this->regenerate($this->differentReply());
 
@@ -130,15 +139,48 @@ class IdentityStabilityTest extends TestCase
         $this->assertSame('صياغة جديدة لنوع النشاط', $after->technical['activity_type']);
         $this->assertSame([], $after->quality['kept']);
         $this->assertSame(BrandProfileGenerator::PROMPT_VERSION, $after->quality['prompt_version']);
+        $this->assertFalse($after->writtenByOlderPrompt());
     }
 
     public function test_versions_from_before_prompt_versioning_count_as_older(): void
     {
         $this->answer(reply: ProfileFixtures::modelOutput());
-        $old = $this->active();
-        $old->update(['quality' => collect($old->quality)->except('prompt_version')->all()]);
+        $this->makeActiveLegacy();
 
-        $this->assertTrue($old->refresh()->writtenByOlderPrompt());
+        $this->assertTrue($this->active()->writtenByOlderPrompt());
+    }
+
+    public function test_text_kept_from_an_older_version_does_not_inherit_the_new_stamp(): void
+    {
+        // حالة حقيقية (v16): مختومة بالإصدار الحالي، لكنها أبقت الوصف التقني كله من نسخة أقدم
+        $this->answer(reply: ProfileFixtures::modelOutput());
+        $this->makeActiveLegacy([
+            'prompt_version' => BrandProfileGenerator::PROMPT_VERSION,
+            'kept' => ['activity_type', 'sales_summary', 'advantages_directives', 'important_notes'],
+        ]);
+
+        $this->assertTrue($this->active()->writtenByOlderPrompt());
+
+        $this->regenerate($this->differentReply());
+
+        $this->assertSame('صياغة جديدة لتوجيهات المزايا.', $this->active()->technical['advantages_directives']);
+        $this->assertSame([], $this->active()->quality['kept']);
+    }
+
+    public function test_editing_a_description_does_not_protect_old_technical_text(): void
+    {
+        // تعديل الوصف المبسط يجعل النسخة «يدوية»، لكن وصفها التقني ما زال نص البرومبت القديم
+        $this->answer(reply: ProfileFixtures::modelOutput());
+        $this->makeActiveLegacy(['prompt_version' => 1]);
+
+        $this->actingAs($this->user)->put('/brand/profile', ['field' => 'simple', 'simple' => 'وصف كتبه التاجر بنفسه لمتجره.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(ProfileSource::ManualEdit, $this->active()->source);
+        $this->assertTrue($this->active()->writtenByOlderPrompt());
+
+        $this->regenerate($this->differentReply());
+
+        $this->assertSame('صياغة جديدة لتوجيهات المزايا.', $this->active()->technical['advantages_directives']);
     }
 
     // ================================================================
@@ -180,6 +222,12 @@ class IdentityStabilityTest extends TestCase
 
         $this->assertSame('ملخص كتبه التاجر بنفسه.', $this->active()->technical['sales_summary']);
         $this->assertSame('توريد مستلزمات المقاهي', $this->active()->technical['activity_type']);
+
+        // ويبقى له في كل توليد تالٍ، لا في الأول فقط
+        $this->regenerate($this->differentReply());
+
+        $this->assertSame('ملخص كتبه التاجر بنفسه.', $this->active()->technical['sales_summary']);
+        $this->assertSame('manual', $this->active()->technicalVersions()['sales_summary']);
     }
 
     // ================================================================
@@ -311,8 +359,7 @@ class IdentityStabilityTest extends TestCase
     public function test_an_older_prompt_profile_says_regeneration_rewrites_everything(): void
     {
         $this->answer(reply: ProfileFixtures::modelOutput());
-        $old = $this->active();
-        $old->update(['quality' => [...$old->quality, 'prompt_version' => 1]]);
+        $this->makeActiveLegacy(['prompt_version' => 1]);
 
         $this->actingAs($this->user)->get('/brand/profile')
             ->assertSee('طوّرنا طريقة كتابة الهوية منذ آخر توليد')

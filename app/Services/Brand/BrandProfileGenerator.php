@@ -148,6 +148,9 @@ class BrandProfileGenerator
                 // حقول بقيت من النسخة السابقة لأن إجاباتها لم تتغير
                 'kept' => $draft['kept'] ?? [],
                 'prompt_version' => self::PROMPT_VERSION,
+                // مصدر كل حقل تقني: الباقي من نسخة سابقة لا يأخذ ختم هذه النسخة
+                'technical_versions' => $draft['technical_versions']
+                    ?? array_fill_keys(array_keys(self::SOURCES), self::PROMPT_VERSION),
                 // من كتبها: «fake/…» يعني نصاً تجريبياً لا أوصافاً، والصفحة تقولها صراحة
                 'model' => $draft['model'] ?? null,
                 'checked_at' => now()->toIso8601String(),
@@ -353,9 +356,8 @@ class BrandProfileGenerator
      */
     protected function stabilize(array $draft, ?BrandProfile $previous, array $answers, Brand $brand): array
     {
-        // نسخة تجريبية من المزود الوهمي ليس فيها ما يستحق الإبقاء،
-        // ونسخة ببرومبت أقدم يُعاد كل ما فيها: تحسين البرومبت سبب كافٍ
-        if (! $previous || $previous->isPlaceholder() || $previous->writtenByOlderPrompt()) {
+        // نسخة تجريبية من المزود الوهمي ليس فيها ما يستحق الإبقاء
+        if (! $previous || $previous->isPlaceholder()) {
             return $draft;
         }
 
@@ -367,7 +369,8 @@ class BrandProfileGenerator
         $kept = [];
 
         foreach (self::SOURCES as $field => $sources) {
-            if (! $unchanged($sources)) {
+            // ما كتبه برومبت أقدم يُعاد ولو لم تتغير إجاباته: تحسين البرومبت سبب كافٍ
+            if (! $unchanged($sources) || ! $previous->keepsTechnical($field)) {
                 continue;
             }
 
@@ -400,6 +403,14 @@ class BrandProfileGenerator
         }
 
         $draft['kept'] = $kept;
+
+        // الباقي يحمل مصدره: تحرير التاجر يبقى «يدوياً» في كل نسخة تالية
+        $origins = $previous->technicalVersions();
+        $draft['technical_versions'] = collect(array_keys(self::SOURCES))
+            ->mapWithKeys(fn ($field) => [$field => in_array($field, $kept, true) && $origins[$field] === 'manual'
+                ? 'manual'
+                : self::PROMPT_VERSION])
+            ->all();
 
         return $draft;
     }
