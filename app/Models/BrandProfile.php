@@ -156,6 +156,16 @@ class BrandProfile extends Model
             || str_contains((string) $this->simple, '[نص تجريبي');
     }
 
+    /**
+     * كتبها برومبت أقدم من الحالي؟ إعادة التوليد حينها تكتب الوصف التقني
+     * من جديد ولو لم تتغير الإجابات. تحرير التاجر ليس من البرومبت: يبقى له.
+     */
+    public function writtenByOlderPrompt(): bool
+    {
+        return $this->source !== ProfileSource::ManualEdit
+            && (int) ($this->quality['prompt_version'] ?? 1) < \App\Services\Brand\BrandProfileGenerator::PROMPT_VERSION;
+    }
+
     public function projectType(): ProductType
     {
         return ProductType::tryFrom((string) ($this->answers['type'] ?? '')) ?? ProductType::Good;

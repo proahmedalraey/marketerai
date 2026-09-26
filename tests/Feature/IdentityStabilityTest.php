@@ -116,6 +116,31 @@ class IdentityStabilityTest extends TestCase
         $this->assertSame(2, $after->version, 'الوصفان يُعاد توليدهما في نسخة جديدة');
     }
 
+    public function test_a_profile_written_by_an_older_prompt_is_fully_rewritten(): void
+    {
+        // تحسين البرومبت لا يصل لمن لم تتغير إجاباته إن أُبقي وصفه التقني القديم
+        $this->answer(reply: ProfileFixtures::modelOutput());
+        $old = $this->active();
+        $old->update(['quality' => [...$old->quality, 'prompt_version' => 1]]);
+
+        $this->regenerate($this->differentReply());
+
+        $after = $this->active();
+        $this->assertSame('صياغة جديدة لتوجيهات المزايا.', $after->technical['advantages_directives']);
+        $this->assertSame('صياغة جديدة لنوع النشاط', $after->technical['activity_type']);
+        $this->assertSame([], $after->quality['kept']);
+        $this->assertSame(BrandProfileGenerator::PROMPT_VERSION, $after->quality['prompt_version']);
+    }
+
+    public function test_versions_from_before_prompt_versioning_count_as_older(): void
+    {
+        $this->answer(reply: ProfileFixtures::modelOutput());
+        $old = $this->active();
+        $old->update(['quality' => collect($old->quality)->except('prompt_version')->all()]);
+
+        $this->assertTrue($old->refresh()->writtenByOlderPrompt());
+    }
+
     // ================================================================
     //  H3 — تغيير إجابة يعيد كتابة ما يعتمد عليها فقط
     // ================================================================
@@ -281,5 +306,16 @@ class IdentityStabilityTest extends TestCase
         $this->actingAs($this->user)->get('/brand/profile')
             ->assertDontSee('إجاباتك لم تتغير منذ آخر توليد')
             ->assertSee('الأوصاف لا تعكس آخر تعديلاتك');
+    }
+
+    public function test_an_older_prompt_profile_says_regeneration_rewrites_everything(): void
+    {
+        $this->answer(reply: ProfileFixtures::modelOutput());
+        $old = $this->active();
+        $old->update(['quality' => [...$old->quality, 'prompt_version' => 1]]);
+
+        $this->actingAs($this->user)->get('/brand/profile')
+            ->assertSee('طوّرنا طريقة كتابة الهوية منذ آخر توليد')
+            ->assertDontSee('ويبقى الوصف التقني كما هو');
     }
 }

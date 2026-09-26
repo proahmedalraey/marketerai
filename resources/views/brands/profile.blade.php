@@ -426,8 +426,13 @@
                     <div x-show="confirming" x-cloak class="alert-info w-full max-w-xl items-center flex-wrap" role="status">
                         <x-icon name="info" class="w-4 h-4 shrink-0" />
                         <p class="flex-1 min-w-[12rem] text-sm leading-relaxed">
-                            إجاباتك لم تتغير منذ آخر توليد: سيتغير لفظ الوصفين المبسط والتفصيلي لا معناهما،
-                            ويبقى الوصف التقني كما هو.
+                            @if ($profile->writtenByOlderPrompt())
+                                طوّرنا طريقة كتابة الهوية منذ آخر توليد: ستُكتب الأوصاف الثلاثة من جديد،
+                                ومنها الوصف التقني، من إجاباتك نفسها.
+                            @else
+                                إجاباتك لم تتغير منذ آخر توليد: سيتغير لفظ الوصفين المبسط والتفصيلي لا معناهما،
+                                ويبقى الوصف التقني كما هو.
+                            @endif
                         </p>
                         <button type="submit" class="btn-primary btn-sm"><span>أعد الصياغة ({{ $costLabel }})</span></button>
                         <button type="button" @click="confirming = false" class="btn-ghost btn-sm"><span>تراجع</span></button>
