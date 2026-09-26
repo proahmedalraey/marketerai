@@ -120,6 +120,14 @@ return [
         'max_edit_words' => 3,
     ],
 
+    /*
+    | تحسين وصف الصورة (زر العصا في /studio): طلب نصي قصير، فنموذج أخف يكفيه ويصله بضع ثوانٍ أقل.
+    | فارغ = نموذج المزود الافتراضي. معرّف النموذج خاص بالمزود (OpenRouter: google/gemini-3.8-flash مثلاً).
+    */
+    'prompt_enhance' => [
+        'model' => env('AI_PROMPT_ENHANCE_MODEL') ?: null,
+    ],
+
     'retry' => [
         'times' => 2,
         'sleep_ms' => 1500,

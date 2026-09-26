@@ -35,6 +35,8 @@
         'hasOld' => session()->hasOldInput(),
         'defaultModel' => old('model', $defaultModel),
         'uploadUrl' => route('studio.uploads'),
+        'enhanceUrl' => $enhanceUrl,
+        'enhanceCost' => $enhanceCost,
         'prompt' => old('prompt', ''),
         'resolution' => $initResolution,
         'quality' => $initQuality,
