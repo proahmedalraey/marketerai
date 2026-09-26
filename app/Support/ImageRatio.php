@@ -77,6 +77,10 @@ final class ImageRatio
 
         $mime = in_array($info['mime'], ['image/jpeg', 'image/webp'], true) ? $info['mime'] : 'image/png';
 
+        // بدونهما يُحفظ PNG الشفاف (إزالة الخلفية) بخلفية سوداء
+        imagealphablending($cropped, false);
+        imagesavealpha($cropped, true);
+
         ob_start();
         match ($mime) {
             'image/jpeg' => imagejpeg($cropped, null, 92),

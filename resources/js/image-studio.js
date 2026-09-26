@@ -13,438 +13,679 @@
 const STORAGE_KEY = 'studio.settings.v1';
 
 export default function registerImageStudio(Alpine) {
-    Alpine.data('imageStudio', (config = {}) => ({
-        resolutions: config.resolutions || {},
-        qualityLevels: config.qualityLevels || {},
-        qualityMatrix: config.qualityMatrix || {},
-        ratios: config.ratios || {},
-        models: config.models || {},
-        modelCaps: config.modelCaps || {},
-        modelsRoutable: config.modelsRoutable ?? false,
-        notice: '',
-        noticeTimer: null,
+    Alpine.data('imageStudio', (config = {}) => {
+        // خارج الحالة التفاعلية عمداً: Alpine يلفّ الكائنات بـProxy، وكائنات المتصفح
+        // (SpeechRecognition) ترمي «Illegal invocation» حين تُستدعى عبره
+        let recognition = null;
+        const shareFiles = new Map(); // رابط الصورة ← Promise<File> (يُجهَّز عند فتح القائمة)
 
-        prompt: config.prompt || '',
-        resolution: config.resolution || '1k',
-        quality: config.quality || 'medium',
-        autoRatio: config.autoRatio ?? true,
-        aspectRatio: config.aspectRatio || '1:1',
-        count: config.count || 1,
-        useBrandIdentity: config.useBrandIdentity ?? true,
-        model: config.defaultModel || '',
+        return {
+            resolutions: config.resolutions || {},
+            qualityLevels: config.qualityLevels || {},
+            qualityMatrix: config.qualityMatrix || {},
+            ratios: config.ratios || {},
+            models: config.models || {},
+            modelCaps: config.modelCaps || {},
+            modelsRoutable: config.modelsRoutable ?? false,
+            notice: '',
+            noticeTimer: null,
 
-        referenceMode: config.referenceMode || null, // null | 'product' | 'gallery'
-        productId: config.productId || '',
-        referenceAssetId: config.referenceAssetId || null,
-        referenceAssetUrl: config.referenceAssetUrl || null,
+            prompt: config.prompt || '',
+            resolution: config.resolution || '1k',
+            quality: config.quality || 'medium',
+            autoRatio: config.autoRatio ?? true,
+            aspectRatio: config.aspectRatio || '1:1',
+            count: config.count || 1,
+            useBrandIdentity: config.useBrandIdentity ?? true,
+            model: config.defaultModel || '',
 
-        popover: null, // null | 'model' | 'quality' | 'ratio' | 'upload'
-        lightbox: null, // null | { id, url, prompt }
-        referencePickerOpen: false,
+            referenceMode: config.referenceMode || null, // null | 'product' | 'gallery'
+            productId: config.productId || '',
+            referenceAssetId: config.referenceAssetId || null,
+            referenceAssetUrl: config.referenceAssetUrl || null,
 
-        uploadUrl: config.uploadUrl || '',
-        uploading: false,
-        uploadError: '',
+            popover: null, // null | 'model' | 'quality' | 'ratio' | 'upload'
+            lightbox: null, // null | { id, url, prompt }
+            referencePickerOpen: false,
 
-        // تحسين الوصف بالذكاء: مهمة في الطابور نستطلعها، والأصل يبقى للتراجع
-        enhanceUrl: config.enhanceUrl || '',
-        enhanceCost: config.enhanceCost || 0,
-        enhancing: false,
-        enhanceError: '',
-        enhancedFrom: null, // الوصف قبل التحسين
-        enhancedText: null, // ما وضعه التحسين (للتراجع فقط ما دام لم يُعدَّل يدوياً)
+            uploadUrl: config.uploadUrl || '',
+            uploading: false,
+            uploadError: '',
 
-        init() {
-            // رجوع الخادم بخطأ (old input) يعلو المحفوظ محلياً
-            if (! config.hasOld) this.restore();
+            // الإدخال الصوتي
+            speechSupported: typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
+            listening: false,
+            voiceError: '',
 
-            this.normalizeForModel(false);
+            // رسالة عابرة أعلى الصفحة
+            flash: null, // null | { text, tone: 'success' | 'info' | 'error' }
+            toastTimer: null,
 
-            ['prompt', 'resolution', 'quality', 'autoRatio', 'aspectRatio', 'count', 'useBrandIdentity', 'model']
-                .forEach((key) => this.$watch(key, () => this.persist()));
+            // التحديد الجماعي في المعرض
+            selecting: false,
+            selected: [],
 
-            // الحقل يكبر مع النص: الوصف المحسَّن فقرة كاملة لا سطر واحد
-            this.$watch('prompt', () => this.$nextTick(() => this.fitPrompt()));
-            this.$nextTick(() => this.fitPrompt());
+            // حفظ صورة مرجعاً لمنتج: { id, url, transparent } أو null
+            productTarget: null,
+            toProductUrl: config.toProductUrl || '',
 
-            // الشريط يقع عند حافة الشاشة: القوائم المرتبطة بأزرارها تخرج منها (RTL)
-            // فتُقصّ. نزيحها أفقياً بعد ظهورها حتى تبقى داخل الإطار.
-            this.$watch('popover', (name) => {
-                if (! name) return;
+            // تحسين الوصف بالذكاء: مهمة في الطابور نستطلعها، والأصل يبقى للتراجع
+            enhanceUrl: config.enhanceUrl || '',
+            enhanceCost: config.enhanceCost || 0,
+            enhancing: false,
+            enhanceError: '',
+            enhancedFrom: null, // الوصف قبل التحسين
+            enhancedText: null, // ما وضعه التحسين (للتراجع فقط ما دام لم يُعدَّل يدوياً)
 
-                // مرتان: الظهور قد يتأخر إطاراً (x-show + x-transition) في بعض المتصفحات
-                this.$nextTick(() => this.keepPopoverInView());
-                setTimeout(() => this.keepPopoverInView(), 120);
-            });
-        },
+            init() {
+                // رجوع الخادم بخطأ (old input) يعلو المحفوظ محلياً
+                if (! config.hasOld) this.restore();
 
-        fitPrompt() {
-            const el = this.$refs.prompt;
+                this.normalizeForModel(false);
 
-            if (! el) return;
+                ['prompt', 'resolution', 'quality', 'autoRatio', 'aspectRatio', 'count', 'useBrandIdentity', 'model']
+                    .forEach((key) => this.$watch(key, () => this.persist()));
 
-            el.style.height = 'auto';
-            el.style.height = Math.min(el.scrollHeight + 2, 200) + 'px';
-        },
+                // الحقل يكبر مع النص: الوصف المحسَّن فقرة كاملة لا سطر واحد
+                this.$watch('prompt', () => this.$nextTick(() => this.fitPrompt()));
+                this.$nextTick(() => this.fitPrompt());
+            },
 
-        keepPopoverInView() {
-            const margin = 8;
-            const width = document.documentElement.clientWidth;
+            fitPrompt() {
+                const el = this.$refs.prompt;
 
-            document.querySelectorAll('[data-popover]').forEach((el) => {
-                if (el.getClientRects().length === 0) return;
+                if (! el) return;
 
-                // قياس نظيف: بلا إزاحة سابقة ولا انيميشن ظهور (scale) يقلّص المستطيل
-                const animation = el.style.animation;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight + 2, 200) + 'px';
+            },
+
+            /**
+             * يُزاح المنبثق أفقياً ليبقى داخل الشاشة — مرة واحدة قبل ظهوره.
+             *
+             * القياس على المنبثق وهو مخفي (display مؤقت بلا رسم) وبأبعاد التخطيط
+             * (offsetLeft/offsetWidth) لا بمستطيله المرسوم: لا يتأثر بحركة الظهور، ولا قفزة
+             * بعد أن يراه المستخدم. (كان يُقاس بعد الظهور ويُعاد تشغيل حركته مرتين فيهتز.)
+             */
+            placePopover(name) {
+                const el = this.$root.querySelector(`[data-popover="${name}"]`);
+
+                if (! el) return;
+
                 el.style.translate = '';
-                el.style.animation = 'none';
-                const { left, right } = el.getBoundingClientRect();
-                el.style.animation = animation;
 
-                let shift = 0;
-                if (right > width - margin) shift = width - margin - right;
-                if (left + shift < margin) shift = margin - left;
+                const hidden = getComputedStyle(el).display === 'none';
 
-                if (shift) el.style.translate = `${Math.round(shift)}px 0`;
-            });
-        },
-
-        persist() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    prompt: this.prompt,
-                    resolution: this.resolution,
-                    quality: this.quality,
-                    autoRatio: this.autoRatio,
-                    aspectRatio: this.aspectRatio,
-                    count: this.count,
-                    useBrandIdentity: this.useBrandIdentity,
-                    model: this.model,
-                }));
-            } catch (e) { /* تخزين معطّل أو ممتلئ: نكمل بلا حفظ */ }
-        },
-
-        restore() {
-            let saved;
-
-            try {
-                saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            } catch (e) {
-                return;
-            }
-
-            if (! saved || typeof saved !== 'object') return;
-
-            // نقبل القيمة فقط إن كانت لا تزال خياراً صالحاً (الإعدادات تتغير بين الزيارات)
-            if (typeof saved.prompt === 'string') this.prompt = saved.prompt.slice(0, 1500);
-            if (saved.resolution in this.resolutions) this.resolution = saved.resolution;
-            if (saved.quality in this.qualityLevels) this.quality = saved.quality;
-            if (saved.aspectRatio in this.ratios) {
-                this.aspectRatio = saved.aspectRatio;
-                this.autoRatio = saved.autoRatio === true && saved.aspectRatio === '1:1';
-            }
-            if (Number.isInteger(saved.count)) this.count = Math.max(1, Math.min(4, saved.count));
-            if (typeof saved.useBrandIdentity === 'boolean') this.useBrandIdentity = saved.useBrandIdentity;
-            if (this.modelsRoutable && saved.model in this.models) this.model = saved.model;
-        },
-
-        // ---------- قدرات النموذج ----------
-        get caps() {
-            return this.modelsRoutable ? (this.modelCaps[this.model] || {}) : {};
-        },
-
-        resolutionAllowed(key) {
-            return ! this.caps.resolutions || this.caps.resolutions.includes(key);
-        },
-
-        qualityAllowed(key) {
-            return ! this.caps.qualities || this.caps.qualities.includes(key);
-        },
-
-        /** وصف مختصر لما يدعمه نموذج (لقائمة النماذج). */
-        capsLabel(modelKey) {
-            const caps = this.modelsRoutable ? (this.modelCaps[modelKey] || {}) : {};
-            const list = caps.resolutions;
-
-            if (! list) return '';
-
-            const top = list[list.length - 1]?.toUpperCase();
-
-            return list.length === 1 ? `${top} فقط` : `حتى ${top}`;
-        },
-
-        selectModel(key) {
-            this.model = key;
-            this.popover = null;
-            this.normalizeForModel(true);
-        },
-
-        /** بعد تبديل النموذج: أقرب دقة/جودة مدعومة، مع تنبيه إن تغيّر شيء. */
-        normalizeForModel(announce) {
-            const notes = [];
-
-            if (! this.resolutionAllowed(this.resolution)) {
-                const before = this.resolution.toUpperCase();
-                this.resolution = this.caps.resolutions[0];
-                notes.push(`الدقة ${before} غير مدعومة ← ${this.resolution.toUpperCase()}`);
-            }
-
-            if (! this.qualityAllowed(this.quality)) {
-                const before = this.qualityLevels[this.quality]?.label;
-                this.quality = this.caps.qualities.includes('medium') ? 'medium' : this.caps.qualities[0];
-                notes.push(`«${before}» غير مدعومة ← «${this.qualityLevels[this.quality]?.label}»`);
-            }
-
-            this.notice = announce && notes.length ? `عُدّل لتناسب ${this.models[this.model]?.label}: ${notes.join('، ')}` : '';
-
-            clearTimeout(this.noticeTimer);
-            if (this.notice) this.noticeTimer = setTimeout(() => (this.notice = ''), 6000);
-        },
-
-        get qualityKey() {
-            return `${this.resolution}_${this.quality}`;
-        },
-
-        get unitCost() {
-            return this.qualityMatrix[this.qualityKey]?.credits ?? 0;
-        },
-
-        get totalCost() {
-            const count = Math.max(1, Math.min(4, this.count || 1));
-
-            return Math.round(this.unitCost * count * 10) / 10;
-        },
-
-        get totalCostLabel() {
-            return Number.isInteger(this.totalCost) ? String(this.totalCost) : this.totalCost.toFixed(1);
-        },
-
-        costFor(key) {
-            const value = this.qualityMatrix[`${this.resolution}_${key}`]?.credits ?? 0;
-
-            return Number.isInteger(value) ? String(value) : value.toFixed(1);
-        },
-
-        togglePopover(name) {
-            this.popover = this.popover === name ? null : name;
-        },
-
-        closePopovers() {
-            this.popover = null;
-        },
-
-        setAutoRatio() {
-            this.autoRatio = true;
-            this.aspectRatio = '1:1';
-            this.popover = null;
-        },
-
-        setRatio(key) {
-            this.autoRatio = false;
-            this.aspectRatio = key;
-            this.popover = null;
-        },
-
-        // ---------- تحسين الوصف بالذكاء ----------
-        get canEnhance() {
-            return this.prompt.trim().length >= 3 && ! this.enhancing;
-        },
-
-        get canUndoEnhance() {
-            return this.enhancedFrom !== null && this.prompt === this.enhancedText;
-        },
-
-        get enhanceTitle() {
-            if (this.enhancing) return 'يحسّن الوصف…';
-
-            return 'حسّن الوصف بالذكاء الاصطناعي' + (this.enhanceCost > 0 ? ` (${this.enhanceCost} نقطة)` : ' — مجاناً');
-        },
-
-        async enhance() {
-            if (! this.canEnhance || ! this.enhanceUrl) return;
-
-            const original = this.prompt;
-
-            this.enhancing = true;
-            this.enhanceError = '';
-
-            try {
-                const response = await fetch(this.enhanceUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                        Accept: 'application/json',
-                    },
-                    body: JSON.stringify({
-                        prompt: original,
-                        aspect_ratio: this.aspectRatio,
-                        product_id: this.referenceMode === 'product' ? this.productId || null : null,
-                        reference_asset_id: this.referenceMode && this.referenceMode !== 'product' ? this.referenceAssetId : null,
-                        use_brand_identity: this.useBrandIdentity,
-                    }),
-                });
-
-                const body = await response.json().catch(() => ({}));
-
-                if (! response.ok) {
-                    const first = Object.values(body.errors || {})[0];
-                    throw new Error(body.message || (Array.isArray(first) ? first[0] : '') || 'تعذّر بدء تحسين الوصف.');
+                if (hidden) {
+                    el.style.visibility = 'hidden';
+                    el.style.display = 'block';
                 }
 
-                const result = await this.pollEnhance(body.status_url);
+                const anchor = el.offsetParent?.getBoundingClientRect();
 
-                // كتب المستخدم شيئاً آخر أثناء الانتظار: لا نمحو ما كتبه
-                if (this.prompt !== original) {
-                    this.enhanceError = 'عدّلت الوصف أثناء التحسين، فلم نستبدله.';
+                if (anchor) {
+                    const margin = 8;
+                    const viewport = document.documentElement.clientWidth;
+                    const left = anchor.left + el.offsetLeft;
+                    const right = left + el.offsetWidth;
+
+                    let shift = 0;
+                    if (right > viewport - margin) shift = viewport - margin - right;
+                    if (left + shift < margin) shift = margin - left;
+
+                    if (shift) el.style.translate = `${Math.round(shift)}px 0`;
+                }
+
+                if (hidden) {
+                    el.style.display = 'none';
+                    el.style.visibility = '';
+                }
+            },
+
+            persist() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        prompt: this.prompt,
+                        resolution: this.resolution,
+                        quality: this.quality,
+                        autoRatio: this.autoRatio,
+                        aspectRatio: this.aspectRatio,
+                        count: this.count,
+                        useBrandIdentity: this.useBrandIdentity,
+                        model: this.model,
+                    }));
+                } catch (e) { /* تخزين معطّل أو ممتلئ: نكمل بلا حفظ */ }
+            },
+
+            restore() {
+                let saved;
+
+                try {
+                    saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+                } catch (e) {
+                    return;
+                }
+
+                if (! saved || typeof saved !== 'object') return;
+
+                // نقبل القيمة فقط إن كانت لا تزال خياراً صالحاً (الإعدادات تتغير بين الزيارات)
+                if (typeof saved.prompt === 'string') this.prompt = saved.prompt.slice(0, 1500);
+                if (saved.resolution in this.resolutions) this.resolution = saved.resolution;
+                if (saved.quality in this.qualityLevels) this.quality = saved.quality;
+                if (saved.aspectRatio in this.ratios) {
+                    this.aspectRatio = saved.aspectRatio;
+                    this.autoRatio = saved.autoRatio === true && saved.aspectRatio === '1:1';
+                }
+                if (Number.isInteger(saved.count)) this.count = Math.max(1, Math.min(4, saved.count));
+                if (typeof saved.useBrandIdentity === 'boolean') this.useBrandIdentity = saved.useBrandIdentity;
+                if (this.modelsRoutable && saved.model in this.models) this.model = saved.model;
+            },
+
+            // ---------- قدرات النموذج ----------
+            get caps() {
+                return this.modelsRoutable ? (this.modelCaps[this.model] || {}) : {};
+            },
+
+            resolutionAllowed(key) {
+                return ! this.caps.resolutions || this.caps.resolutions.includes(key);
+            },
+
+            qualityAllowed(key) {
+                return ! this.caps.qualities || this.caps.qualities.includes(key);
+            },
+
+            /** وصف مختصر لما يدعمه نموذج (لقائمة النماذج). */
+            capsLabel(modelKey) {
+                const caps = this.modelsRoutable ? (this.modelCaps[modelKey] || {}) : {};
+                const list = caps.resolutions;
+
+                if (! list) return '';
+
+                const top = list[list.length - 1]?.toUpperCase();
+
+                return list.length === 1 ? `${top} فقط` : `حتى ${top}`;
+            },
+
+            selectModel(key) {
+                this.model = key;
+                this.popover = null;
+                this.normalizeForModel(true);
+            },
+
+            /** بعد تبديل النموذج: أقرب دقة/جودة مدعومة، مع تنبيه إن تغيّر شيء. */
+            normalizeForModel(announce) {
+                const notes = [];
+
+                if (! this.resolutionAllowed(this.resolution)) {
+                    const before = this.resolution.toUpperCase();
+                    this.resolution = this.caps.resolutions[0];
+                    notes.push(`الدقة ${before} غير مدعومة ← ${this.resolution.toUpperCase()}`);
+                }
+
+                if (! this.qualityAllowed(this.quality)) {
+                    const before = this.qualityLevels[this.quality]?.label;
+                    this.quality = this.caps.qualities.includes('medium') ? 'medium' : this.caps.qualities[0];
+                    notes.push(`«${before}» غير مدعومة ← «${this.qualityLevels[this.quality]?.label}»`);
+                }
+
+                this.notice = announce && notes.length ? `عُدّل لتناسب ${this.models[this.model]?.label}: ${notes.join('، ')}` : '';
+
+                clearTimeout(this.noticeTimer);
+                if (this.notice) this.noticeTimer = setTimeout(() => (this.notice = ''), 6000);
+            },
+
+            get qualityKey() {
+                return `${this.resolution}_${this.quality}`;
+            },
+
+            get unitCost() {
+                return this.qualityMatrix[this.qualityKey]?.credits ?? 0;
+            },
+
+            get totalCost() {
+                const count = Math.max(1, Math.min(4, this.count || 1));
+
+                return Math.round(this.unitCost * count * 10) / 10;
+            },
+
+            get totalCostLabel() {
+                return Number.isInteger(this.totalCost) ? String(this.totalCost) : this.totalCost.toFixed(1);
+            },
+
+            costFor(key) {
+                const value = this.qualityMatrix[`${this.resolution}_${key}`]?.credits ?? 0;
+
+                return Number.isInteger(value) ? String(value) : value.toFixed(1);
+            },
+
+            togglePopover(name) {
+                if (this.popover === name) {
+                    this.popover = null;
 
                     return;
                 }
 
-                this.enhancedFrom = original;
-                this.enhancedText = result.prompt;
-                this.prompt = result.prompt;
-                this.$nextTick(() => this.$refs.prompt?.focus());
-            } catch (e) {
-                this.enhanceError = e.message || 'تعذّر تحسين الوصف. حاول مرة أخرى.';
-            } finally {
-                this.enhancing = false;
-            }
-        },
+                this.placePopover(name);
+                this.popover = name;
+            },
 
-        /** يستطلع المهمة كل ثانية (حتى دقيقتين) ويعيد نتيجتها أو يرمي رسالة الفشل. */
-        async pollEnhance(statusUrl) {
-            for (let i = 0; i < 120; i++) {
-                await new Promise((resolve) => setTimeout(resolve, i < 3 ? 700 : 1000));
+            closePopovers() {
+                this.popover = null;
+            },
 
-                const response = await fetch(statusUrl, { headers: { Accept: 'application/json' } });
+            setAutoRatio() {
+                this.autoRatio = true;
+                this.aspectRatio = '1:1';
+                this.popover = null;
+            },
 
-                if (! response.ok) throw new Error('تعذّر متابعة تحسين الوصف.');
+            setRatio(key) {
+                this.autoRatio = false;
+                this.aspectRatio = key;
+                this.popover = null;
+            },
 
-                const job = await response.json();
+            // ---------- تحسين الوصف بالذكاء ----------
+            get canEnhance() {
+                return this.prompt.trim().length >= 3 && ! this.enhancing;
+            },
 
-                if (['failed', 'cancelled'].includes(job.status)) {
-                    throw new Error(job.error || 'تعذّر تحسين الوصف.');
+            get canUndoEnhance() {
+                return this.enhancedFrom !== null && this.prompt === this.enhancedText;
+            },
+
+            get enhanceTitle() {
+                if (this.enhancing) return 'يحسّن الوصف…';
+
+                return 'حسّن الوصف بالذكاء الاصطناعي' + (this.enhanceCost > 0 ? ` (${this.enhanceCost} نقطة)` : ' — مجاناً');
+            },
+
+            async enhance() {
+                if (! this.canEnhance || ! this.enhanceUrl) return;
+
+                this.stopVoice();
+
+                const original = this.prompt;
+
+                this.enhancing = true;
+                this.enhanceError = '';
+
+                try {
+                    const response = await fetch(this.enhanceUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            Accept: 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prompt: original,
+                            aspect_ratio: this.aspectRatio,
+                            product_id: this.referenceMode === 'product' ? this.productId || null : null,
+                            reference_asset_id: this.referenceMode && this.referenceMode !== 'product' ? this.referenceAssetId : null,
+                            use_brand_identity: this.useBrandIdentity,
+                        }),
+                    });
+
+                    const body = await response.json().catch(() => ({}));
+
+                    if (! response.ok) {
+                        const first = Object.values(body.errors || {})[0];
+                        throw new Error(body.message || (Array.isArray(first) ? first[0] : '') || 'تعذّر بدء تحسين الوصف.');
+                    }
+
+                    const result = await this.pollEnhance(body.status_url);
+
+                    // كتب المستخدم شيئاً آخر أثناء الانتظار: لا نمحو ما كتبه
+                    if (this.prompt !== original) {
+                        this.enhanceError = 'عدّلت الوصف أثناء التحسين، فلم نستبدله.';
+
+                        return;
+                    }
+
+                    this.enhancedFrom = original;
+                    this.enhancedText = result.prompt;
+                    this.prompt = result.prompt;
+                    this.$nextTick(() => this.$refs.prompt?.focus());
+                } catch (e) {
+                    this.enhanceError = e.message || 'تعذّر تحسين الوصف. حاول مرة أخرى.';
+                } finally {
+                    this.enhancing = false;
+                }
+            },
+
+            /** يستطلع المهمة كل ثانية (حتى دقيقتين) ويعيد نتيجتها أو يرمي رسالة الفشل. */
+            async pollEnhance(statusUrl) {
+                for (let i = 0; i < 120; i++) {
+                    await new Promise((resolve) => setTimeout(resolve, i < 3 ? 700 : 1000));
+
+                    const response = await fetch(statusUrl, { headers: { Accept: 'application/json' } });
+
+                    if (! response.ok) throw new Error('تعذّر متابعة تحسين الوصف.');
+
+                    const job = await response.json();
+
+                    if (['failed', 'cancelled'].includes(job.status)) {
+                        throw new Error(job.error || 'تعذّر تحسين الوصف.');
+                    }
+
+                    if (['completed', 'partial'].includes(job.status)) {
+                        if (! job.result?.prompt) throw new Error('لم يصل وصف محسَّن.');
+
+                        return job.result;
+                    }
                 }
 
-                if (['completed', 'partial'].includes(job.status)) {
-                    if (! job.result?.prompt) throw new Error('لم يصل وصف محسَّن.');
+                throw new Error('استغرق التحسين وقتاً أطول من المعتاد. جرّب مرة أخرى.');
+            },
 
-                    return job.result;
+            undoEnhance() {
+                if (! this.canUndoEnhance) return;
+
+                this.prompt = this.enhancedFrom;
+                this.enhancedFrom = null;
+                this.enhancedText = null;
+            },
+
+            clearPrompt() {
+                this.prompt = '';
+                this.enhancedFrom = null;
+                this.enhancedText = null;
+                this.enhanceError = '';
+            },
+
+            pickProduct(id) {
+                this.productId = id;
+                this.referenceMode = id ? 'product' : null;
+                this.referenceAssetId = null;
+                this.referenceAssetUrl = null;
+
+                if (id) this.popover = null;
+            },
+
+            pickReferenceAsset(asset, mode = 'gallery') {
+                this.referenceAssetId = asset.id;
+                this.referenceAssetUrl = asset.url;
+                this.referenceMode = mode; // 'gallery' | 'upload'
+                this.productId = '';
+                this.popover = null;
+                this.referencePickerOpen = false;
+            },
+
+            clearReference() {
+                this.referenceMode = null;
+                this.productId = '';
+                this.referenceAssetId = null;
+                this.referenceAssetUrl = null;
+            },
+
+            openLightbox(asset) {
+                this.lightbox = asset;
+            },
+
+            closeLightbox() {
+                this.lightbox = null;
+            },
+
+            useAsReference() {
+                if (! this.lightbox) return;
+
+                this.pickReferenceAsset(this.lightbox);
+                this.closeLightbox();
+                this.$nextTick(() => document.getElementById('studio-prompt')?.focus());
+            },
+
+            async togglePin() {
+                if (! this.lightbox?.pinUrl) return;
+
+                const asset = this.lightbox;
+                asset.pinned = ! asset.pinned; // تفاؤلي: يتراجع إن فشل الطلب
+
+                try {
+                    const response = await fetch(asset.pinUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            Accept: 'application/json',
+                        },
+                    });
+
+                    if (! response.ok) throw new Error('pin failed');
+
+                    const data = await response.json();
+                    asset.pinned = data.pinned;
+                } catch (e) {
+                    asset.pinned = ! asset.pinned;
                 }
-            }
+            },
 
-            throw new Error('استغرق التحسين وقتاً أطول من المعتاد. جرّب مرة أخرى.');
-        },
+            async uploadReference(file) {
+                if (! file) return;
 
-        undoEnhance() {
-            if (! this.canUndoEnhance) return;
+                this.uploading = true;
+                this.uploadError = '';
+                this.popover = null;
 
-            this.prompt = this.enhancedFrom;
-            this.enhancedFrom = null;
-            this.enhancedText = null;
-        },
+                try {
+                    const body = new FormData();
+                    body.append('file', file);
 
-        clearPrompt() {
-            this.prompt = '';
-            this.enhancedFrom = null;
-            this.enhancedText = null;
-            this.enhanceError = '';
-        },
+                    const response = await fetch(this.uploadUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            Accept: 'application/json',
+                        },
+                        body,
+                    });
 
-        pickProduct(id) {
-            this.productId = id;
-            this.referenceMode = id ? 'product' : null;
-            this.referenceAssetId = null;
-            this.referenceAssetUrl = null;
+                    if (! response.ok) throw new Error('upload failed');
 
-            if (id) this.popover = null;
-        },
+                    this.pickReferenceAsset(await response.json(), 'upload');
+                } catch (e) {
+                    this.uploadError = 'تعذّر رفع الصورة. جرّب صورة أصغر أو بصيغة PNG أو JPG أو WEBP.';
+                } finally {
+                    this.uploading = false;
+                }
+            },
 
-        pickReferenceAsset(asset, mode = 'gallery') {
-            this.referenceAssetId = asset.id;
-            this.referenceAssetUrl = asset.url;
-            this.referenceMode = mode; // 'gallery' | 'upload'
-            this.productId = '';
-            this.popover = null;
-            this.referencePickerOpen = false;
-        },
+            // ---------- رسالة عابرة (المشاركة، الإدخال الصوتي) ----------
+            toast(text, tone = 'success') {
+                clearTimeout(this.toastTimer);
+                this.flash = text ? { text, tone } : null;
+                if (text) this.toastTimer = setTimeout(() => (this.flash = null), 5000);
+            },
 
-        clearReference() {
-            this.referenceMode = null;
-            this.productId = '';
-            this.referenceAssetId = null;
-            this.referenceAssetUrl = null;
-        },
+            // ---------- الإدخال الصوتي (Web Speech API — داخل المتصفح بلا خادم) ----------
+            get voiceTitle() {
+                if (! this.speechSupported) return 'الإدخال الصوتي غير مدعوم في هذا المتصفح — جرّب Chrome أو Edge أو Safari';
 
-        openLightbox(asset) {
-            this.lightbox = asset;
-        },
+                return this.listening ? 'إيقاف الاستماع' : 'تحدّث لكتابة الوصف (عربي)';
+            },
 
-        closeLightbox() {
-            this.lightbox = null;
-        },
+            toggleVoice() {
+                if (this.listening) {
+                    recognition?.stop();
 
-        useAsReference() {
-            if (! this.lightbox) return;
+                    return;
+                }
 
-            this.pickReferenceAsset(this.lightbox);
-            this.closeLightbox();
-            this.$nextTick(() => document.getElementById('studio-prompt')?.focus());
-        },
+                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        async togglePin() {
-            if (! this.lightbox?.pinUrl) return;
+                if (! Recognition) {
+                    this.voiceError = 'متصفحك لا يدعم الإدخال الصوتي. جرّب Chrome أو Edge أو Safari.';
 
-            const asset = this.lightbox;
-            asset.pinned = ! asset.pinned; // تفاؤلي: يتراجع إن فشل الطلب
+                    return;
+                }
 
-            try {
-                const response = await fetch(asset.pinUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                        Accept: 'application/json',
-                    },
-                });
+                const base = this.prompt.trim();
+                let finalText = '';
 
-                if (! response.ok) throw new Error('pin failed');
+                recognition = new Recognition();
+                recognition.lang = 'ar-SA';
+                recognition.continuous = true;
+                recognition.interimResults = true;
 
-                const data = await response.json();
-                asset.pinned = data.pinned;
-            } catch (e) {
-                asset.pinned = ! asset.pinned;
-            }
-        },
+                // النص المؤقت يظهر أثناء الكلام، ويثبت حين يعتمده المتصفح
+                recognition.onresult = (event) => {
+                    let interim = '';
 
-        async uploadReference(file) {
-            if (! file) return;
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const text = event.results[i][0].transcript;
 
-            this.uploading = true;
-            this.uploadError = '';
-            this.popover = null;
+                        if (event.results[i].isFinal) finalText += text + ' ';
+                        else interim += text;
+                    }
 
-            try {
-                const body = new FormData();
-                body.append('file', file);
+                    this.prompt = [base, (finalText + interim).trim()].filter(Boolean).join(' ').slice(0, 1500);
+                };
 
-                const response = await fetch(this.uploadUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                        Accept: 'application/json',
-                    },
-                    body,
-                });
+                recognition.onerror = (event) => {
+                    this.voiceError = {
+                        'not-allowed': 'اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع ثم أعد المحاولة.',
+                        'service-not-allowed': 'اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع ثم أعد المحاولة.',
+                        'no-speech': 'لم نلتقط صوتاً. اضغط الميكروفون وتحدّث مباشرة.',
+                        'audio-capture': 'لا يوجد ميكروفون متصل بالجهاز.',
+                        network: 'التعرف على الصوت يحتاج اتصالاً بالإنترنت.',
+                        'language-not-supported': 'متصفحك لا يدعم التعرف على العربية.',
+                        aborted: '',
+                    }[event.error] ?? 'تعذّر التعرف على الصوت. حاول مرة أخرى.';
 
-                if (! response.ok) throw new Error('upload failed');
+                    setTimeout(() => (this.voiceError = ''), 8000);
+                };
 
-                this.pickReferenceAsset(await response.json(), 'upload');
-            } catch (e) {
-                this.uploadError = 'تعذّر رفع الصورة. جرّب صورة أصغر أو بصيغة PNG أو JPG أو WEBP.';
-            } finally {
-                this.uploading = false;
-            }
-        },
-    }));
+                recognition.onend = () => {
+                    this.listening = false;
+                    recognition = null;
+                    this.$nextTick(() => this.$refs.prompt?.focus());
+                };
+
+                this.voiceError = '';
+                this.enhanceError = '';
+                this.listening = true;
+
+                try {
+                    recognition.start();
+                } catch (e) {
+                    this.listening = false;
+                    recognition = null;
+                    this.voiceError = 'تعذّر تشغيل الميكروفون. حاول مرة أخرى.';
+                }
+            },
+
+            stopVoice() {
+                recognition?.stop();
+            },
+
+            // ---------- المشاركة إلى تطبيقات السوشيال (قائمة المشاركة في الجهاز) ----------
+            /** يبدأ تنزيل الصورة عند فتح القائمة: المشاركة يجب أن تُستدعى بعد النقرة مباشرة. */
+            prepareShare(asset) {
+                if (! asset?.url || shareFiles.has(asset.url)) return;
+
+                const file = fetch(asset.url)
+                    .then((response) => {
+                        if (! response.ok) throw new Error('fetch failed');
+
+                        return response.blob();
+                    })
+                    .then((blob) => {
+                        const extension = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+
+                        return new File([blob], `image-${asset.id}.${extension}`, { type: blob.type || 'image/png' });
+                    });
+
+                // فشل التجهيز لا يُخزَّن: المحاولة التالية تعيد التنزيل
+                file.catch(() => shareFiles.delete(asset.url));
+                shareFiles.set(asset.url, file);
+            },
+
+            async shareAsset(asset) {
+                this.prepareShare(asset);
+
+                let file;
+
+                try {
+                    file = await shareFiles.get(asset.url);
+                } catch (e) {
+                    this.toast('تعذّر تجهيز الصورة للمشاركة. حاول مرة أخرى.', 'error');
+
+                    return;
+                }
+
+                try {
+                    if (navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+
+                        return;
+                    }
+
+                    // الحاسوب غالباً: نسخ الصورة للحافظة ثم لصقها في المنصة
+                    if (navigator.clipboard?.write && window.ClipboardItem) {
+                        const png = file.type === 'image/png' ? file : await toPng(file);
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+                        this.toast('نُسخت الصورة — الصقها (Ctrl+V) في منشورك على المنصة.');
+
+                        return;
+                    }
+
+                    throw new Error('unsupported');
+                } catch (e) {
+                    if (e?.name === 'AbortError') return; // أغلق المستخدم قائمة المشاركة
+
+                    if (e?.name === 'NotAllowedError') {
+                        this.toast('اضغط «نشر إلى السوشيال ميديا» مرة أخرى — الصورة جاهزة الآن.', 'info');
+
+                        return;
+                    }
+
+                    this.toast('المتصفح لا يدعم المشاركة المباشرة. نزّل الصورة وارفعها من تطبيق المنصة.', 'error');
+                }
+            },
+
+            openProductPicker(asset) {
+                this.productTarget = asset;
+            },
+
+            // ---------- التحديد الجماعي ----------
+            get selectedCount() {
+                return this.selected.length;
+            },
+
+            startSelecting() {
+                this.selecting = true;
+                this.selected = [];
+                this.closePopovers();
+            },
+
+            stopSelecting() {
+                this.selecting = false;
+                this.selected = [];
+            },
+
+            isSelected(id) {
+                return this.selected.includes(id);
+            },
+
+            toggleSelected(id) {
+                this.selected = this.isSelected(id)
+                    ? this.selected.filter((value) => value !== id)
+                    : [...this.selected, id];
+            },
+
+            selectAll(ids) {
+                this.selected = this.selected.length === ids.length ? [] : [...ids];
+            },
+        };
+    });
+}
+
+/** JPEG ← PNG: الحافظة في أغلب المتصفحات لا تقبل إلا image/png. */
+async function toPng(blob) {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+
+    return new Promise((resolve, reject) => canvas.toBlob((png) => (png ? resolve(png) : reject(new Error('png'))), 'image/png'));
 }

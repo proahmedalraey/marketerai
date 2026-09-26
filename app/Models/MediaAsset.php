@@ -55,17 +55,23 @@ class MediaAsset extends Model
      * يكتب مصغّرة بجوار الأصل ويعيد مسارها لتُسجَّل في meta، أو null إن لم تلزم/تعذّرت.
      * فشلها لا يُسقط التوليد: تبقى الشبكة تعرض الأصل.
      */
-    public static function putThumbnail(string $disk, string $originalPath, string $contents): ?string
+    public static function putThumbnail(string $disk, string $originalPath, string $contents, bool $keepAlpha = false): ?string
     {
-        $thumb = ImageThumbnail::make($contents);
+        $thumb = ImageThumbnail::make($contents, keepAlpha: $keepAlpha);
 
         if (! $thumb) {
             return null;
         }
 
-        $path = ImageThumbnail::pathFor($originalPath);
+        $path = ImageThumbnail::pathFor($originalPath, $keepAlpha ? 'png' : 'jpg');
 
         return Storage::disk($disk)->put($path, $thumb['contents']) ? $path : null;
+    }
+
+    /** صورة بلا خلفية: المعرض يعرضها فوق نقش الشطرنج ليظهر أنها شفافة. */
+    public function isTransparent(): bool
+    {
+        return ($this->meta['background'] ?? null) === 'transparent';
     }
 
     /** يمسح الأصل ومصغّرته من التخزين (السجل يُحذف بشكل منفصل). */

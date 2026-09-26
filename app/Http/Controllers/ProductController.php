@@ -14,8 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
-    /** أقصى عدد صور: السلعة تُعرض من زوايا، والخدمة صورة توضيحية واحدة. */
-    protected const MAX_IMAGES = ['good' => 6, 'service' => 1];
+    protected const MAX_IMAGES = Product::MAX_IMAGES;
 
     public function index(Request $request, ImportService $imports)
     {

@@ -1,10 +1,14 @@
 <div
-    data-popover
+    data-popover="quality"
     x-show="popover === 'quality'"
     x-cloak
-    x-transition.opacity.duration.150ms
-    @click.outside="popover = null"
-    class="absolute bottom-full start-0 mb-2 z-20 w-80 max-w-[90vw] p-3.5 card shadow-pop motion-safe:animate-scale-in"
+    x-transition:enter="transition ease-out duration-150"
+    x-transition:enter-start="opacity-0 translate-y-1"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-100"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="absolute bottom-full start-0 mb-2 z-20 w-80 max-w-[90vw] p-3.5 studio-popover"
 >
     <p class="label mb-2">الدقة</p>
     <div class="grid grid-cols-3 gap-1.5 mb-3.5">

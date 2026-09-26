@@ -36,6 +36,7 @@
         'defaultModel' => old('model', $defaultModel),
         'uploadUrl' => route('studio.uploads'),
         'enhanceUrl' => $enhanceUrl,
+        'toProductUrl' => route('studio.media.to-product', ['mediaAsset' => '__ASSET__']),
         'enhanceCost' => $enhanceCost,
         'prompt' => old('prompt', ''),
         'resolution' => $initResolution,
@@ -55,7 +56,12 @@
     ];
 @endphp
 
-<div x-data="imageStudio(@js($studioConfig))" @keydown.escape.window="popover = null; lightbox = null" class="space-y-5">
+<div
+    x-data="imageStudio(@js($studioConfig))"
+    @keydown.escape.window="closePopovers(); lightbox = null"
+    @resize.window.debounce.120ms="popover && placePopover(popover)"
+    class="space-y-5"
+>
 
     @if ($jobUuid = request('job'))
         <div class="card p-4" x-data="jobTracker(@js($jobUuid), { redirectTo: @js(route('studio.index')) })">
@@ -108,16 +114,7 @@
         </div>
     @endif
 
-    @error('credits')
-        <div class="alert-danger">{{ $message }}</div>
-    @enderror
-
-    {{-- رفض الخادم قبل الحجز (نموذج لا يدعم الدقة/الجودة، وصف فارغ…): بدونه يبدو الضغط بلا أثر --}}
-    @foreach (['quality', 'model', 'prompt', 'aspect_ratio', 'count', 'product_id', 'reference_asset_id'] as $field)
-        @error($field)
-            <div class="alert-danger" role="alert">{{ $message }}</div>
-        @enderror
-    @endforeach
+    {{-- أخطاء التحقق والنقاط يعرضها partials.flash في التخطيط؛ تكرارها هنا كان يُظهر الرسالة مرتين --}}
 
     <div x-data="{ activeTab: 'gallery' }">
         <div class="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit mb-3" role="tablist">
@@ -207,6 +204,34 @@
 
     @include('content.studio._toolbar')
     @include('content.studio._reference-picker-modal')
+    @include('content.studio._product-picker-modal')
+
+    {{-- رسالة عابرة (المشاركة، النسخ للحافظة) --}}
+    <div
+        x-show="flash" x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-2"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-end="opacity-0"
+        class="fixed top-20 inset-x-0 z-[80] flex justify-center px-4 pointer-events-none"
+        role="status" aria-live="polite"
+    >
+        <p
+            :class="{
+                'bg-success-soft text-success-fg border-success/25': flash?.tone === 'success',
+                'bg-info-soft text-info-fg border-info/25': flash?.tone === 'info',
+                'bg-danger-soft text-danger-fg border-danger/25': flash?.tone === 'error',
+            }"
+            class="pointer-events-auto flex items-center gap-2 max-w-md px-4 py-2.5 rounded-xl border shadow-pop text-sm"
+        >
+            <span x-text="flash?.text"></span>
+            <button type="button" @click="flash = null" class="shrink-0 -me-1 p-1 rounded-lg hover:bg-black/5">
+                <x-icon name="close" class="w-3.5 h-3.5" />
+                <span class="sr-only">إخفاء</span>
+            </button>
+        </p>
+    </div>
     @include('content.studio._lightbox')
 </div>
 @endsection

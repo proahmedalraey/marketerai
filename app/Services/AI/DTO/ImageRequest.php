@@ -15,6 +15,8 @@ class ImageRequest
         public string $operation = 'image.standard_1k',
         /** معرّف نموذج محدد لهذا الطلب (OpenRouter فقط الآن). null = نموذج المزود الافتراضي من الإعدادات */
         public ?string $model = null,
+        /** خلفية الناتج (transparent لإزالة الخلفية) — تُرسَل فقط للنماذج التي تعلن دعمها */
+        public ?string $background = null,
     ) {}
 
     public function dimensions(): array

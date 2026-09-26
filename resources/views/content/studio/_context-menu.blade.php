@@ -1,7 +1,8 @@
 {{--
-    قائمة إجراءات الصورة — شكل مطابق للصور المرجعية. "إعادة التوليد" و"نقل إلى
-    مجلد" حقيقيتان الآن (المرحلة الثانية، البندان 2.4 و2.2)؛ الباقي معطّل بوسم
-    "قريباً" حتى بناء بنيته الخلفية (نشر سوشيال، إزالة خلفية...).
+    قائمة إجراءات الصورة — كل بنودها حقيقية:
+      - نشر إلى السوشيال: قائمة المشاركة في الجهاز (Web Share) أو نسخ الصورة للحافظة.
+        لا نشر آلي على حسابات المنصات: لا تكامل مع واجهاتها بعد، ولا ندّعيه.
+      - إعادة التوليد، نقل إلى مجلد، إزالة الخلفية (مهمة طابور بنقاط)، حفظها مرجعاً لمنتج، حذف.
     التفاصيل في docs/image-studio-redesign-plan.md.
 
     تُبثّ (x-teleport) لجسم الصفحة بموضع ثابت: الأب (figure) عليه overflow-hidden
@@ -18,13 +19,15 @@
         role="menu"
     >
         <button
-            type="button" disabled title="قريباً"
-            role="menuitem"
-            class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg-subtle cursor-not-allowed opacity-60"
+            type="button" role="menuitem"
+            @click="menu = false; shareAsset(@js($shareable))"
+            class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg hover:bg-muted"
         >
-            <x-icon name="send" class="w-4 h-4" />
-            <span class="flex-1 text-start">نشر إلى السوشيال ميديا</span>
-            <span class="text-[10px] text-fg-subtle">قريباً</span>
+            <x-icon name="send" class="w-4 h-4 text-fg-subtle" />
+            <span class="flex-1 text-start leading-tight">
+                نشر إلى السوشيال ميديا
+                <span class="block text-[10px] text-fg-subtle">عبر تطبيقات جهازك</span>
+            </span>
         </button>
 
         <form method="POST" action="{{ route('studio.regenerate', $asset) }}" data-busy-on-submit>
@@ -90,20 +93,40 @@
             </div>
         </template>
 
-        @foreach ([
-            ['icon' => 'layers', 'label' => 'إزالة الخلفية'],
-            ['icon' => 'target', 'label' => 'حفظ الصورة كصورة مرجعية أساسية في المنتج'],
-        ] as $action)
-            <button
-                type="button" disabled title="قريباً"
-                role="menuitem"
-                class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg-subtle cursor-not-allowed opacity-60"
-            >
-                <x-icon :name="$action['icon']" class="w-4 h-4" />
-                <span class="flex-1 text-start">{{ $action['label'] }}</span>
-                <span class="text-[10px] text-fg-subtle">قريباً</span>
+        {{-- إزالة الخلفية: صورة شفافة جديدة بجانب الأصل --}}
+        @if ($transparent)
+            <p class="flex items-center gap-2.5 px-2.5 min-h-10 text-sm text-fg-subtle">
+                <x-icon name="layers" class="w-4 h-4" />
+                <span class="flex-1">الصورة بلا خلفية أصلاً</span>
+            </p>
+        @elseif ($removeBackgroundAvailable)
+            <form method="POST" action="{{ route('studio.media.remove-background', $asset) }}" data-busy-on-submit>
+                @csrf
+                <button type="submit" role="menuitem" class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg hover:bg-muted">
+                    <x-icon name="layers" class="w-4 h-4 text-fg-subtle" />
+                    <span class="flex-1 text-start">إزالة الخلفية</span>
+                    <span class="chip-neutral text-[10px] tnum">{{ fmod($removeBackgroundCost, 1.0) === 0.0 ? (int) $removeBackgroundCost : $removeBackgroundCost }} نقطة</span>
+                </button>
+            </form>
+        @else
+            <button type="button" disabled role="menuitem"
+                    title="تتطلب مزود الصور OpenRouter من إعدادات المنصة"
+                    class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg-subtle cursor-not-allowed opacity-60">
+                <x-icon name="layers" class="w-4 h-4" />
+                <span class="flex-1 text-start">إزالة الخلفية</span>
+                <span class="text-[10px]">تتطلب OpenRouter</span>
             </button>
-        @endforeach
+        @endif
+
+        {{-- حفظها مرجعاً بصرياً أساسياً لمنتج: قائمة المنتجات في نافذة واحدة للصفحة كلها --}}
+        <button
+            type="button" role="menuitem"
+            @click="menu = false; openProductPicker({ id: {{ $asset->id }}, url: @js($asset->thumbUrl()), transparent: {{ $transparent ? 'true' : 'false' }} })"
+            class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg hover:bg-muted"
+        >
+            <x-icon name="target" class="w-4 h-4 text-fg-subtle" />
+            <span class="flex-1 text-start">حفظ الصورة كصورة مرجعية أساسية في المنتج</span>
+        </button>
 
         <div class="divider my-1.5"></div>
 

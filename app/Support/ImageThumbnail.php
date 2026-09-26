@@ -3,11 +3,14 @@
 namespace App\Support;
 
 /**
- * مصغّرة JPEG لعرض الشبكات.
+ * مصغّرة لعرض الشبكات.
  *
  * صور النماذج تصل PNG بحجم 1–2 ميغابايت؛ عرضها كما هي في معرض من 60 صورة
  * يعني عشرات الميغابايتات وصوراً فارغة ريثما تنتهي — فالشبكة تعرض مصغّرة
  * (~40KB) والأصل يُفتح فقط في العارض والتنزيل.
+ *
+ * الصور الشفافة (إزالة الخلفية) تُصغَّر PNG بشفافيتها: JPEG كان سيملأ الخلفية
+ * بالأبيض فيخفي أن الصورة بلا خلفية.
  */
 final class ImageThumbnail
 {
@@ -17,7 +20,7 @@ final class ImageThumbnail
      * @return array{contents: string, mime: string, width: int, height: int}|null
      *                                                                             null = لا GD، ملف غير صالح، أو الأصل أصغر أصلاً (لا فائدة من نسخة أخرى)
      */
-    public static function make(string $contents, int $maxSide = self::MAX_SIDE): ?array
+    public static function make(string $contents, int $maxSide = self::MAX_SIDE, bool $keepAlpha = false): ?array
     {
         if (! function_exists('imagecreatefromstring') || ! function_exists('imagejpeg')) {
             return null;
@@ -41,24 +44,31 @@ final class ImageThumbnail
 
         $thumb = imagecreatetruecolor($width, $height);
 
-        // JPEG لا يحمل شفافية: الخلفية البيضاء تمنع اسوداد الصور الشفافة (PNG المرفوعة)
-        imagefill($thumb, 0, 0, imagecolorallocate($thumb, 255, 255, 255));
+        if ($keepAlpha) {
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
+            imagefill($thumb, 0, 0, imagecolorallocatealpha($thumb, 0, 0, 0, 127));
+        } else {
+            // JPEG لا يحمل شفافية: الخلفية البيضاء تمنع اسوداد الصور الشفافة (PNG المرفوعة)
+            imagefill($thumb, 0, 0, imagecolorallocate($thumb, 255, 255, 255));
+        }
+
         imagecopyresampled($thumb, $source, 0, 0, 0, 0, $width, $height, $info[0], $info[1]);
         imagedestroy($source);
 
         ob_start();
-        imagejpeg($thumb, null, 82);
-        $jpeg = (string) ob_get_clean();
+        $keepAlpha ? imagepng($thumb, null, 6) : imagejpeg($thumb, null, 82);
+        $encoded = (string) ob_get_clean();
         imagedestroy($thumb);
 
-        return $jpeg === ''
+        return $encoded === ''
             ? null
-            : ['contents' => $jpeg, 'mime' => 'image/jpeg', 'width' => $width, 'height' => $height];
+            : ['contents' => $encoded, 'mime' => $keepAlpha ? 'image/png' : 'image/jpeg', 'width' => $width, 'height' => $height];
     }
 
-    /** مسار المصغّرة بجوار الأصل: .../uuid.png → .../uuid.thumb.jpg */
-    public static function pathFor(string $originalPath): string
+    /** مسار المصغّرة بجوار الأصل: .../uuid.png → .../uuid.thumb.jpg (أو .thumb.png للشفافة) */
+    public static function pathFor(string $originalPath, string $extension = 'jpg'): string
     {
-        return preg_replace('/\.[A-Za-z0-9]+$/', '', $originalPath).'.thumb.jpg';
+        return preg_replace('/\.[A-Za-z0-9]+$/', '', $originalPath).'.thumb.'.$extension;
     }
 }

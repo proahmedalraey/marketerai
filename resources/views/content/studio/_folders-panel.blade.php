@@ -1,7 +1,7 @@
 {{--
     لوحة المجلدات — مجلدات حقيقية الآن (المرحلة الثانية، البند 2.2).
     حذف مجلد لا يحذف صوره (folder_id يعود فارغاً، nullOnDelete). "تحديد للحذف
-    الجماعي" لا يزال شكلياً — يُبنى في خطوة قادمة منفصلة.
+    الجماعي" يفتح وضع التحديد في المعرض (حذف أو نقل عدة صور دفعة واحدة).
 --}}
 <div
     x-show="foldersOpen"
@@ -84,10 +84,9 @@
 
     <div class="divider my-2"></div>
 
-    <button type="button" disabled title="قريباً"
-            class="flex items-center gap-2.5 w-full px-2.5 min-h-9 rounded-lg text-xs text-fg-subtle cursor-not-allowed opacity-60">
+    <button type="button" @click="foldersOpen = false; startSelecting()"
+            class="flex items-center gap-2.5 w-full px-2.5 min-h-9 rounded-lg text-xs text-fg-muted hover:bg-muted hover:text-fg">
         <x-icon name="check-circle" class="w-3.5 h-3.5" />
-        تحديد للحذف الجماعي
-        <span class="ms-auto">قريباً</span>
+        تحديد للحذف أو النقل الجماعي
     </button>
 </div>

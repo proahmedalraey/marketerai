@@ -100,6 +100,12 @@ Route::middleware(['auth', 'brand.ready'])->group(function () {
     Route::post('/studio', [ImageStudioController::class, 'store'])->name('studio.generate');
     Route::post('/studio/carousel/{contentItem}', [ImageStudioController::class, 'carousel'])->name('studio.carousel');
     Route::post('/studio/{contentItem}/attach', [ImageStudioController::class, 'attach'])->name('studio.attach');
+    // الجماعية قبل مسارات {mediaAsset}: «bulk-destroy» ليست معرّف صورة
+    Route::post('/studio/media/bulk-destroy', [ImageStudioController::class, 'bulkDestroy'])->name('studio.media.bulk-destroy');
+    Route::post('/studio/media/bulk-move', [ImageStudioController::class, 'bulkMove'])->name('studio.media.bulk-move');
+    Route::post('/studio/media/{mediaAsset}/remove-background', [ImageStudioController::class, 'removeBackground'])
+        ->middleware('throttle:20,1')->name('studio.media.remove-background');
+    Route::post('/studio/media/{mediaAsset}/to-product', [ImageStudioController::class, 'toProduct'])->name('studio.media.to-product');
     Route::post('/studio/media/{mediaAsset}/regenerate', [ImageStudioController::class, 'regenerate'])->name('studio.regenerate');
     Route::post('/studio/uploads', [ImageStudioController::class, 'upload'])->name('studio.uploads');
     Route::post('/studio/enhance', [ImageStudioController::class, 'enhance'])

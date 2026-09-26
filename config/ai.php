@@ -140,6 +140,15 @@ return [
     | تحسين وصف الصورة (زر العصا في /studio): طلب نصي قصير، فنموذج أخف يكفيه ويصله بضع ثوانٍ أقل.
     | فارغ = نموذج المزود الافتراضي. معرّف النموذج خاص بالمزود (OpenRouter: google/gemini-3.8-flash مثلاً).
     */
+    /*
+    | إزالة الخلفية في /studio: تتطلب مزود صور OpenRouter ونموذجاً يعلن background=transparent
+    | ويقبل صورة مرجعية. GPT Image 2.5 Flare: قصّ نظيف ويحفظ ملصق المنتج ونصوصه (قياس 2026-09-26).
+    */
+    'remove_background' => [
+        'model' => env('AI_REMOVE_BG_MODEL', 'openai/gpt-image-2.5-flare'),
+        'quality' => '1k_medium',
+    ],
+
     'prompt_enhance' => [
         'model' => env('AI_PROMPT_ENHANCE_MODEL') ?: null,
     ],

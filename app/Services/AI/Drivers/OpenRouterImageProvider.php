@@ -87,6 +87,10 @@ class OpenRouterImageProvider implements ImageProvider
             $body['quality'] = $quality;
         }
 
+        if ($request->background && ($background = $this->choose($params, 'background', $request->background))) {
+            $body['background'] = $background;
+        }
+
         // نماذج لا تقبل output_format (مثل بعض نماذج الفيكتور) لا يجب أن تُسقط الطلب
         if ($params !== null && ! isset($params['output_format'])) {
             unset($body['output_format']);

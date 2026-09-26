@@ -23,6 +23,9 @@ class Product extends Model
         'source', 'external_id', 'synced_at', 'is_primary', 'is_active',
     ];
 
+    /** أقصى عدد صور: السلعة تُعرض من زوايا، والخدمة صورة توضيحية واحدة. */
+    public const MAX_IMAGES = ['good' => 6, 'service' => 1];
+
     public const STOCK = [
         'in_stock' => 'متوفر',
         'out_of_stock' => 'نفد من المخزون',

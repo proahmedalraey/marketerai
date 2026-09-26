@@ -2,11 +2,18 @@
     شريط التأليف العائم — يطابق تخطيط الصور المرجعية: برومبت + صف أدوات
     (رفع/صوت/تحسين/هوية بصرية/ممحاة/عدد/جودة+دقة/نموذج/نسبة) + زر توليد بتكلفة حية.
 
-    الصوت شكلي (قرار §1/§2) — معطّل بوسم "قريباً".
-    النموذج والدقة+الجودة والنسبة وحقول المرجع وتحسين الوصف بالذكاء (العصا) حقيقية.
+    كل الأدوات حقيقية: الإدخال الصوتي (Web Speech API داخل المتصفح)، وتحسين الوصف (العصا)،
+    والنموذج والدقة+الجودة والنسبة وحقول المرجع.
+
+    القوائم المنبثقة تُغلق بنقرة خارج الشريط كله (click.outside واحد هنا) لا خارج كل قائمة:
+    كانت كل قائمة تغلق الأخرى أثناء حركة إخفائها، فتظهر القائمة الجديدة وتختفي فوراً.
 --}}
 <div class="sticky bottom-4 z-30">
-    <form method="POST" action="{{ route('studio.generate') }}" class="card shadow-pop p-3 space-y-2.5">
+    <form
+        method="POST" action="{{ route('studio.generate') }}"
+        @click.outside="closePopovers()" @submit="stopVoice()"
+        class="studio-dock p-3 space-y-2.5"
+    >
         @csrf
 
         <input type="hidden" name="aspect_ratio" :value="aspectRatio">
@@ -65,9 +72,16 @@
                 placeholder="صف المشهد الذي تتخيّله… أو اسحب صورة هنا كمرجع"
             ></textarea>
 
-            <button type="button" disabled title="قريباً — إدخال صوتي" class="btn btn-ghost btn-icon opacity-50 cursor-not-allowed">
+            {{-- إدخال صوتي بالعربية: يُكتب في حقل الوصف أثناء الكلام، ونقرة ثانية توقفه --}}
+            <button
+                type="button" @click="toggleVoice()" :disabled="enhancing"
+                :title="voiceTitle" :aria-pressed="listening ? 'true' : 'false'"
+                :class="listening ? 'bg-danger-soft text-danger-fg ring-2 ring-danger/30' : (speechSupported ? '' : 'opacity-50')"
+                class="btn btn-ghost btn-icon relative"
+            >
                 <x-icon name="mic" class="w-4 h-4" />
-                <span class="sr-only">إدخال صوتي (قريباً)</span>
+                <span x-show="listening" x-cloak class="absolute top-2 end-2 w-2 h-2 rounded-full bg-danger motion-safe:animate-ping"></span>
+                <span class="sr-only" x-text="listening ? 'إيقاف الإدخال الصوتي' : 'إدخال صوتي'">إدخال صوتي</span>
             </button>
 
             {{-- تحسين الوصف بالذكاء: مهمة طابور صغيرة (قاعدة §1)، والأصل يُحفظ للتراجع --}}
@@ -84,16 +98,24 @@
         </div>
 
         {{-- حالة تحسين الوصف: جارٍ / تم (مع تراجع) / خطأ --}}
-        <div x-show="enhancing || enhanceError || canUndoEnhance" x-cloak class="flex items-center gap-2 px-1 text-xs" role="status" aria-live="polite">
-            <span x-show="enhancing" class="flex items-center gap-1.5 text-fg-muted">
+        <div x-show="listening || voiceError || enhancing || enhanceError || canUndoEnhance" x-cloak class="flex items-center gap-2 px-1 text-xs" role="status" aria-live="polite">
+            <span x-show="listening" class="flex items-center gap-1.5 text-danger-fg">
+                <span class="w-2 h-2 rounded-full bg-danger motion-safe:animate-pulse"></span>
+                يستمع… تحدّث بالعربية، واضغط الميكروفون للإيقاف
+            </span>
+            <span x-show="! listening && voiceError" class="flex items-center gap-1.5 text-danger-fg">
+                <x-icon name="mic" class="w-3.5 h-3.5" />
+                <span x-text="voiceError"></span>
+            </span>
+            <span x-show="! listening && ! voiceError && enhancing" class="flex items-center gap-1.5 text-fg-muted">
                 <x-icon name="wand" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
                 يحسّن الوصف… عادةً بضع ثوانٍ
             </span>
-            <span x-show="! enhancing && enhanceError" class="flex items-center gap-1.5 text-danger-fg">
+            <span x-show="! listening && ! voiceError && ! enhancing && enhanceError" class="flex items-center gap-1.5 text-danger-fg">
                 <x-icon name="alert" class="w-3.5 h-3.5" />
                 <span x-text="enhanceError"></span>
             </span>
-            <span x-show="! enhancing && ! enhanceError && canUndoEnhance" class="flex items-center gap-2 text-fg-muted">
+            <span x-show="! listening && ! voiceError && ! enhancing && ! enhanceError && canUndoEnhance" class="flex items-center gap-2 text-fg-muted">
                 <x-icon name="check" class="w-3.5 h-3.5 text-success-fg" />
                 حُسّن الوصف — راجعه قبل التوليد
                 <button type="button" @click="undoEnhance()" class="font-semibold text-brand-700 dark:text-brand-400 underline underline-offset-4">تراجع</button>

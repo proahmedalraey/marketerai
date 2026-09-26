@@ -1,4 +1,4 @@
-{{-- عارض الصورة بالحجم الكامل. "استخدم كمرجع" حقيقي؛ المفضّلة شكلية (قرار §4). --}}
+{{-- عارض الصورة بالحجم الكامل. "استخدم كمرجع" والتثبيت حقيقيان؛ الصور الشفافة فوق نقش شطرنج. --}}
 <div
     x-show="lightbox"
     x-cloak
@@ -17,7 +17,7 @@
     <template x-if="lightbox">
         <div class="relative min-h-full grid place-items-center p-4">
             <div class="relative max-w-3xl w-full motion-safe:animate-scale-in">
-                <img :src="lightbox.url" :alt="lightbox.prompt" class="w-full max-h-[80vh] object-contain rounded-xl bg-muted">
+                <img :src="lightbox.url" :alt="lightbox.prompt" :class="lightbox.transparent ? 'bg-checker' : 'bg-muted'" class="w-full max-h-[80vh] object-contain rounded-xl">
 
                 <button
                     type="button" @click="closeLightbox()"

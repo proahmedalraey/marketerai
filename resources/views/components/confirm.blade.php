@@ -86,6 +86,8 @@
                     <form method="POST" action="{{ $action }}" class="flex-1" data-busy-on-submit>
                         @csrf
                         @method($method)
+                        {{-- حقول إضافية للحذف الجماعي (ids[] مثلاً)؛ فارغة في الاستعمال المعتاد --}}
+                        {{ $slot }}
                         <button type="submit" class="btn bg-danger text-white hover:brightness-110 w-full">
                             <span>{{ $confirm }}</span>
                         </button>

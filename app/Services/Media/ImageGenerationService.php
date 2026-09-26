@@ -8,6 +8,7 @@ use App\Models\Brand;
 use App\Models\ContentItem;
 use App\Models\GenerationJob;
 use App\Models\MediaAsset;
+use App\Models\MediaFolder;
 use App\Services\AI\AiManager;
 use App\Services\AI\DTO\ImageRequest;
 use App\Services\Credits\CreditService;
@@ -30,10 +31,57 @@ class ImageGenerationService
         .'Change only the surroundings, surface and lighting. '
         .'Everywhere else in the image: no text, no captions, no extra logos, no watermarks.';
 
+    /**
+     * إزالة الخلفية: النموذج يعيد رسم الصورة نفسها بخلفية شفافة (background=transparent).
+     * قِسنا (2026-09-26) على عبوة «MASTIC»: القصّ نظيف والملصق ونصوصه كما هي، ~11ث.
+     */
+    public const REMOVE_BACKGROUND_PROMPT = 'Remove the background completely and output only the main subject on a fully transparent background. '
+        .'Keep the subject exactly as it is in the reference image: same shape, colors, label artwork, logo and every printed word, '
+        .'same proportions and camera angle. Do not redraw, restyle or add anything. No shadow, no floor, no backdrop.';
+
+    public const REMOVE_BACKGROUND_OPERATION = 'image.remove_bg';
+
     public function __construct(
         protected AiManager $ai,
         protected CreditService $credits,
     ) {}
+
+    /** عملية النقاط للحمولة: إزالة الخلفية سعرها ثابت، والتوليد حسب الدقة×الجودة. */
+    public static function operationFor(array $payload): string
+    {
+        return ($payload['mode'] ?? null) === 'remove_background'
+            ? self::REMOVE_BACKGROUND_OPERATION
+            : 'image.'.($payload['quality'] ?? 'standard_1k');
+    }
+
+    /**
+     * صورة بلا خلفية من صورة في المعرض — صورة جديدة بجانب الأصل (لا تُستبدل)،
+     * في مجلده نفسه، ويمكن إعادة توليدها كأي صورة أخرى.
+     */
+    public function dispatchRemoveBackground(Brand $brand, MediaAsset $source, ?int $userId = null): GenerationJob
+    {
+        [$width, $height] = [(int) $source->width, (int) $source->height];
+
+        // نسبة الأصل مختصرة (1000×1000 ← 1:1، 864×1080 ← 4:5): النموذج يأخذ أقرب نسبة ويُقصّ الناتج إليها
+        $gcd = static function (int $a, int $b) use (&$gcd): int {
+            return $b === 0 ? max($a, 1) : $gcd($b, $a % $b);
+        };
+        $divisor = $width > 0 && $height > 0 ? $gcd($width, $height) : 1;
+        $ratio = $width > 0 && $height > 0 ? ($width / $divisor).':'.($height / $divisor) : '1:1';
+
+        return $this->dispatch($brand, [
+            'mode' => 'remove_background',
+            'prompt' => trim('بلا خلفية — '.($source->prompt ?: 'صورة')),
+            'aspect_ratio' => $ratio,
+            'quality' => config('ai.remove_background.quality', '1k_medium'),
+            'count' => 1,
+            'use_brand_identity' => false,
+            'reference_asset_id' => $source->id,
+            'openrouter_model' => config('ai.remove_background.model'),
+            'background' => 'transparent',
+            'folder_id' => $source->folder_id,
+        ], $userId);
+    }
 
     /**
      * @param  array{prompt:string, aspect_ratio?:string, quality?:string, count?:int, content_item_id?:int|null, use_brand_identity?:bool}  $input
@@ -42,7 +90,7 @@ class ImageGenerationService
     {
         $quality = $input['quality'] ?? 'standard_1k';
         $count = max((int) ($input['count'] ?? 1), 1);
-        $operation = "image.{$quality}";
+        $operation = self::operationFor($input);
 
         return DB::transaction(function () use ($brand, $input, $quality, $count, $operation, $userId) {
             $job = GenerationJob::create([
@@ -62,7 +110,13 @@ class ImageGenerationService
                     'reference_asset_id' => $input['reference_asset_id'] ?? null,
                     // مفتاح نموذج الاستوديو (config ai.studio_models)؛ إعادة التوليد تعيد استخدامه من الحمولة
                     'model' => $input['model'] ?? null,
-                ],
+                ] + array_filter([
+                    // إزالة الخلفية: نموذج محدد وخلفية شفافة ومجلد الأصل (null لا تُخزَّن)
+                    'mode' => $input['mode'] ?? null,
+                    'openrouter_model' => $input['openrouter_model'] ?? null,
+                    'background' => $input['background'] ?? null,
+                    'folder_id' => $input['folder_id'] ?? null,
+                ], fn ($value) => $value !== null),
             ]);
 
             $this->credits->hold($brand, $operation, $count, $job);
@@ -78,15 +132,34 @@ class ImageGenerationService
         $brand = $job->brand;
         $payload = $job->payload;
         $quality = $payload['quality'] ?? 'standard_1k';
-        $operation = "image.{$quality}";
+        $operation = self::operationFor($payload);
         $count = (int) ($payload['count'] ?? 1);
+        $removingBackground = ($payload['mode'] ?? null) === 'remove_background';
+        $transparent = ($payload['background'] ?? null) === 'transparent';
 
         $job->markProcessing();
 
         $reference = $this->referenceImagePath($brand, $payload);
-        $prompt = $this->composePrompt($brand, $payload, $reference !== null);
+
+        // الأصل حُذف بين الطلب والتنفيذ: بلا صورة لا شيء تُزال خلفيته
+        if ($removingBackground && $reference === null) {
+            $this->credits->refund($brand, (float) $job->credits_held, $job, $operation, 'إرجاع: الصورة الأصلية لم تعد موجودة');
+            $job->markFailed('الصورة الأصلية لم تعد موجودة. أُرجعت نقاطك.');
+            $this->finishChild($job);
+
+            return;
+        }
+
+        $prompt = $removingBackground
+            ? self::REMOVE_BACKGROUND_PROMPT
+            : $this->composePrompt($brand, $payload, $reference !== null);
 
         $ratio = $payload['aspect_ratio'] ?? '1:1';
+
+        // مجلد الأصل قد يُحذف قبل التنفيذ: لا نربط بمجلد غير موجود
+        $folderId = filled($payload['folder_id'] ?? null) && MediaFolder::whereKey($payload['folder_id'])->exists()
+            ? (int) $payload['folder_id']
+            : null;
 
         $response = $this->ai->generateImage(new ImageRequest(
             prompt: $prompt,
@@ -95,7 +168,8 @@ class ImageGenerationService
             count: $count,
             referenceImage: $reference,
             operation: $operation,
-            model: app(StudioModels::class)->modelId($payload['model'] ?? null),
+            model: $payload['openrouter_model'] ?? app(StudioModels::class)->modelId($payload['model'] ?? null),
+            background: $payload['background'] ?? null,
         ), $job);
 
         $assetIds = [];
@@ -127,8 +201,16 @@ class ImageGenerationService
             Storage::disk(config('ai.media_disk'))->put($path, $contents);
 
             // مصغّرة للشبكة: الأصل 1–2MB والمعرض يعرض عشرات الصور دفعة واحدة
-            if ($thumb = MediaAsset::putThumbnail(config('ai.media_disk'), $path, $contents)) {
+            if ($thumb = MediaAsset::putThumbnail(config('ai.media_disk'), $path, $contents, keepAlpha: $transparent)) {
                 $extra['thumb'] = $thumb;
+            }
+
+            if ($removingBackground) {
+                $extra += ['source_asset_id' => $payload['reference_asset_id'] ?? null, 'mode' => 'remove_background'];
+            }
+
+            if ($transparent) {
+                $extra['background'] = 'transparent';
             }
 
             // الأبعاد الفعلية من الملف لا من الطلب: نموذج يُنتج 1K عند طلب 4K كان يُسجَّل 3840 كذباً
@@ -138,6 +220,7 @@ class ImageGenerationService
                 'brand_id' => $brand->id,
                 'content_item_id' => $payload['content_item_id'] ?? null,
                 'generation_job_id' => $job->id,
+                'folder_id' => $folderId,
                 'kind' => 'image',
                 'disk' => config('ai.media_disk'),
                 'path' => $path,

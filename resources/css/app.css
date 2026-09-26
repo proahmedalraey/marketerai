@@ -496,6 +496,74 @@
         @apply bg-card/85 backdrop-blur-xl backdrop-saturate-150;
     }
 
+    /* ---------- استوديو الصور: شريط التوليد الزجاجي وقوائمه ---------- */
+    /*
+     * شفاف بطبقتين: تدرّج خفيف من لون البطاقة + ضبابية للمعرض خلفه، وحافة علوية مضيئة
+     * تفصله عن الصور دون خط صلب. بلا backdrop-filter (متصفحات قديمة) يرجع للون البطاقة الصلب.
+     */
+    .studio-dock {
+        border-radius: 1.25rem;
+        border-width: 1px;
+        border-style: solid;
+        background:
+            linear-gradient(180deg, rgb(var(--card) / .78) 0%, rgb(var(--card) / .62) 100%);
+        border-color: rgb(var(--card) / .9);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / .6),
+            0 0 0 1px rgb(var(--line) / .55),
+            0 24px 48px -20px rgb(41 31 24 / .35),
+            0 8px 16px -12px rgb(41 31 24 / .18);
+        -webkit-backdrop-filter: blur(22px) saturate(170%);
+        backdrop-filter: blur(22px) saturate(170%);
+    }
+
+    .dark .studio-dock {
+        background: linear-gradient(180deg, rgb(var(--card) / .72) 0%, rgb(var(--card) / .58) 100%);
+        border-color: rgb(255 255 255 / .07);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / .06),
+            0 0 0 1px rgb(0 0 0 / .35),
+            0 24px 48px -20px rgb(0 0 0 / .7);
+    }
+
+    /* الحقول والوسوم داخل الشريط شبه شفافة لتنتمي للزجاج لا لتقطعه */
+    .studio-dock .field {
+        background: rgb(var(--card) / .55);
+        border-color: rgb(var(--line-strong) / .7);
+    }
+
+    .studio-dock .field:focus { background: rgb(var(--card) / .85); }
+
+    .studio-dock .chip { border-color: rgb(var(--line-strong) / .6); }
+
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .studio-dock { background: rgb(var(--card)); }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+        .studio-dock { background: rgb(var(--card)); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    }
+
+    /*
+     * القوائم فوق الشريط: صلبة عمداً (بلا backdrop-filter). داخل عنصر زجاجي، ضبابية الابن
+     * لا ترى إلا ما داخل أبيه، فكانت ستظهر رمادية فارغة خارج حدود الشريط.
+     */
+    .studio-popover {
+        @apply bg-card rounded-2xl border border-line shadow-pop origin-bottom;
+    }
+
+    /* نقش شطرنج خلف الصور الشفافة (بعد إزالة الخلفية) */
+    .bg-checker {
+        background-color: rgb(var(--card));
+        background-image:
+            linear-gradient(45deg, rgb(var(--muted)) 25%, transparent 25%),
+            linear-gradient(-45deg, rgb(var(--muted)) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgb(var(--muted)) 75%),
+            linear-gradient(-45deg, transparent 75%, rgb(var(--muted)) 75%);
+        background-size: 16px 16px;
+        background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+
     /* رابط تخطي للوحة المفاتيح وقارئات الشاشة */
     .skip-link {
         @apply sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[100]

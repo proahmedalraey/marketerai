@@ -4,13 +4,17 @@
     "من المنتجات" و"الصور المرفوعة مسبقاً" حقيقيان أيضاً.
 --}}
 <div
-    data-popover
+    data-popover="upload"
     x-show="popover === 'upload'"
     x-cloak
-    x-transition.opacity.duration.150ms
-    @click.outside="popover = null"
+    x-transition:enter="transition ease-out duration-150"
+    x-transition:enter-start="opacity-0 translate-y-1"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-100"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
     x-data="{ showProducts: false, productQuery: '' }"
-    class="absolute bottom-full start-0 mb-2 z-20 w-72 max-w-[90vw] p-1.5 card shadow-pop motion-safe:animate-scale-in"
+    class="absolute bottom-full start-0 mb-2 z-20 w-72 max-w-[90vw] p-1.5 studio-popover"
 >
     <template x-if="! showProducts">
         <div>

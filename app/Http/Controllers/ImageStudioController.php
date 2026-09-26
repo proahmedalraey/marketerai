@@ -7,13 +7,18 @@ use App\Models\GenerationJob;
 use App\Models\MediaAsset;
 use App\Models\MediaFolder;
 use App\Models\Product;
+use App\Services\AI\ModelCatalog;
 use App\Services\Credits\CreditService;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
 use App\Services\Media\ImageGenerationService;
 use App\Services\Media\PromptEnhancer;
 use App\Services\Media\StudioModels;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ImageStudioController extends Controller
@@ -70,7 +75,10 @@ class ImageStudioController extends Controller
             'folders' => MediaFolder::orderBy('name')->get(),
             'activeFolder' => $activeFolder,
             'pinnedOnly' => $pinnedOnly,
-            'products' => Product::where('is_active', true)->get(),
+            'products' => Product::where('is_active', true)->withCount('images')->get(),
+            // إزالة الخلفية تحتاج OpenRouter (نموذج بخلفية شفافة)؛ بغيره يظهر البند معطّلاً بسببه
+            'removeBackgroundAvailable' => $models->routable(),
+            'removeBackgroundCost' => app(CreditService::class)->cost(ImageGenerationService::REMOVE_BACKGROUND_OPERATION),
             'planItems' => ContentItem::whereIn('status', ['ready', 'draft'])->latest()->take(20)->get(),
             // نطاق التصميم الجديد (/studio فقط) — الكاروسيل في content/show.blade.php يبقى على ai.quality_tiers
             'ratios' => config('ai.aspect_ratios'),
@@ -289,6 +297,126 @@ class ImageStudioController extends Controller
         $mediaAsset->update(['folder_id' => $data['folder_id'] ?? null]);
 
         return back()->with('status', $data['folder_id'] ?? null ? 'نُقلت الصورة إلى المجلد.' : 'أُعيدت الصورة إلى "الكل".');
+    }
+
+    /**
+     * إزالة الخلفية: صورة جديدة شفافة بجانب الأصل (لا يُمسّ الأصل)، عبر الطابور كأي توليد.
+     */
+    public function removeBackground(MediaAsset $mediaAsset, Request $request, ImageGenerationService $service, StudioModels $models)
+    {
+        abort_unless($mediaAsset->kind === 'image', 404);
+
+        if (! $models->routable()) {
+            return back()->withErrors(['remove_background' => 'إزالة الخلفية تتطلب مزود الصور OpenRouter من إعدادات المنصة.']);
+        }
+
+        // النموذج المُعدّ يجب أن يعلن الخلفية الشفافة ويقبل صورة مرجعية؛ قدرات مجهولة = نحاول
+        $params = app(ModelCatalog::class)->imageParameters((string) config('ai.remove_background.model'));
+
+        if ($params !== null && (! in_array('transparent', $params['background']['values'] ?? [], true)
+            || (int) data_get($params, 'input_references.max', 0) < 1)) {
+            return back()->withErrors(['remove_background' => 'نموذج إزالة الخلفية المُعدّ لا يدعم الخلفية الشفافة. غيّر AI_REMOVE_BG_MODEL.']);
+        }
+
+        try {
+            $job = $service->dispatchRemoveBackground($this->brand(), $mediaAsset, $request->user()->id);
+        } catch (InsufficientCreditsException|DailyCapReachedException $e) {
+            return back()->withErrors(['credits' => $e->getMessage()]);
+        }
+
+        return redirect()->route('studio.index', array_filter([
+            'job' => $job->uuid,
+            'folder' => $mediaAsset->folder_id,
+        ]));
+    }
+
+    /**
+     * حفظ صورة من المعرض كصورة مرجعية أساسية لمنتج: تُنسخ لصور المنتج وتصير مرجعه
+     * البصري (is_reference) — فتُرفق تلقائياً في كل توليد قادم لهذا المنتج.
+     */
+    public function toProduct(MediaAsset $mediaAsset, Request $request)
+    {
+        abort_unless($mediaAsset->kind === 'image', 404);
+
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('brand_id', $this->brand()->id)],
+        ], [], ['product_id' => 'المنتج']);
+
+        $product = Product::findOrFail($data['product_id']);
+        $max = Product::MAX_IMAGES[$product->type->value] ?? 6;
+
+        if ($product->images()->count() >= $max) {
+            return back()->withErrors(['product_id' => "«{$product->title}» وصل للحد الأقصى ({$max} صور). احذف صورة من صفحة المنتج ثم أعد المحاولة."]);
+        }
+
+        $source = Storage::disk($mediaAsset->disk);
+
+        abort_unless($source->exists($mediaAsset->path), 404);
+
+        // نسخة مستقلة في مجلد المنتج: حذف الصورة من المعرض لاحقاً لا يُفقد المنتج مرجعه
+        $extension = pathinfo($mediaAsset->path, PATHINFO_EXTENSION) ?: 'png';
+        $path = "brands/{$product->brand_id}/products/".Str::uuid().'.'.$extension;
+        Storage::disk('public')->put($path, $source->get($mediaAsset->path));
+
+        DB::transaction(function () use ($product, $path) {
+            $image = $product->images()->create([
+                'disk' => 'public',
+                'path' => $path,
+                'position' => ($product->images()->max('position') ?? -1) + 1,
+                'is_reference' => false,
+            ]);
+
+            // استعلامان لا تحديث نموذج: نفس سبب ProductController::applyReferenceImage
+            $product->images()->whereKeyNot($image->id)->update(['is_reference' => false]);
+            $product->images()->whereKey($image->id)->update(['is_reference' => true]);
+        });
+
+        return back()->with('status', "صارت الصورة المرجع البصري الأساسي لـ«{$product->title}» — تُرفق في صوره القادمة.");
+    }
+
+    /** حذف جماعي نهائي (نفس قرار الحذف الفوري للصورة الواحدة). */
+    public function bulkDestroy(Request $request)
+    {
+        $assets = $this->selectedAssets($request);
+
+        foreach ($assets as $asset) {
+            $asset->deleteFiles();
+            $asset->delete();
+        }
+
+        return back()->with('status', $assets->count() === 1 ? 'حُذفت صورة واحدة نهائياً.' : "حُذفت {$assets->count()} صور نهائياً.");
+    }
+
+    /** نقل جماعي إلى مجلد، أو إلى «الكل» حين folder_id فارغ. */
+    public function bulkMove(Request $request)
+    {
+        $data = $request->validate([
+            'folder_id' => ['nullable', 'integer', Rule::exists('media_folders', 'id')->where('brand_id', $this->brand()->id)],
+        ]);
+
+        $assets = $this->selectedAssets($request);
+
+        MediaAsset::whereKey($assets->modelKeys())->update(['folder_id' => $data['folder_id'] ?? null]);
+
+        return back()->with('status', ($data['folder_id'] ?? null)
+            ? "نُقلت {$assets->count()} صور إلى المجلد."
+            : "أُعيدت {$assets->count()} صور إلى «الكل».");
+    }
+
+    /**
+     * الصور المحددة لهذه العلامة فقط: النطاق العام BelongsToBrand يُسقط أي معرّف لعلامة أخرى
+     * بصمت (لا خطأ يكشف وجوده)، ولا نمس إلا الصور.
+     *
+     * @return Collection<int, MediaAsset>
+     */
+    protected function selectedAssets(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:600'],
+            'ids.*' => ['integer'],
+        ], ['ids.required' => 'حدّد صورة واحدة على الأقل.']);
+
+        return MediaAsset::whereIn('id', $data['ids'])->where('kind', 'image')->get();
     }
 
     /**
