@@ -6,6 +6,7 @@ use App\Enums\JobStatus;
 use App\Models\ContentItem;
 use App\Models\GenerationJob;
 use App\Services\Content\ContentFormats;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -32,7 +33,7 @@ class JobSummary
     /**
      * صفوف اللوحة جاهزة لجافاسكربت.
      *
-     * @param  \Illuminate\Support\Collection<int, GenerationJob>  $jobs
+     * @param  Collection<int, GenerationJob>  $jobs
      */
     public static function collect($jobs): array
     {
@@ -53,10 +54,16 @@ class JobSummary
             'meta' => $this->meta(),
             'state' => $this->state(),
             'running' => ! $job->status->isFinished(),
+            // في الانتظار منذ أكثر من نصف دقيقة ولا عامل حي: تنبّه اللوحة بدل «جارية» بلا نهاية
+            'stalled' => QueueHealth::isStalled($job),
+            'stage' => JobStage::label($job),
             'progress' => $job->progress(),
             'succeeded' => $this->succeeded(),
             'error' => $job->error,
-            'credits' => (int) $job->credits_charged,
+            // كسرية منذ مصفوفة الصور (0.5)؛ نُبقي الصحيح صحيحاً ليبقى العرض «2» لا «2.0»
+            'credits' => fmod((float) $job->credits_charged, 1.0) === 0.0
+                ? (int) $job->credits_charged
+                : (float) $job->credits_charged,
             'time' => $job->created_at->diffForHumans(),
             'resultUrl' => $this->resultUrl($item),
             'editUrl' => $item ? route('content.show', $item) : null,

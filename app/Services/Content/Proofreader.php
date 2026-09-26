@@ -5,8 +5,10 @@ namespace App\Services\Content;
 use App\Models\GenerationJob;
 use App\Services\AI\AiManager;
 use App\Services\AI\DTO\TextRequest;
+use App\Services\AI\ProviderException;
 use App\Support\Arabic\ArabicText;
 use App\Support\WordDiff;
+use Illuminate\Support\Facades\Log;
 
 /**
  * مدقق لغوي يصحح الإملاء والنحو في المنشور ولا يمس غيرهما.
@@ -37,14 +39,34 @@ class Proofreader
             return ['content' => $content, 'changes' => [], 'skipped' => []];
         }
 
-        $response = $this->ai->generateText(new TextRequest(
+        $request = new TextRequest(
             system: $this->system($dialect),
             prompt: $this->prompt($fields),
             schema: $this->schema(array_keys($fields)),
             temperature: 0.1,
             maxTokens: 2048,
             operation: self::OPERATION,
-        ), $job, config('ai.proofread.provider'));
+            model: config('ai.proofread.model'),
+        );
+
+        $provider = config('ai.proofread.provider');
+
+        try {
+            $response = $this->ai->generateText($request, $job, $provider);
+        } catch (ProviderException $e) {
+            // نموذج التدقيق مكتوب بخطأ أو سُحب أو ليس لهذا المزود: لا نُسقط التدقيق كله بسببه
+            if ($request->model === null || ! in_array($e->statusCode, [400, 404], true)) {
+                throw $e;
+            }
+
+            Log::warning('نموذج التدقيق اللغوي غير صالح؛ أُعيد الطلب بنموذج المزود الافتراضي', [
+                'model' => $request->model,
+                'error' => mb_substr($e->getMessage(), 0, 300),
+            ]);
+
+            $request->model = null;
+            $response = $this->ai->generateText($request, $job, $provider);
+        }
 
         return $this->merge($content, $fields, (array) ($response->data ?? []));
     }

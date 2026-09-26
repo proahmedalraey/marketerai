@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\GenerationJob;
 use App\Models\Product;
+use App\Services\Credits\CreditService;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
-use App\Services\Credits\CreditService;
 use App\Services\Import\DTO\DiscoveryResult;
 use App\Services\Import\ImportService;
 use App\Services\Import\ProductEnricher;
@@ -123,17 +123,26 @@ class ProductImportController extends Controller
             'brand_name' => $discovered->brandName,
         ]);
 
+        /*
+         * قراءة الصفحة مجانية ونجحت بالفعل، فلا نرمي اسمها وسعرها وصورها
+         * لأن خطوة الذكاء الاصطناعي بعدها تعثّرت. نُرجع ما قرأناه،
+         * ونُعيد النقطة، ونُخبر المستخدم أن التحليل وحده هو ما فشل.
+         */
+        $warning = null;
+
         try {
             $fields = $enricher->fieldsFor($draft);
-        } catch (\Throwable $e) {
-            $credits->refund($brand, $held, null, ProductEnricher::OPERATION, 'فشل استيراد رابط واحد');
+            $credits->settle($brand, $held, $held, null, ProductEnricher::OPERATION);
+        } catch (\Throwable) {
+            $credits->refund($brand, $held, null, ProductEnricher::OPERATION, 'فشل تحليل رابط واحد');
 
-            return response()->json(['message' => 'تعذّر تحليل المنتج. لم تُخصم أي نقاط.'], 502);
+            $fields = [];
+            $held = 0;
+            $warning = 'استوردنا بيانات الصفحة، لكن تعذّر تحليلها بالذكاء الاصطناعي — راجع الحقول بنفسك. لم تُخصم أي نقاط.';
         }
 
-        $credits->settle($brand, $held, $held, null, ProductEnricher::OPERATION);
-
         return response()->json([
+            'warning' => $warning,
             'title' => $discovered->title,
             'features' => $fields['features'] ?? $discovered->summary,
             'specifications' => $fields['specifications'] ?? '',

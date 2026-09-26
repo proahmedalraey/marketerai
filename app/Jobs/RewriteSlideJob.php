@@ -46,7 +46,7 @@ class RewriteSlideJob implements ShouldQueue
 
         app(CreditService::class)->refund(
             $job->brand,
-            (int) $job->credits_held,
+            (float) $job->credits_held,
             $job,
             ContentGenerationService::SLIDE_OPERATION,
             'إرجاع تلقائي بعد فشل إعادة كتابة الشريحة'

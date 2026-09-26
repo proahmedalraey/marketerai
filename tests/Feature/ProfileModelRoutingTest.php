@@ -81,6 +81,32 @@ class ProfileModelRoutingTest extends TestCase
         Http::assertSent(fn (Request $r) => $r['model'] === 'gpt-4o-mini');
     }
 
+    public function test_a_model_alone_applies_to_the_default_provider(): void
+    {
+        // كإعداد OpenRouter: المزود الافتراضي نفسه، بنموذج آخر للهوية وحدها
+        config(['ai.text_provider' => 'openai', 'ai.profile.model' => 'gpt-4.1']);
+        Http::fake(['api.openai.com/*' => Http::response($this->openAi('gpt-4.1'))]);
+
+        $this->draft();
+
+        Http::assertSent(fn (Request $r) => $r['model'] === 'gpt-4.1');
+    }
+
+    public function test_a_rejected_profile_model_falls_back_to_the_provider_model(): void
+    {
+        config(['ai.profile.provider' => 'openai', 'ai.profile.model' => 'gpt-typo']);
+        Http::fake(['api.openai.com/*' => Http::sequence()
+            ->push(['error' => ['message' => 'model not found']], 404)
+            ->push($this->openAi('gpt-4o-mini'))]);
+
+        $draft = $this->draft();
+
+        $models = Http::recorded()->map(fn ($pair) => $pair[0]['model'])->all();
+
+        $this->assertSame(['gpt-typo', 'gpt-4o-mini'], $models);
+        $this->assertSame(ProfileFixtures::simple(), $draft['simple']);
+    }
+
     public function test_a_profile_provider_without_a_key_falls_back_to_the_default(): void
     {
         // ملف بالنموذج الافتراضي خير من مهمة فاشلة

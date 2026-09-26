@@ -44,10 +44,10 @@ class ScriptedAiManager extends AiManager
         return $this;
     }
 
-    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null, ?string $model = null): TextResponse
+    public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null): TextResponse
     {
         $this->requests[] = $request;
-        $this->routes[] = ['provider' => $provider, 'model' => $model];
+        $this->routes[] = ['provider' => $provider, 'model' => $request->model];
 
         $reply = array_shift($this->replies) ?? throw new RuntimeException('لا رد مجهّز لهذا الطلب.');
 

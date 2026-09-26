@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentItem;
+use App\Models\GenerationJob;
 use App\Models\MediaAsset;
 use App\Models\MediaFolder;
 use App\Models\Product;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
 use App\Services\Media\ImageGenerationService;
+use App\Services\Media\StudioModels;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ImageStudioController extends Controller
@@ -38,8 +39,29 @@ class ImageStudioController extends Controller
 
         $referenceLibrary = MediaAsset::where('kind', 'image')->latest()->take(60)->get();
 
+        $models = app(StudioModels::class);
+        $provider = $models->provider();
+
+        // المعرض يكبر بلا سقف صامت: "عرض المزيد" يرفع الحد 60 في كل مرة (نجلب واحداً زائداً لمعرفة وجود المزيد)
+        $limit = min(600, max(60, (int) $request->integer('limit', 60)));
+        $items = $gallery->take($limit + 1)->get();
+
+        // شكل المهمة الجارية (عدد/نسبة) لعرض هياكل انتظار مطابقة لما سيصل
+        $tracked = ($jobUuid = $request->string('job')->toString())
+            ? GenerationJob::where('uuid', $jobUuid)->first()
+            : null;
+
         return view('content.studio', [
-            'gallery' => $gallery->take(60)->get(),
+            'trackedCount' => min(4, max(1, (int) ($tracked?->payload['count'] ?? 1))),
+            'trackedRatio' => (string) ($tracked?->payload['aspect_ratio'] ?? '1:1'),
+            'studioModelService' => $models,
+            'modelCaps' => $models->allCapabilities(),
+            'modelsRoutable' => $models->routable(),
+            // حين لا توجيه: النموذج الفعلي المُعدّ (للقراءة فقط بدل قائمة مضلِّلة)
+            'activeModel' => trim($provider.' · '.(config("ai.providers.{$provider}.image_model") ?? ''), ' ·'),
+            'gallery' => $items->take($limit),
+            'galleryHasMore' => $items->count() > $limit,
+            'galleryLimit' => $limit,
             'referenceLibrary' => $referenceLibrary,
             'folders' => MediaFolder::orderBy('name')->get(),
             'activeFolder' => $activeFolder,
@@ -58,9 +80,10 @@ class ImageStudioController extends Controller
         ]);
     }
 
-    public function store(Request $request, ImageGenerationService $service)
+    public function store(Request $request, ImageGenerationService $service, StudioModels $models)
     {
         $data = $request->validate([
+            'model' => ['nullable', Rule::in(array_keys(config('ai.studio_models')))],
             'prompt' => ['required', 'string', 'max:1500'],
             'aspect_ratio' => ['required', 'in:'.implode(',', array_keys(config('ai.aspect_ratios')))],
             'quality' => ['required', 'in:'.implode(',', array_keys(config('ai.image_quality_matrix')))],
@@ -75,6 +98,11 @@ class ImageStudioController extends Controller
                 Rule::exists('media_assets', 'id')->where('brand_id', $this->brand()->id),
             ],
         ]);
+
+        // نرفض قبل الحجز: لا يُخصم ثمن 4K أو جودة قصوى من نموذج لا ينتجهما
+        if ($message = $models->unsupported($data['model'] ?? null, $data['quality'])) {
+            return back()->withInput()->withErrors(['quality' => $message]);
+        }
 
         try {
             $job = $service->dispatch($this->brand(), $data, $request->user()->id);
@@ -192,7 +220,11 @@ class ImageStudioController extends Controller
             'bytes' => $file->getSize(),
             'width' => $size[0] ?? null,
             'height' => $size[1] ?? null,
-            'meta' => ['source' => 'upload'],
+            'meta' => ['source' => 'upload'] + (
+                ($thumb = MediaAsset::putThumbnail($disk, $path, (string) file_get_contents($file->getRealPath())))
+                    ? ['thumb' => $thumb]
+                    : []
+            ),
         ]);
 
         return response()->json(['id' => $asset->id, 'url' => $asset->url()]);
@@ -206,7 +238,7 @@ class ImageStudioController extends Controller
     {
         abort_unless($mediaAsset->kind === 'image', 404);
 
-        Storage::disk($mediaAsset->disk)->delete($mediaAsset->path);
+        $mediaAsset->deleteFiles();
         $mediaAsset->delete();
 
         return back()->with('status', 'حُذفت الصورة نهائياً.');

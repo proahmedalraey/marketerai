@@ -77,7 +77,7 @@ class ImportProductsJob implements ShouldQueue
             }
 
             // نسوّي على المُثرى فقط: ما لم يُثرَ لم يستهلك نموذجاً
-            $credits->settle($job->brand, (int) $job->credits_held, $enriched, $job, ProductEnricher::OPERATION);
+            $credits->settle($job->brand, (float) $job->credits_held, $enriched, $job, ProductEnricher::OPERATION);
 
             $job->markCompleted([
                 'product_ids' => $imported,
@@ -98,7 +98,7 @@ class ImportProductsJob implements ShouldQueue
 
         app(CreditService::class)->refund(
             $job->brand,
-            (int) $job->credits_held,
+            (float) $job->credits_held,
             $job,
             ProductEnricher::OPERATION,
             'إرجاع تلقائي بعد فشل الاستيراد'

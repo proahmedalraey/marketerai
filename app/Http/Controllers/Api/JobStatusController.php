@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\GenerationJob;
+use App\Support\JobStage;
+use App\Support\QueueHealth;
 use Illuminate\Http\JsonResponse;
 
 class JobStatusController extends Controller
@@ -22,6 +24,8 @@ class JobStatusController extends Controller
             'status' => $job->status->value,
             'label' => $job->status->label(),
             'progress' => $job->progress(),
+            'stalled' => QueueHealth::isStalled($job),
+            'stage' => JobStage::label($job),
             'children_total' => $job->children_total,
             'children_done' => $job->children_done,
             'credits_charged' => $job->credits_charged,

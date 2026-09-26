@@ -11,6 +11,7 @@ use App\Models\BrandProfile;
 use App\Models\GenerationJob;
 use App\Services\AI\AiManager;
 use App\Services\AI\DTO\TextRequest;
+use App\Services\AI\ProviderException;
 use App\Services\Brand\Quality\ProfileQualityCheck;
 use App\Services\Brand\Quality\ProfileQualityReport;
 use App\Services\Credits\CreditService;
@@ -117,7 +118,7 @@ class BrandProfileGenerator
 
         if ($draft['simple'] === null || $draft['detailed'] === null) {
             // الفشل يُرجع النقاط كاملة: لا يدفع المستخدم مقابل ملف ناقص
-            $this->credits->refund($brand, (int) $job->credits_held, $job, self::OPERATION, 'إرجاع: مخرج ناقص');
+            $this->credits->refund($brand, (float) $job->credits_held, $job, self::OPERATION, 'إرجاع: مخرج ناقص');
             $job->markFailed('لم يُنتج النموذج الوصفين المطلوبين. أُرجعت النقاط.');
 
             return;
@@ -152,7 +153,7 @@ class BrandProfileGenerator
             $brand->update(['industry' => Str::limit($profile->technical['activity_type'], 120, '')]);
         }
 
-        $held = (int) $job->credits_held;
+        $held = (float) $job->credits_held;
         $this->credits->settle($brand, $held, $held, $job, self::OPERATION);
 
         $job->markCompleted(['brand_profile_id' => $profile->id, 'version' => $profile->version]);
@@ -168,7 +169,9 @@ class BrandProfileGenerator
      */
     public function draft(Brand $brand, array $answers, ?GenerationJob $job = null, ?ProfileQualityReport $feedback = null): array
     {
-        $response = $this->ai->generateText(new TextRequest(
+        [$provider, $model] = $this->route();
+
+        $request = new TextRequest(
             system: $this->system($brand),
             prompt: $this->prompt($brand, $answers).$this->correction($feedback),
             schema: $this->schema(),
@@ -177,7 +180,25 @@ class BrandProfileGenerator
             // الموجز الاستراتيجي يسبق الحقول، والعربية أثقل توكنزاً
             maxTokens: 3000,
             operation: self::OPERATION,
-        ), $job, ...$this->route());
+            model: $model,
+        );
+
+        try {
+            $response = $this->ai->generateText($request, $job, $provider);
+        } catch (ProviderException $e) {
+            // نموذج الهوية مكتوب بخطأ أو سُحب أو ليس لهذا المزود: ملف بالنموذج الافتراضي خير من مهمة فاشلة
+            if ($request->model === null || ! in_array($e->statusCode, [400, 404], true)) {
+                throw $e;
+            }
+
+            Log::warning('نموذج الهوية غير صالح؛ أُعيد الطلب بنموذج المزود الافتراضي', [
+                'model' => $request->model,
+                'error' => mb_substr($e->getMessage(), 0, 300),
+            ]);
+
+            $request->model = null;
+            $response = $this->ai->generateText($request, $job, $provider);
+        }
 
         $data = (array) ($response->data ?? []);
 
@@ -196,8 +217,9 @@ class BrandProfileGenerator
     /**
      * مزود الهوية ونموذجها إن خُصّصا في config('ai.profile')، وإلا الافتراضي.
      *
-     * مزود مخصص بلا مفتاح يُتجاوز بتحذير في السجل: الأفضل ملف بالنموذج
-     * الافتراضي من مهمة فاشلة تُرجع النقاط ولا تعطي التاجر شيئاً.
+     * النموذج وحده يكفي مع المزود الافتراضي (OpenRouter: «openai/gpt-4.1»).
+     * مزود مخصص بلا مفتاح يُتجاوز بتحذير في السجل، ونموذجه معه لأنه اسم عنده
+     * لا عند الافتراضي: ملف بالنموذج الافتراضي خير من مهمة فاشلة تُرجع النقاط.
      *
      * @return array{0: ?string, 1: ?string}
      */
@@ -206,7 +228,7 @@ class BrandProfileGenerator
         $provider = config('ai.profile.provider');
 
         if (blank($provider)) {
-            return [null, null];
+            return [null, config('ai.profile.model') ?: null];
         }
 
         if (! $this->ai->ready($provider)) {

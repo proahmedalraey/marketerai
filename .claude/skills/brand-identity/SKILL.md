@@ -55,7 +55,7 @@ description: منهجية كتابة وتقييم برومبتات «هوية ا
 
 1. عدّل البرومبت **و**الفحص معاً، وحدّث `ProfileFixtures` إن تغيّر المعيار.
 2. `php artisan test --filter='Profile|BrandIdentity|IdentityStability|Gemini'`
-3. `php artisan brand:eval-profile --show` بالنموذج الحقيقي، وقيّم كل مشروع يدوياً من 1 إلى 5 على:
+3. `php artisan brand:eval-profile --show` بالنموذج الحقيقي، ثم افتح `storage/app/brand-eval.html` في المتصفح (الطرفية على ويندوز تعكس العربية)، وقيّم كل مشروع يدوياً من 1 إلى 5 على:
    **التحديد** (أسماء لا تعميمات) · **الفائدة** (ماذا يكسب العميل) · **الصدق** (صفر أخطاء فحص) · **الصوت** (نص كاتب لا مترجم) · **خلوّه من القوالب** (صفر `cliche`).
 4. قارن بالمنافس على المدخلات نفسها حرفياً قبل أن تحكم.
 5. `vendor/bin/pint` ثم وثّق القرار في `docs/brand-identity-spec.md`.

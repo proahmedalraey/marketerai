@@ -9,6 +9,7 @@ class AiUsageLog extends Model
     protected $fillable = [
         'brand_id', 'generation_job_id', 'provider', 'model', 'operation',
         'tokens_in', 'tokens_out', 'images', 'latency_ms', 'cost_usd', 'succeeded',
+        'attempt', 'status_code', 'waited_ms', 'error',
     ];
 
     protected function casts(): array

@@ -12,5 +12,7 @@ class TextRequest
         public float $temperature = 0.8,
         public int $maxTokens = 2048,
         public string $operation = 'content.post',
+        /** نموذج لهذا الطلب وحده بدل نموذج المزود الافتراضي (كالتدقيق اللغوي بنموذج أخف) */
+        public ?string $model = null,
     ) {}
 }

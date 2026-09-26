@@ -39,8 +39,10 @@
             x-show="badge"
             x-cloak
             class="grid place-items-center min-w-5 h-5 px-1 rounded-full text-[11px] font-bold tnum"
-            :class="running.length ? 'bg-brand-600 text-white motion-safe:animate-pulse-dot' : 'bg-muted text-fg-muted'"
-            x-text="badge"
+            :class="stalledAny
+                ? 'bg-warning text-white motion-safe:animate-pulse-dot'
+                : (running.length ? 'bg-brand-600 text-white motion-safe:animate-pulse-dot' : 'bg-muted text-fg-muted')"
+            x-text="stalledAny ? '!' : badge"
         ></span>
 
         <span class="sr-only">إنتاجاتي — تتبع عمليات الذكاء الاصطناعي</span>
@@ -114,6 +116,16 @@
                         <div class="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out" :style="`width: ${op.progress}%`"></div>
                     </div>
 
+                    {{-- لم تبدأ ولا عامل طابور حي: بدونه تبقى «جارية» بلا نهاية ويظنها التاجر عطلاً --}}
+                    <div x-show="op.state === 'running' && op.stalled" x-cloak class="alert-warning mt-3 text-xs" role="status">
+                        <x-icon name="alert" class="w-4 h-4 shrink-0 mt-px" />
+                        <p class="flex-1 leading-relaxed">
+                            لم تبدأ هذه العملية بعد: خدمة المعالجة في الخلفية لا تبدو شغّالة.
+                            إن كنت تشغّل المنصة بنفسك فافتح نافذة «الطابور» (من <span dir="ltr">start.bat</span>)
+                            وستبدأ العملية تلقائياً، وإلا فتواصل مع الدعم. نقاط العملية محجوزة لها وتُسوّى بعد انتهائها.
+                        </p>
+                    </div>
+
                     <button
                         type="button" @click="expand(op.uuid)"
                         class="block w-full mt-2.5 text-[11px] text-fg-subtle hover:text-fg-muted"
@@ -131,7 +143,7 @@
                         <span
                             class="text-xs font-semibold tnum"
                             :class="op.state === 'failed' ? 'text-danger-fg' : 'text-success-fg'"
-                            x-text="op.state === 'failed' ? 'فشلت — أُرجعت نقاطها' : (op.state === 'running' ? 'جارية…' : `${op.succeeded} نجح`)"
+                            x-text="op.state === 'failed' ? 'فشلت — أُرجعت نقاطها' : (op.state === 'running' ? (op.stage ? `${op.stage}…` : 'جارية…') : `${op.succeeded} نجح`)"
                         ></span>
 
                         <template x-if="op.resultUrl">

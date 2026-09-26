@@ -53,6 +53,20 @@
             'baseUrl' => ['field' => 'gemini.base_url', 'input' => 'gemini_base_url'],
             'uses' => 'النصوص والصور',
         ],
+        'openrouter' => [
+            'name' => 'OpenRouter',
+            'tagline' => 'مفتاح واحد لمئات النماذج (Claude وGPT وGemini وDeepSeek وغيرها) وعشرات نماذج الصور، بفاتورة واحدة.',
+            'keyPlaceholder' => 'sk-or-v1-...',
+            'keyUrl' => 'https://openrouter.ai/settings/keys',
+            'models' => [
+                ['field' => 'openrouter.model', 'input' => 'openrouter_model', 'label' => 'نموذج النصوص', 'kind' => 'text',
+                 'suggest' => ['google/gemini-3.6-flash', 'anthropic/claude-sonnet-5', 'openai/gpt-6-luna']],
+                ['field' => 'openrouter.image_model', 'input' => 'openrouter_image_model', 'label' => 'نموذج الصور', 'kind' => 'image',
+                 'suggest' => ['google/gemini-3.1-flash-image', 'openai/gpt-image-2']],
+            ],
+            'baseUrl' => ['field' => 'openrouter.base_url', 'input' => 'openrouter_base_url'],
+            'uses' => 'النصوص والصور',
+        ],
     ];
 
     $textProvider = old('text_provider', $fields['ai.text_provider']['value']);
@@ -168,8 +182,10 @@
                                 $live = $catalogs[$id][$m['kind']] ?? null;
                                 $options = $live ?: $m['suggest'];
                                 $unavailable = $live && $current !== '' && ! in_array($current, $live, true);
+                                // مئات النماذج (OpenRouter) لا تصلح قائمة منسدلة عادية: نضيف بحثاً
+                                $searchable = count($options) > 40;
                                 $hint = $live
-                                    ? count($live).' نموذجاً متاحاً لمفتاحك — القائمة من '.$p['name'].' مباشرة.'
+                                    ? count($live).' نموذجاً متاحاً'.($id === 'openrouter' ? '' : ' لمفتاحك').' — القائمة من '.$p['name'].' مباشرة.'
                                     : ($fields[$keyField]['mask']
                                         ? 'تعذر جلب قائمة النماذج من '.$p['name'].' — هذه اقتراحات عامة.'
                                         : 'احفظ المفتاح لتظهر النماذج المتاحة لحسابك.');
@@ -180,24 +196,55 @@
                                     x-data="{
                                         choice: @js(in_array($current, $options, true) || $unavailable ? $current : ($current === '' ? ($options[0] ?? '') : '__custom')),
                                         custom: @js($current),
+                                        q: '',
+                                        all: @js($searchable ? $options : []),
+                                        // المختار يبقى ظاهراً ولو لم يطابق البحث، وإلا اختفى من القائمة وتغيّرت قيمته
+                                        get shown() {
+                                            const q = this.q.trim().toLowerCase();
+                                            const list = q ? this.all.filter(o => o.toLowerCase().includes(q)) : this.all;
+                                            const keep = this.choice && this.choice !== '__custom' && ! list.includes(this.choice);
+                                            return (keep ? [this.choice, ...list] : list).slice(0, 200);
+                                        },
                                     }"
                                     class="space-y-2"
                                 >
                                     <input type="hidden" name="{{ $m['input'] }}" value="{{ $current }}"
                                            :value="choice === '__custom' ? custom : choice">
 
-                                    <select
-                                        id="{{ $m['input'] }}_select" x-model="choice" dir="ltr"
-                                        class="field font-mono text-sm @error($m['input']) field-invalid @enderror"
-                                    >
-                                        @if ($unavailable)
-                                            <option value="{{ $current }}">{{ $current }} — غير متاح لحسابك</option>
-                                        @endif
-                                        @foreach ($options as $option)
-                                            <option value="{{ $option }}" @selected($option === $current)>{{ $option }}</option>
-                                        @endforeach
-                                        <option value="__custom">اسم آخر…</option>
-                                    </select>
+                                    @if ($searchable)
+                                        <input
+                                            type="search" x-model="q" dir="ltr" spellcheck="false"
+                                            class="field text-sm" placeholder="ابحث: claude · gemini · gpt · deepseek…"
+                                            aria-label="ابحث في النماذج"
+                                        >
+
+                                        <select
+                                            id="{{ $m['input'] }}_select" x-model="choice" dir="ltr"
+                                            class="field font-mono text-sm @error($m['input']) field-invalid @enderror"
+                                        >
+                                            <template x-for="o in shown" :key="o">
+                                                <option :value="o" x-text="o" :selected="o === choice"></option>
+                                            </template>
+                                            <option value="__custom">اسم آخر…</option>
+                                        </select>
+
+                                        <p class="hint" x-show="q && shown.length === 0" x-cloak>
+                                            لا نموذج بهذا الاسم — جرّب كلمة أخرى، أو اختر «اسم آخر…» واكتبه.
+                                        </p>
+                                    @else
+                                        <select
+                                            id="{{ $m['input'] }}_select" x-model="choice" dir="ltr"
+                                            class="field font-mono text-sm @error($m['input']) field-invalid @enderror"
+                                        >
+                                            @if ($unavailable)
+                                                <option value="{{ $current }}">{{ $current }} — غير متاح لحسابك</option>
+                                            @endif
+                                            @foreach ($options as $option)
+                                                <option value="{{ $option }}" @selected($option === $current)>{{ $option }}</option>
+                                            @endforeach
+                                            <option value="__custom">اسم آخر…</option>
+                                        </select>
+                                    @endif
 
                                     <input
                                         x-show="choice === '__custom'" x-cloak x-model="custom"

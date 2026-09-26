@@ -492,4 +492,32 @@ class ProductImportTest extends TestCase
         $this->assertStringContainsString('حشوات بيسان', $product->spec_sheet);
         $this->assertStringNotContainsString('/p454952899', $product->spec_sheet);
     }
+
+    public function test_a_failed_enrichment_still_returns_the_scraped_data_and_refunds(): void
+    {
+        Http::fake(['*/p777' => Http::response(
+            '<html><head><meta property="og:type" content="product">'
+            .'<meta property="og:title" content="سيروب فانيليا">'
+            .'<meta property="product:price:amount" content="55">'
+            .'<meta property="og:image" content="https://cdn.example.com/v.jpg"></head><body></body></html>'
+        )]);
+
+        // نُسقط خطوة الذكاء الاصطناعي عمداً
+        $this->mock(\App\Services\Import\ProductEnricher::class, function ($mock) {
+            $mock->shouldReceive('fieldsFor')->andThrow(new \RuntimeException('المزوّد لا يستجيب'));
+        });
+
+        $before = $this->brand->fresh()->credit_balance;
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/products/import/single', ['url' => 'https://shop.example.com/p777'])
+            ->assertOk();
+
+        // البيانات المقروءة مجاناً يجب ألا تضيع لأن التحليل تعثّر
+        $response->assertJsonPath('title', 'سيروب فانيليا');
+        $this->assertSame(['https://cdn.example.com/v.jpg'], $response->json('image_urls'));
+        $this->assertNotEmpty($response->json('warning'));
+
+        $this->assertSame($before, $this->brand->fresh()->credit_balance, 'لم تُرجَع النقطة بعد فشل التحليل');
+    }
 }

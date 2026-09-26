@@ -85,9 +85,12 @@ OPENAI_API_KEY=sk-...
 دون تغيير نموذج المحتوى اليومي (يحتاج مفتاح ذلك المزود؛ بدونه يُستخدم الافتراضي):
 
 ```env
-AI_PROFILE_PROVIDER=openai
-AI_PROFILE_MODEL=gpt-4.1
+AI_PROFILE_PROVIDER=openai      # فارغ = المزود الافتراضي
+AI_PROFILE_MODEL=gpt-4.1        # مع OpenRouter افتراضياً يكفي: AI_PROFILE_MODEL=openai/gpt-4.1
 ```
+
+قارن النماذج بـ `php artisan brand:eval-profile --show`: يكتب مع كل تشغيل تقريراً في
+`storage/app/brand-eval.html` يُفتح في المتصفح — طرفية ويندوز تعرض العربية معكوسة الحروف.
 
 ---
 
@@ -165,6 +168,16 @@ php artisan content:eval        # يقيس الأخطاء قبل البوابة 
 
 مصدر الحقائق المسموحة: بيانات المنتج، وملف الهوية، وصفحة **حقائق البيع** (`/store/facts`):
 التوصيل والدفع، والعروض والأكواد بتواريخها، وتجارب العملاء بإذنهم. العرض المنتهي يختفي من البرومبت تلقائياً.
+
+### استوديو الصور
+
+اختيار النموذج في `/studio` فعلي حين يكون مزود الصور **OpenRouter** (Nano Banana 2، GPT Image 2.5 Sunburst/Flare،
+Grok Imagine، Grok Imagine 2.0 — `config('ai.studio_models')`)؛ قدرات كل نموذج (الدقات/الجودات/النسب) تُقرأ حياً منه،
+وما لا يدعمه يُعطَّل في الواجهة ويُرفض قبل حجز النقاط. الصور تُولَّد بالتوازي وتُحفظ لها مصغّرة للمعرض.
+
+```bash
+php artisan media:thumbnails    # مصغّرات للصور القديمة (الجديدة تُنشأ تلقائياً)
+```
 
 ---
 

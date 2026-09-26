@@ -164,6 +164,15 @@
                                     <span class="sr-only" x-text="isReference(item.key) ? 'الصورة الرئيسية' : 'اجعلها الصورة الرئيسية'"></span>
                                 </button>
 
+                                {{--
+                                    الصورة المستوردة ليس لها سجل بعد، فالرابط نفسه
+                                    هو ما يصل للخادم. بلا هذا الحقل يعرض المعرض صوراً
+                                    لا تُحفظ، وهو ما كان يحدث فعلاً.
+                                --}}
+                                <template x-if="item.kind === 'url'">
+                                    <input type="hidden" name="image_urls[]" :value="item.url">
+                                </template>
+
                                 <button
                                     type="button"
                                     @click.stop="removeGalleryImage(item)"
@@ -222,7 +231,7 @@
                         <input type="hidden" name="removed_image_ids[]" :value="id">
                     </template>
 
-                    <input type="hidden" name="reference" :value="reference">
+                    <input type="hidden" name="reference" :value="effectiveReference">
 
                     @error('images.*')
                         <p class="error-text"><x-icon name="alert-circle" class="w-3.5 h-3.5 mt-px" /><span>{{ $message }}</span></p>

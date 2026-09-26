@@ -41,6 +41,11 @@ export default function registerOperations(Alpine) {
             return this.visible.filter((op) => op.state === 'failed');
         },
 
+        /** عملية جارية لم تبدأ ولا عامل طابور حي: الزر الجانبي ينبّه حتى واللوحة مغلقة. */
+        get stalledAny() {
+            return this.running.some((op) => op.stalled);
+        },
+
         /** «فشلت» تبويب لا يظهر إلا حين يكون فيه شيء. */
         get tabs() {
             return [
@@ -106,13 +111,20 @@ export default function registerOperations(Alpine) {
                 this.watched.push(op.uuid);
 
                 window.pollJob(op.uuid, {
+                    // بقاء المهمة في الانتظار لا يعني أنها ضاعت: العامل قد يُشغَّل بعد دقائق فتكتمل
+                    // وتتحدث البطاقة وحدها. المهلة تطابق مهلة إنهاء المهام العالقة (15 دقيقة).
+                    timeout: 15 * 60 * 1000,
                     onUpdate: (data) => {
                         op.progress = Math.max(op.progress, data.progress ?? 0);
+                        op.stalled = Boolean(data.stalled);
+                        op.stage = data.stage ?? null;
                     },
                     onDone: (data) => {
                         if (data.status === 'timeout') return;
 
                         op.progress = 100;
+                        op.stalled = false;
+                        op.stage = null;
                         op.state = ['failed', 'cancelled'].includes(data.status) ? 'failed' : 'done';
                         op.error = data.error ?? op.error;
                         op.credits = data.credits_charged ?? op.credits;

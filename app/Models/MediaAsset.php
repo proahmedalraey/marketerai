@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToBrand;
+use App\Support\ImageThumbnail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -40,5 +41,38 @@ class MediaAsset extends Model
     public function url(): string
     {
         return Storage::disk($this->disk)->url($this->path);
+    }
+
+    /** رابط مصغّرة الشبكة، أو الأصل إن لم تُنشأ لها مصغّرة (قديمة/صغيرة أصلاً). */
+    public function thumbUrl(): string
+    {
+        $thumb = $this->meta['thumb'] ?? null;
+
+        return $thumb ? Storage::disk($this->disk)->url($thumb) : $this->url();
+    }
+
+    /**
+     * يكتب مصغّرة بجوار الأصل ويعيد مسارها لتُسجَّل في meta، أو null إن لم تلزم/تعذّرت.
+     * فشلها لا يُسقط التوليد: تبقى الشبكة تعرض الأصل.
+     */
+    public static function putThumbnail(string $disk, string $originalPath, string $contents): ?string
+    {
+        $thumb = ImageThumbnail::make($contents);
+
+        if (! $thumb) {
+            return null;
+        }
+
+        $path = ImageThumbnail::pathFor($originalPath);
+
+        return Storage::disk($disk)->put($path, $thumb['contents']) ? $path : null;
+    }
+
+    /** يمسح الأصل ومصغّرته من التخزين (السجل يُحذف بشكل منفصل). */
+    public function deleteFiles(): void
+    {
+        $disk = Storage::disk($this->disk);
+
+        $disk->delete(array_filter([$this->path, $this->meta['thumb'] ?? null]));
     }
 }

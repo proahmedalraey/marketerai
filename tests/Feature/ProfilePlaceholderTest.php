@@ -63,7 +63,7 @@ class ProfilePlaceholderTest extends TestCase
     {
         app()->instance(AiManager::class, new class(app(AiSettings::class)) extends AiManager
         {
-            public function text(?string $provider = null, ?string $model = null): TextProvider
+            public function text(?string $provider = null): TextProvider
             {
                 return new class implements TextProvider
                 {

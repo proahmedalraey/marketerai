@@ -50,7 +50,7 @@ class GenerateImageJob implements ShouldQueue
             return;
         }
 
-        app(CreditService::class)->refund($job->brand, (int) $job->credits_held, $job, 'image');
+        app(CreditService::class)->refund($job->brand, (float) $job->credits_held, $job, 'image');
         // الرسالة تُعرض لصاحب المتجر؛ نص المزود الخام بقي في السجل
         $job->markFailed(\App\Services\AI\ProviderException::messageFor($e));
 

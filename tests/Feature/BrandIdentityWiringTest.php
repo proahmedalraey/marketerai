@@ -102,9 +102,13 @@ class BrandIdentityWiringTest extends TestCase
             'count' => 1,
         ], $this->user->id);
 
-        $prompt = MediaAsset::withoutBrandScope()->where('generation_job_id', $job->id)->value('prompt');
+        $asset = MediaAsset::withoutBrandScope()->where('generation_job_id', $job->id)->first();
 
-        $this->assertNotNull($prompt, 'لم تُنتج أي صورة');
+        $this->assertNotNull($asset, 'لم تُنتج أي صورة');
+
+        // المعرض والبحث يعرضان وصف المستخدم كما كتبه؛ البرومبت المُركَّب (ألوان واتجاه) يُحفظ في meta
+        $this->assertSame('كوب قهوة على طاولة خشبية', $asset->prompt);
+        $prompt = $asset->meta['composed_prompt'];
 
         // الخلل الصامت السابق: implode على مصفوفة كائنات يكتب «Array, Array» في البرومبت
         $this->assertStringNotContainsString('Array', $prompt);

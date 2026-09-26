@@ -13,6 +13,8 @@ class ImageRequest
         public ?string $referenceImage = null,
         public ?string $seed = null,
         public string $operation = 'image.standard_1k',
+        /** معرّف نموذج محدد لهذا الطلب (OpenRouter فقط الآن). null = نموذج المزود الافتراضي من الإعدادات */
+        public ?string $model = null,
     ) {}
 
     public function dimensions(): array

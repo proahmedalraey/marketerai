@@ -39,7 +39,7 @@ class ReapStuckJobsCommand extends Command
             ->chunkById(100, function ($jobs) use ($credits, &$reaped) {
                 foreach ($jobs as $job) {
                     if ($job->brand && $job->credits_held > 0) {
-                        $credits->refund($job->brand, (int) $job->credits_held, $job, $job->type, 'إرجاع: مهمة عالقة');
+                        $credits->refund($job->brand, (float) $job->credits_held, $job, $job->type, 'إرجاع: مهمة عالقة');
                     }
 
                     $job->markFailed(self::MESSAGE);

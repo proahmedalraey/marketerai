@@ -86,6 +86,27 @@ class ProductGalleryTest extends TestCase
         $this->assertStringContainsString('is_reference', $html);
     }
 
+    /**
+     * الاختبارات الأخرى ترسل image_urls مباشرة، فتتجاوز النموذج ولا تكشف
+     * غياب حقوله. هذا يتحقق من أن النافذة نفسها تحمل ما يصل للخادم.
+     */
+    public function test_the_modal_carries_every_field_the_server_reads(): void
+    {
+        $html = $this->actingAs($this->user)
+            ->get('/products?edit='.$this->product->id)
+            ->assertOk()
+            ->getContent();
+
+        foreach ([
+            'name="images[]"' => 'رفع صورة من الجهاز',
+            'name="image_urls[]"' => 'صور مستوردة من رابط',
+            'name="removed_image_ids[]"' => 'حذف صورة',
+            'name="reference"' => 'اختيار الصورة الرئيسية',
+        ] as $field => $purpose) {
+            $this->assertStringContainsString($field, $html, "حقل «{$purpose}» غائب عن النموذج");
+        }
+    }
+
     public function test_marked_images_are_deleted_with_their_files(): void
     {
         $doomed = $this->product->images()->orderBy('position')->get()->slice(1, 2);

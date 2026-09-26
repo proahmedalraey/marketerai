@@ -2,10 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\ProductType;
 use App\Models\Brand;
+use App\Models\BrandProfile;
 use App\Services\Brand\BrandProfileGenerator;
 use App\Services\Brand\Quality\ProfileQualityCheck;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 
 /**
  * تقييم جودة توليد ملف الهوية على النموذج الحقيقي المضبوط في الإعدادات.
@@ -20,7 +23,8 @@ class EvalBrandProfileCommand extends Command
 {
     protected $signature = 'brand:eval-profile
                             {--sample=* : تشغيل مشاريع بعينها (coffee, consultancy, vague, constrained)}
-                            {--show : عرض النصوص المولّدة كاملة}';
+                            {--show : عرض النصوص المولّدة كاملة}
+                            {--html= : مسار تقرير HTML (افتراضياً storage/app/brand-eval.html)}';
 
     protected $description = 'تقييم جودة توليد ملف الهوية على النموذج الحقيقي';
 
@@ -94,6 +98,7 @@ class EvalBrandProfileCommand extends Command
         }
 
         $rows = [];
+        $results = [];
         $failed = 0;
 
         foreach ($selected as $key) {
@@ -104,17 +109,41 @@ class EvalBrandProfileCommand extends Command
 
             $this->line("\n<fg=cyan>▶ {$key}</> — {$sample['answers']['project_name']}");
 
+            $result = [
+                'key' => $key,
+                'name' => $sample['answers']['project_name'],
+                'answers' => $this->answerSheet($sample['answers']),
+                'model' => null,
+                'error' => null,
+            ];
+
             try {
                 $draft = $generator->draft($brand, $sample['answers']);
             } catch (\Throwable $e) {
                 $this->error('  فشل الاستدعاء: '.$e->getMessage());
                 $rows[] = [$key, '—', '—', '—', 'فشل', $e->getMessage()];
+                $results[] = [...$result, 'error' => $e->getMessage()];
                 $failed++;
 
                 continue;
             }
 
             $report = $check->check($draft, $sample['answers'], (array) $brand->banned_words);
+
+            $results[] = [
+                ...$result,
+                'model' => $draft['model'],
+                'latency_ms' => $draft['latency_ms'],
+                'draft' => $draft,
+                'score' => $report->score(),
+                'errors' => count($report->errors()),
+                'warnings' => count($report->warnings()),
+                'issues' => $report->issues(),
+                'words' => [
+                    'simple' => $check->words((string) $draft['simple']),
+                    'detailed' => $check->words((string) $draft['detailed']),
+                ],
+            ];
 
             $this->line("  النموذج: {$draft['model']} · {$draft['latency_ms']}ms");
             $this->line('  الكلمات: مبسط '.$check->words((string) $draft['simple'])
@@ -163,6 +192,46 @@ class EvalBrandProfileCommand extends Command
         $this->newLine();
         $this->table(['المشروع', 'الدرجة', 'أخطاء', 'تحذيرات', 'الحكم', 'الرموز'], $rows);
 
+        $this->writeReport($results);
+
         return $failed === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * تقرير HTML من اليمين لليسار في كل تشغيل.
+     *
+     * طرفية ويندوز (PowerShell) تعرض العربية معكوسة الحروف ومتقطعة، فلا
+     * تصلح لقراءة الأوصاف ولا لمقارنتها بالمنافس. المتصفح يعرضها كما هي.
+     */
+    protected function writeReport(array $results): void
+    {
+        $path = $this->option('html') ?: storage_path('app/brand-eval.html');
+
+        if (! preg_match('#^([A-Za-z]:[\\\\/]|/)#', $path)) {
+            $path = base_path($path);
+        }
+
+        File::ensureDirectoryExists(dirname($path));
+        File::put($path, view('reports.brand-eval', [
+            'results' => $results,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])->render());
+
+        // المسار وحده في سطره: لاتيني فيُقرأ سليماً حتى في طرفية لا تعرض العربية
+        $this->newLine();
+        $this->line('Report / التقرير:');
+        $this->info($path);
+    }
+
+    /**
+     * @return array<string, string> السؤال ← الإجابة، كما رآها النموذج
+     */
+    protected function answerSheet(array $answers): array
+    {
+        $type = ProductType::tryFrom((string) ($answers['type'] ?? '')) ?? ProductType::Good;
+
+        return collect(BrandProfile::sheetFor($answers, $type))
+            ->mapWithKeys(fn ($row) => [$row['question'] => $row['answer']])
+            ->all();
     }
 }

@@ -37,7 +37,7 @@
                                     <input type="hidden" name="media_asset_id" value="{{ $asset->id }}">
                                     <button type="submit" class="block w-full rounded-xl overflow-hidden border border-line hover:border-brand-400 transition">
                                         <img
-                                            src="{{ $asset->url() }}" alt="" loading="lazy" decoding="async"
+                                            src="{{ $asset->thumbUrl() }}" alt="" loading="lazy" decoding="async"
                                             class="aspect-square w-full object-cover bg-muted"
                                         >
                                     </button>

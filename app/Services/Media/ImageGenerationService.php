@@ -11,12 +11,25 @@ use App\Models\MediaAsset;
 use App\Services\AI\AiManager;
 use App\Services\AI\DTO\ImageRequest;
 use App\Services\Credits\CreditService;
+use App\Support\ImageRatio;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ImageGenerationService
 {
+    protected const NO_TEXT_RULE = 'Absolutely no text, no letters, no logos, no watermarks in the image.';
+
+    /**
+     * مع صورة مرجعية (منتج التاجر): «لا نص ولا شعارات» كانت تمحو اسم المنتج وشعاره من العبوة
+     * نفسها (اختبار 2026-09-25: essenza / MASTIC / FLAVOR SYRUP اختفت). القيد هنا يخص ما حول المنتج فقط.
+     */
+    protected const KEEP_PRODUCT_RULE = 'The attached reference image shows the exact product. Reproduce it faithfully: '
+        .'same shape, proportions, colors, packaging, label artwork, logo and every word printed on it — '
+        .'do not redraw, translate, blank out, restyle or replace any of it. '
+        .'Change only the surroundings, surface and lighting. '
+        .'Everywhere else in the image: no text, no captions, no extra logos, no watermarks.';
+
     public function __construct(
         protected AiManager $ai,
         protected CreditService $credits,
@@ -47,6 +60,8 @@ class ImageGenerationService
                     'use_brand_identity' => (bool) ($input['use_brand_identity'] ?? true),
                     'product_id' => $input['product_id'] ?? null,
                     'reference_asset_id' => $input['reference_asset_id'] ?? null,
+                    // مفتاح نموذج الاستوديو (config ai.studio_models)؛ إعادة التوليد تعيد استخدامه من الحمولة
+                    'model' => $input['model'] ?? null,
                 ],
             ]);
 
@@ -68,34 +83,56 @@ class ImageGenerationService
 
         $job->markProcessing();
 
-        $prompt = $this->composePrompt($brand, $payload);
         $reference = $this->referenceImagePath($brand, $payload);
+        $prompt = $this->composePrompt($brand, $payload, $reference !== null);
+
+        $ratio = $payload['aspect_ratio'] ?? '1:1';
 
         $response = $this->ai->generateImage(new ImageRequest(
             prompt: $prompt,
-            aspectRatio: $payload['aspect_ratio'] ?? '1:1',
+            aspectRatio: $ratio,
             quality: $quality,
             count: $count,
             referenceImage: $reference,
             operation: $operation,
+            model: app(StudioModels::class)->modelId($payload['model'] ?? null),
         ), $job);
 
         $assetIds = [];
 
         foreach ($response->images as $index => $image) {
+            $contents = $image->contents;
+            $mime = $image->mime;
+            $extra = [];
+
+            // النموذج قد يعيد أقرب نسبة يدعمها لا المطلوبة: نقصّ إلى النسبة التي اختارها التاجر
+            if ($cropped = ImageRatio::crop($contents, $ratio)) {
+                $contents = $cropped['contents'];
+                $mime = $cropped['mime'];
+                $extra['cropped_from'] = $cropped['from'];
+            }
+
             // Gemini قد يعيد JPEG؛ الامتداد يتبع النوع الفعلي لا افتراض PNG
             $path = sprintf(
                 'brands/%d/media/%s.%s',
                 $brand->id,
                 Str::uuid(),
-                match ($image->mime) {
+                match ($mime) {
                     'image/jpeg' => 'jpg',
                     'image/webp' => 'webp',
                     default => 'png',
                 }
             );
 
-            Storage::disk(config('ai.media_disk'))->put($path, $image->contents);
+            Storage::disk(config('ai.media_disk'))->put($path, $contents);
+
+            // مصغّرة للشبكة: الأصل 1–2MB والمعرض يعرض عشرات الصور دفعة واحدة
+            if ($thumb = MediaAsset::putThumbnail(config('ai.media_disk'), $path, $contents)) {
+                $extra['thumb'] = $thumb;
+            }
+
+            // الأبعاد الفعلية من الملف لا من الطلب: نموذج يُنتج 1K عند طلب 4K كان يُسجَّل 3840 كذباً
+            $actual = @getimagesizefromstring($contents) ?: null;
 
             $asset = MediaAsset::create([
                 'brand_id' => $brand->id,
@@ -104,13 +141,20 @@ class ImageGenerationService
                 'kind' => 'image',
                 'disk' => config('ai.media_disk'),
                 'path' => $path,
-                'mime' => $image->mime,
-                'bytes' => strlen($image->contents),
-                'width' => $image->width,
-                'height' => $image->height,
-                'prompt' => $prompt,
+                'mime' => $mime,
+                'bytes' => strlen($contents),
+                'width' => $actual[0] ?? $image->width,
+                'height' => $actual[1] ?? $image->height,
+                // وصف المستخدم يظهر في المعرض والبحث؛ المُركَّب (ألوان وقيود) يبقى في meta
+                'prompt' => trim($payload['prompt']),
                 'seed' => $image->seed,
-                'meta' => $image->meta + ['quality' => $quality, 'aspect_ratio' => $payload['aspect_ratio'] ?? '1:1'],
+                'meta' => $image->meta + $extra + [
+                    'quality' => $quality,
+                    'aspect_ratio' => $ratio,
+                    'provider' => $response->provider,
+                    'model' => $response->model,
+                    'composed_prompt' => $prompt,
+                ],
                 'slide_index' => $payload['slide_index'] ?? null,
             ]);
 
@@ -121,7 +165,7 @@ class ImageGenerationService
         $unitCost = $this->credits->cost($operation);
 
         // ندفع مقابل ما وصل فعلاً لا مقابل ما طُلب
-        $this->credits->settle($brand, (int) $job->credits_held, $unitCost * $produced, $job, $operation);
+        $this->credits->settle($brand, (float) $job->credits_held, $unitCost * $produced, $job, $operation);
 
         $job->markCompleted(
             ['media_asset_ids' => $assetIds],
@@ -135,18 +179,23 @@ class ImageGenerationService
      * حقن الهوية البصرية في البرومبت: الألوان والنمط.
      * الشعار يُركَّب برمجياً بعد التوليد، والنص العربي لا يُطلب من النموذج إطلاقاً.
      */
-    protected function composePrompt(Brand $brand, array $payload): string
+    protected function composePrompt(Brand $brand, array $payload, bool $hasReference = false): string
     {
         $prompt = trim($payload['prompt']);
 
+        // صياغة واحدة للقيد في المسارين: "No text, no letters, no watermark." الحرفية كانت تُحجب
+        // بفلتر SAFETY في Gemini 3.1 (اختبار 2026-09-25) بينما تمر هذه الصياغة
         if (! ($payload['use_brand_identity'] ?? true)) {
-            return $prompt.' No text, no letters, no watermark.';
+            return $hasReference
+                ? self::KEEP_PRODUCT_RULE.' Scene: '.$prompt
+                : $prompt.' '.self::NO_TEXT_RULE;
         }
 
-        $parts = [$prompt];
+        // تعليمة المنتج أولاً: النماذج تُرجّح ما يُقال في البداية
+        $parts = $hasReference ? [self::KEEP_PRODUCT_RULE, 'Scene: '.$prompt] : [$prompt];
 
         if ($palette = $brand->paletteForPrompt()) {
-            $parts[] = 'Color palette: '.$palette.'.';
+            $parts[] = ($hasReference ? 'Scene color palette (background and props only, never recolor the product): ' : 'Color palette: ').$palette.'.';
         }
 
         if (filled($brand->visual_style)) {
@@ -157,9 +206,12 @@ class ImageGenerationService
             $parts[] = "Brand design direction: {$brand->design_summary}.";
         }
 
-        // النماذج ضعيفة في الخط العربي: نمنع أي نص داخل الصورة
+        // النماذج ضعيفة في الخط العربي: نمنع أي نص داخل الصورة (المرجع يحمل قيده في KEEP_PRODUCT_RULE)
         $parts[] = 'Professional commercial photography, clean composition, high detail.';
-        $parts[] = 'Absolutely no text, no letters, no logos, no watermarks in the image.';
+
+        if (! $hasReference) {
+            $parts[] = self::NO_TEXT_RULE;
+        }
 
         return implode(' ', $parts);
     }

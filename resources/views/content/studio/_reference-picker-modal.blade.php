@@ -39,7 +39,7 @@
                                     :class="referenceAssetId === {{ $asset->id }} ? 'border-brand-500' : 'border-line hover:border-brand-300'"
                                 >
                                     <img
-                                        src="{{ $asset->url() }}" alt="" loading="lazy" decoding="async"
+                                        src="{{ $asset->thumbUrl() }}" alt="" loading="lazy" decoding="async"
                                         class="aspect-square w-full object-cover bg-muted"
                                     >
                                     <x-icon

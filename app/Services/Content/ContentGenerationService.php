@@ -254,7 +254,7 @@ class ContentGenerationService
         // الفشل الجزئي ليس فشلاً كلياً: نسلّم ما نجح ونرجع نقاط ما فشل.
         // التصحيح لا يُحتسب: النقاط لكل نسخة سُلّمت، لا لكل طلب أُرسل.
         $consumedUnits = count($created);
-        $held = (int) $job->credits_held;
+        $held = (float) $job->credits_held;
         $unitCost = $this->credits->cost($operation);
 
         $this->credits->settle($brand, $held, $unitCost * $consumedUnits, $job, $operation);
@@ -459,7 +459,7 @@ class ContentGenerationService
         $item = ContentItem::forBrand($brand)->with(['product', 'mediaAssets'])->find($payload['content_item_id'] ?? 0);
 
         if (! $item || ! isset($item->slides()[$index])) {
-            $this->credits->refund($brand, (int) $job->credits_held, $job, self::SLIDE_OPERATION, 'إرجاع: الشريحة لم تعد موجودة');
+            $this->credits->refund($brand, (float) $job->credits_held, $job, self::SLIDE_OPERATION, 'إرجاع: الشريحة لم تعد موجودة');
             $job->markFailed('الشريحة لم تعد موجودة. أُرجعت النقطة.');
 
             return;
@@ -481,7 +481,7 @@ class ContentGenerationService
         $slide = $this->draftSlide($builder, $item, $index, $payload, $job);
 
         if ($slide === null) {
-            $this->credits->refund($brand, (int) $job->credits_held, $job, self::SLIDE_OPERATION, 'إرجاع: مخرج غير صالح');
+            $this->credits->refund($brand, (float) $job->credits_held, $job, self::SLIDE_OPERATION, 'إرجاع: مخرج غير صالح');
             $job->markFailed('لم يُنتج النموذج نصاً صالحاً للشريحة. أُرجعت النقطة.');
 
             return;
@@ -518,7 +518,7 @@ class ContentGenerationService
         $item->update(['body' => $with($slide)]);
         $item->update(['quality' => ['edited' => false, 'rewritten' => $index + 1] + $this->recheck($item->refresh())]);
 
-        $held = (int) $job->credits_held;
+        $held = (float) $job->credits_held;
         $this->credits->settle($brand, $held, $held, $job, self::SLIDE_OPERATION);
 
         $job->markCompleted(['content_item_id' => $item->id, 'index' => $index]);

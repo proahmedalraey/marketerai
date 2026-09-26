@@ -9,7 +9,7 @@
 المستخدم أجاب على 4 أسئلة توضيحية قبل التنفيذ (راجع سجل المحادثة). الخلاصة:
 
 1. **الشكل/التخطيط يُبنى الآن بالكامل.** كل عنصر في الصور المرجعية موجود بصرياً في الواجهة الجديدة.
-2. **قائمة اختيار النموذج شكلية.** لا توجيه فعلي لمزوّد مختلف.
+2. **قائمة اختيار النموذج كانت شكلية عند القرار الأول، وأصبحت فعلية بتاريخ 2026-09-25** (توجيه عبر OpenRouter — §2.1).
 3. **مصفوفة النقاط الكسرية (دقة × جودة) فعلية بالكامل.** تغيير حقيقي في نظام النقاط، منفَّذ في هذه الجلسة (انظر §1 أدناه — منفَّذ لا مؤجَّل).
 4. **المعرض (مجلدات/تثبيت/حذف جماعي) وإجراءات كل صورة شكلية.** كل عنصر معطّل بوسم "قريباً" في الواجهة الحالية.
 
@@ -36,6 +36,23 @@
 | بحث داخل قائمة "من المنتجات" في لوحة الرفع | **فعلي** — 2026-09-23، فلترة Alpine محلية | `_upload-popover.blade.php` |
 | منزلق حجم شبكة المعرض | **فعلي** — 2026-09-23، تفضيل عرض محلي بحت (`gridCols`) | `_gallery.blade.php` |
 | مجلدات المعرض + تثبيت (§2.2 سابقاً — جزء منه) | **فعلي** — 2026-09-23: إنشاء/حذف مجلد، نقل صورة إليه، فلترة المعرض بمجلد أو بالمثبتة، تثبيت/إلغاء عبر العارض الكامل (JSON فوري بلا إعادة تحميل). **الحذف الجماعي لا يزال مؤجَّلاً** (يحتاج وضع تحديد متعدد منفصلاً) | هجرتا `2026_01_11_*`, `MediaFolder`, `MediaFolderController`, `ImageStudioController::move()/pin()`, `_folders-panel.blade.php`, `tests/Feature/ImageStudioFoldersTest.php` |
+| توجيه فعلي بين النماذج الخمسة عبر OpenRouter (§2.1) | **فعلي** — 2026-09-25 (اختُبر حياً بخمسة نماذج). الاختيار يُرسَل مع الطلب ويُسجَّل في `meta.model`؛ حين مزود الصور غير OpenRouter تُعرض «شريحة قراءة فقط» بالنموذج المُعدّ بدل قائمة مضلِّلة | `StudioModels`, `config/ai.php` (`studio_models`), `OpenRouterImageProvider`, `_toolbar/_model-popover.blade.php`, `tests/Feature/ImageStudioModelsTest.php` |
+| قدرات كل نموذج حيّة من OpenRouter (دقات/جودات/نسب) | **فعلي** — الدقة أو الجودة غير المدعومة تُعطَّل في الواجهة وتُرفض في الخادم **قبل حجز النقاط**؛ تبديل النموذج يضبط الاختيار تلقائياً مع تنبيه | `StudioModels::capabilities()/unsupported()`, `image-studio.js` (`selectModel`, `normalizeForModel`), `_quality-popover.blade.php` |
+| نسبة غير مدعومة: تُطلب أقرب نسبة ثم تُقصّ من المنتصف | **فعلي** — `meta.cropped_from`؛ الأبعاد المسجّلة = أبعاد الملف الفعلية (كانت تُسجَّل 3840 لصورة 1024) | `ImageRatio::crop()`, `ImageGenerationService::run()` |
+| حفظ آخر اختيارات المستخدم (نموذج/دقة/جودة/نسبة/عدد/برومبت) | **فعلي** — localStorage؛ يعلوه `old()` عند رجوع الخادم بخطأ | `image-studio.js` (`persist`, `restore`) |
+| النقاط الكسرية: إصلاح فقدانها في التسوية والاسترجاع | **مُصلَح** — 2026-09-25: `(int)` على `credits_held` كانت تُسجّل 0 مخصوم وتُرجع 0 عند الفشل؛ اختبارات دفتر النقاط | 9 ملفات (Jobs/Services)، `JobSummary`, `tests/Feature/ImageStudioCreditsTest.php` |
+| إعدادات `/settings/ai` لم تكن تُطبَّق في طلب الويب (الواجهة ترى `.env` والعامل يرى المنصة) | **مُصلَح** — كان اختيار النموذج يختفي رغم ضبط OpenRouter | `StudioModels::provider()` (يستدعي `AiSettings::apply`)، اختبار `platform_settings_override_env_for_the_web_request` |
+| توليد الصور بالتوازي (`Http::pool`) مع تحمّل الفشل الجزئي | **فعلي** — 4 صور في ~14ث بدل ~50ث؛ فشل صورة لا يُسقط ما نجح (تُرجع الخدمة نقاط الناقص فقط) | `OpenRouterImageProvider::generateMany()`, `OpenRouterProviderTest` |
+| مصغّرات المعرض (480px JPEG ≈ 20–50KB بدل 1–2MB) | **فعلي** — تُنشأ عند التوليد والرفع؛ `php artisan media:thumbnails` للقديمة؛ تُمسح مع الحذف | `ImageThumbnail`, `MediaAsset::thumbUrl()/putThumbnail()/deleteFiles()`, `MediaThumbnailsCommand`, `tests/Feature/ImageStudioThumbnailTest.php` |
+| «عرض المزيد» في المعرض بدل سقف صامت عند 60 | **فعلي** — `?limit=` يرتفع 60 كل مرة ويحفظ البحث/الفلتر | `ImageStudioController::index()`, `_gallery.blade.php`, `tests/Feature/ImageStudioGalleryTest.php` |
+| اسم النموذج والأبعاد الفعلية على بطاقة المعرض والعارض | **فعلي** | `_gallery.blade.php`, `_lightbox.blade.php` |
+| هياكل انتظار التوليد بعدد الصور ونسبتها الفعلية | **فعلي** | `studio.blade.php` (`trackedCount/trackedRatio`) |
+| القوائم المنبثقة لا تخرج من إطار الشاشة (RTL / الجوال) | **فعلي** | `image-studio.js` (`keepPopoverInView`, `data-popover`) |
+| الحفاظ على المنتج عند وجود صورة مرجعية | **مُصلَح** — 2026-09-25: قيد «لا نص ولا شعارات» كان يمحو اسم المنتج وشعاره من العبوة نفسها (essenza / MASTIC). مع مرجع يُرسَل بدله `KEEP_PRODUCT_RULE` (يحفظ الشكل والألوان والنصوص ويغيّر المحيط فقط) والقيد القديم بلا مرجع. اختُبر حياً على Flare وSunburst وNano Banana 2 | `ImageGenerationService::composePrompt()`, `tests/Feature/ImageStudioModelsTest.php` |
+| أخطاء الاتصال (DNS/رفض اتصال) | **فعلي** — تُعاد تلقائياً (لم يصل الطلب للمزود فلا دفع مرتين)، والمهلة لا تُعاد، ورسالة واضحة للتاجر بدل «تعذّر التوليد» العامة | `ProviderException::fromConnection()/messageFor()`, `AiManager::withRetries()`, `OpenRouterProviderTest` |
+| تنزيل صورة المنتج المرجعية يفشل (403/404) | **فعلي** — رسالة واضحة قبل الاتصال بالمزود بدل إرسال صفحة الخطأ كأنها صورة | `OpenRouterImageProvider::referencePart()` |
+| رفض الخادم يظهر في الصفحة (جودة/نموذج/وصف) | **فعلي** — كان يبدو الضغط بلا أثر | `studio.blade.php` |
+| **ملاحظة تشغيل**: الأصول تُخدَّم من `public/build` إن غاب `public/hot` (خادم Vite متوقف) | بناء قديم = واجهة بلا `selectModel` ← تعذّر تبديل النموذج. بعد أي تعديل JS/Blade-classes: `npm run dev` أو `npm run build` | `resources/js/image-studio.js` |
 
 صفحة الكاروسيل (`content/show.blade.php`, `ImageStudioController::carousel()`) تبقى على `config('ai.quality_tiers')` القديمة (4 مستويات صحيحة) — لم تُمس عمداً.
 
@@ -43,19 +60,28 @@
 
 ## 2. المؤجَّل — تفصيل تقني لكل بند
 
-### 2.1 توجيه فعلي بين النماذج (Nano Banana 2 / GPT Image Sunburst / Flare / Grok Imagine / Grok Imagine 2.0)
+### 2.1 توجيه فعلي بين النماذج — **مُنفَّذ (2026-09-25)** عبر OpenRouter
 
-- **الفجوة**: `AiManager::image(?string $provider)` يقبل بالفعل اسم مزوّد فردي، لكن `ImageGenerationService::run()` لا يمرّره (`app/Services/Media/ImageGenerationService.php:73`، الاستدعاء بلا وسيط `$provider`). `ImageRequest` DTO لا يحمل حقل نموذج/مزوّد إطلاقاً.
-- **Grok/xAI**: لا يوجد درايفر إطلاقاً. يلزم `app/Services/AI/Drivers/GrokImageProvider.php` يطبّق `App\Services\AI\Contracts\ImageProvider`، وإضافة `'grok' => ['driver' => 'grok', ...]` في `config/ai.php['providers']`.
-- **GPT Image Sunburst مقابل Flare**: OpenAI لا يميّز رسمياً بين نسختين بهذين الاسمين اليوم — يحتاج قرار منتج: هل هما إعداد باراميترات مختلف لنفس `gpt-image-1` (مثال: `quality=hd` مقابل `standard` في OpenAI's API)، أم اسمان تسويقيان فقط لنفس السلوك؟
-- **الخطوات**: (1) حقل `provider`/`model` في `ImageRequest` و`config('ai.studio_models')` (موجود فعلاً كعرض فقط) يُربط بمفتاح مزوّد حقيقي، (2) تمرير الاختيار من `ImageStudioController::store()` عبر `ImageGenerationService::dispatch()` إلى `AiManager::generateImage($request, $job, $provider)`، (3) بناء درايفر Grok، (4) تحديث `ModelCatalog.php` إن لزم عرض نماذج Grok الحية في إعدادات المنصة.
+لم يلزم درايفر Grok: OpenRouter يوفّر النماذج الخمسة بمفتاح واحد (`config('ai.studio_models')` يربط كل مفتاح واجهة بمعرّف OpenRouter). التوجيه فعّال **فقط حين `ai.image_provider = openrouter`**؛ بغيره يُتجاهل الاختيار.
+
+قياسات حقيقية (1K، جودة منخفضة/الوحيدة، 2026-09-25):
+
+| النموذج | الزمن | كلفة المزوّد/صورة | ملاحظات |
+|---|---|---|---|
+| GPT Image 2.5 Flare | ~13ث | $0.006 | 16:9 ← 1536×864 فعلياً |
+| GPT Image 2.5 Sunburst | ~14ث | $0.004 | مثل Flare |
+| Grok Imagine | ~6ث | $0.050 | جودة واحدة؛ 4:5 غير مدعومة ← 3:4 ثم قصّ |
+| Grok Imagine 2.0 | ~15ث (low) / ~58ث (medium) | $0.040 | 1K/2K، جودتان |
+| Nano Banana 2 | ~13ث/صورة | $0.067 | 1K/2K/4K، جودة واحدة؛ **يحجب بالسلامة** عبارة «No text, no letters, no watermark.» فتُستبدل بصيغة موحّدة (`NO_TEXT_RULE`) |
+
+**قرار منتج معلّق**: مصفوفة النقاط لا تعرف النموذج (1 نقطة = 1K متوسطة لكل النماذج) بينما كلفة المزوّد تتفاوت ×17 ($0.004 ← $0.067). إن كان السعر النهائي يجب أن يعكس الكلفة، يلزم معامل نموذج في `image_quality_matrix` (مثلاً ضرب النقاط بمعامل لكل `studio_models`).
 
 ### 2.2 حذف جماعي (الجزء المتبقي من "مجلدات المعرض")
 
 المجلدات والتثبيت صارا فعليين (§1). المتبقي فقط:
 
 - **الفجوة**: يحتاج وضع "تحديد متعدد" في الواجهة — checkbox على كل بطاقة عند تفعيل "تحديد للحذف الجماعي"، حالة `selectedIds` مشتركة على مستوى قسم المعرض، وشريط إجراء عائم يظهر عدد المحدد وزر "حذف المحدد".
-- **الخطوات**: endpoint `POST /studio/media/bulk-destroy` يقبل `ids[]` (كل عنصر يُتحقق أنه ضمن `media_assets` الخاصة بالبراند — لا يكفي `whereIn('id', $ids)` بلا فلتر brand)، يمسح الملفات من التخزين ثم السجلات، على نمط `ImageStudioController::destroy()` الحالي (حذف فردي فعلي) لكن بحلقة/استعلام دفعة واحدة.
+- **الخطوات**: endpoint `POST /studio/media/bulk-destroy` يقبل `ids[]` (كل عنصر يُتحقق أنه ضمن `media_assets` الخاصة بالبراند — لا يكفي `whereIn('id', $ids)` بلا فلتر brand)، يمسح الملفات (`MediaAsset::deleteFiles()` — يشمل المصغّرة) ثم السجلات، على نمط `ImageStudioController::destroy()` الحالي (حذف فردي فعلي) لكن بحلقة/استعلام دفعة واحدة.
 
 ### 2.5 إزالة الخلفية
 

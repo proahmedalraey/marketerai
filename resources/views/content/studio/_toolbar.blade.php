@@ -12,9 +12,18 @@
         <input type="hidden" name="aspect_ratio" :value="aspectRatio">
         <input type="hidden" name="quality" :value="qualityKey">
         <input type="hidden" name="count" :value="count">
+        @if ($modelsRoutable)
+            <input type="hidden" name="model" :value="model">
+        @endif
         <input type="hidden" name="use_brand_identity" :value="useBrandIdentity ? 1 : 0">
         <input type="hidden" name="product_id" :value="referenceMode === 'product' ? productId : ''">
         <input type="hidden" name="reference_asset_id" :value="referenceMode === 'gallery' ? referenceAssetId : ''">
+
+        {{-- تنبيه ضبط تلقائي بعد تبديل النموذج --}}
+        <p x-show="notice" x-cloak x-transition class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-warning-soft text-warning-fg text-xs" role="status">
+            <x-icon name="info" class="w-3.5 h-3.5 shrink-0" />
+            <span x-text="notice"></span>
+        </p>
 
         {{-- شريحة المرجع المختار --}}
         <div x-show="referenceMode" x-cloak class="flex items-center gap-2 px-1">
@@ -113,19 +122,29 @@
                 @include('content.studio._quality-popover')
             </div>
 
-            {{-- النموذج (شكلي) --}}
+            {{-- النموذج: فعّال حين مزود الصور OpenRouter، وإلا عرض للقراءة للنموذج المُعدّ --}}
             <div class="relative">
-                <button
-                    type="button" @click="togglePopover('model')"
-                    :aria-expanded="popover === 'model' ? 'true' : 'false'"
-                    aria-label="النموذج"
-                    class="chip border border-line text-fg min-h-9 hover:bg-muted transition"
-                >
-                    <span x-text="models[model]?.label"></span>
-                    <x-icon name="settings" class="w-3.5 h-3.5 text-fg-subtle" />
-                </button>
+                @if ($modelsRoutable)
+                    <button
+                        type="button" @click="togglePopover('model')"
+                        :aria-expanded="popover === 'model' ? 'true' : 'false'"
+                        aria-label="النموذج"
+                        class="chip border border-line text-fg min-h-9 hover:bg-muted transition"
+                    >
+                        <span x-text="models[model]?.label"></span>
+                        <x-icon name="settings" class="w-3.5 h-3.5 text-fg-subtle" />
+                    </button>
 
-                @include('content.studio._model-popover')
+                    @include('content.studio._model-popover')
+                @else
+                    <span
+                        class="chip border border-line text-fg-muted min-h-9"
+                        title="النموذج المُعدّ في إعدادات المنصة. التبديل بين النماذج متاح حين يكون مزود الصور OpenRouter."
+                    >
+                        <x-icon name="settings" class="w-3.5 h-3.5 text-fg-subtle" />
+                        {{ $activeModel }}
+                    </span>
+                @endif
             </div>
 
             {{-- نسبة الأبعاد --}}

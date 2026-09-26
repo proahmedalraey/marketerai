@@ -40,6 +40,11 @@ class AiSettings
         'gemini.model' => ['config' => 'ai.providers.gemini.model', 'secret' => false],
         'gemini.image_model' => ['config' => 'ai.providers.gemini.image_model', 'secret' => false],
         'gemini.base_url' => ['config' => 'ai.providers.gemini.base_url', 'secret' => false],
+
+        'openrouter.api_key' => ['config' => 'ai.providers.openrouter.api_key', 'secret' => true],
+        'openrouter.model' => ['config' => 'ai.providers.openrouter.model', 'secret' => false],
+        'openrouter.image_model' => ['config' => 'ai.providers.openrouter.image_model', 'secret' => false],
+        'openrouter.base_url' => ['config' => 'ai.providers.openrouter.base_url', 'secret' => false],
     ];
 
     /** قيم البيئة الأصلية قبل أي تطبيق، للرجوع إليها حين يُحذف الإعداد */
