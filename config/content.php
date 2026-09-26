@@ -321,6 +321,8 @@ return [
     'templates' => [
 
         'value_carousel' => [
+            // الوسم القصير في بطاقات «من خطة المحتوى» باستوديو الصور
+            'short' => 'محتوى قيمي',
             'label' => 'كاروسيل قيمي',
             'format' => 'carousel',
             'goals' => ['engagement', 'followers', 'reputation', 'reach'],
@@ -329,6 +331,8 @@ return [
         ],
 
         'marketing_carousel' => [
+            // الوسم القصير في بطاقات «من خطة المحتوى» باستوديو الصور
+            'short' => 'محتوى تسويقي',
             'label' => 'كاروسيل تسويقي',
             'format' => 'carousel',
             'goals' => ['direct_sales', 'positioning', 'competitive_edge'],

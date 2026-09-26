@@ -5,10 +5,13 @@ namespace App\Models;
 use App\Enums\ContentFormat;
 use App\Enums\ContentStatus;
 use App\Models\Concerns\BelongsToBrand;
+use App\Services\Content\ContentFormats;
+use App\Support\Arabic\ArabicText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class ContentItem extends Model
 {
@@ -124,7 +127,7 @@ class ContentItem extends Model
     /** الشكل كما اختاره التاجر («Reels»)، أو اسم البنية لمحتوى سبق الأشكال. */
     public function variantLabel(): string
     {
-        return \App\Services\Content\ContentFormats::label($this->variant) ?? $this->format->label();
+        return ContentFormats::label($this->variant) ?? $this->format->label();
     }
 
     /** المدة أو طول الثريد كما اختيرا («30 ثانية»). */
@@ -133,7 +136,7 @@ class ContentItem extends Model
         $choice = $this->options['option'] ?? null;
 
         return $this->variant && $choice !== null
-            ? (\App\Services\Content\ContentFormats::choice($this->variant, (string) $choice)['label'] ?? null)
+            ? (ContentFormats::choice($this->variant, (string) $choice)['label'] ?? null)
             : null;
     }
 
@@ -245,9 +248,9 @@ class ContentItem extends Model
      * عروض ذكرها المنشور وتنتهي قبل تاريخ نشره المخطط.
      * كُتب المنشور والعرض سارٍ؛ نشره بعد انتهائه وعدٌ لن يُوفى.
      *
-     * @return \Illuminate\Support\Collection<int, Offer>
+     * @return Collection<int, Offer>
      */
-    public function offersEndingBeforePublish(): \Illuminate\Support\Collection
+    public function offersEndingBeforePublish(): Collection
     {
         $ids = (array) ($this->body['offer_ids'] ?? []);
 
@@ -267,7 +270,7 @@ class ContentItem extends Model
             ->whereDate('ends_at', '<', $this->planned_for)
             ->get()
             ->filter(fn (Offer $offer) => (filled($offer->coupon_code) && mb_stripos($text, $offer->coupon_code) !== false)
-                || \App\Support\Arabic\ArabicText::firstOf($text, [
+                || ArabicText::firstOf($text, [
                     ...config('claims.categories.discount.words', []),
                     ...config('claims.categories.free.words', []),
                 ]) !== null)
@@ -288,6 +291,14 @@ class ContentItem extends Model
     public function platformLabel(): string
     {
         return config("content.platforms.{$this->platform}.label", $this->platform);
+    }
+
+    /** نوع المحتوى بكلمتين للبطاقات («محتوى قيمي»، «محتوى تسويقي»)، وإلا اسم القالب. */
+    public function kindLabel(): ?string
+    {
+        return $this->template
+            ? (config("content.templates.{$this->template}.short") ?? $this->templateLabel())
+            : null;
     }
 
     public function templateLabel(): ?string

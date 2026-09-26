@@ -14,6 +14,7 @@ use App\Services\Credits\InsufficientCreditsException;
 use App\Services\Media\ImageGenerationService;
 use App\Services\Media\PromptEnhancer;
 use App\Services\Media\StudioModels;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,8 @@ class ImageStudioController extends Controller
     {
         // معرض "توليد" = نتائج فعلية فقط؛ الصور المرفوعة من الجهاز مدخلات مرجعية
         // لا نتائج، فتبقى خارجه وتظهر فقط في مكتبة "الصور المرفوعة مسبقاً"
-        $gallery = MediaAsset::where('kind', 'image')->whereNotNull('generation_job_id');
+        // contentItem: صور شرائح الكاروسيل تُعرض بنص شريحتها لا ببرومبت الصورة الإنجليزي
+        $gallery = MediaAsset::where('kind', 'image')->whereNotNull('generation_job_id')->with('contentItem');
 
         $pinnedOnly = $request->boolean('pinned');
         $activeFolder = $pinnedOnly ? null : ($request->integer('folder') ?: null);
@@ -53,16 +55,36 @@ class ImageStudioController extends Controller
         $limit = min(600, max(60, (int) $request->integer('limit', 60)));
         $items = $gallery->take($limit + 1)->get();
 
-        // شكل المهمة الجارية (عدد/نسبة) لعرض هياكل انتظار مطابقة لما سيصل
+        // شكل المهمة الجارية (عدد/نسبة) لعرض هياكل انتظار مطابقة لما سيصل.
+        // صور الكاروسيل مهمة أم: عددها في indices ونسبتها عند أول شريحة
         $tracked = ($jobUuid = $request->string('job')->toString())
             ? GenerationJob::where('uuid', $jobUuid)->first()
             : null;
+        $trackedChild = $tracked?->type === 'carousel_images'
+            ? GenerationJob::where('parent_id', $tracked->id)->oldest('id')->first()
+            : null;
+
+        // تبويب «من خطة المحتوى»: محتوى الخطة الشهرية لشهر واحد، يُتنقّل بينه بالأسهم
+        $monthParam = (string) $request->query('plan_month');
+        $planMonth = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $monthParam)
+            ? CarbonImmutable::createFromFormat('!Y-m', $monthParam)->startOfMonth()
+            : CarbonImmutable::now()->startOfMonth();
+
+        $planItems = ContentItem::inPlan()
+            ->whereBetween('planned_for', [$planMonth->toDateString(), $planMonth->endOfMonth()->toDateString()])
+            ->with(['product', 'mediaAssets'])
+            ->orderBy('planned_for')
+            ->orderBy('id')
+            ->get();
 
         return view('content.studio', [
             'enhanceUrl' => route('studio.enhance'),
             'enhanceCost' => app(CreditService::class)->cost(PromptEnhancer::OPERATION),
-            'trackedCount' => min(4, max(1, (int) ($tracked?->payload['count'] ?? 1))),
-            'trackedRatio' => (string) ($tracked?->payload['aspect_ratio'] ?? '1:1'),
+            'trackedCount' => min(8, max(1, (int) (isset($tracked?->payload['indices']) ? count($tracked->payload['indices']) : ($tracked?->payload['count'] ?? 1)))),
+            'trackedRatio' => (string) ($trackedChild?->payload['aspect_ratio'] ?? $tracked?->payload['aspect_ratio'] ?? '1:1'),
+            'activeTab' => $request->query('tab') === 'plan' ? 'plan' : 'studio',
+            'planMonth' => $planMonth,
+            'slideImageCost' => app(CreditService::class)->cost('image.standard_1k'),
             'studioModelService' => $models,
             'modelCaps' => $models->allCapabilities(),
             'modelsRoutable' => $models->routable(),
@@ -79,7 +101,7 @@ class ImageStudioController extends Controller
             // إزالة الخلفية تحتاج OpenRouter (نموذج بخلفية شفافة)؛ بغيره يظهر البند معطّلاً بسببه
             'removeBackgroundAvailable' => $models->routable(),
             'removeBackgroundCost' => app(CreditService::class)->cost(ImageGenerationService::REMOVE_BACKGROUND_OPERATION),
-            'planItems' => ContentItem::whereIn('status', ['ready', 'draft'])->latest()->take(20)->get(),
+            'planItems' => $planItems,
             // نطاق التصميم الجديد (/studio فقط) — الكاروسيل في content/show.blade.php يبقى على ai.quality_tiers
             'ratios' => config('ai.aspect_ratios'),
             'resolutions' => config('ai.resolutions'),
@@ -162,6 +184,8 @@ class ImageStudioController extends Controller
         $data = $request->validate([
             'stage' => ['required', 'in:cover,rest,slide'],
             'index' => ['required_if:stage,slide', 'nullable', 'integer', 'min:0'],
+            // من تبويب «من خطة المحتوى» في الاستوديو: تُتابَع الصور وتظهر في «الاستوديو» لا في صفحة المحتوى
+            'return' => ['nullable', 'in:studio'],
             'aspect_ratio' => ['nullable', 'in:'.implode(',', array_keys(config('ai.aspect_ratios')))],
             'quality' => ['nullable', 'in:'.implode(',', array_keys(config('ai.quality_tiers')))],
         ]);
@@ -191,10 +215,14 @@ class ImageStudioController extends Controller
             return back()->withErrors(['stage' => $e->getMessage()]);
         }
 
+        if (($data['return'] ?? null) === 'studio') {
+            return redirect()->route('studio.index', ['job' => $job->uuid]);
+        }
+
         return redirect()->route('content.show', [$contentItem, 'job' => $job->uuid]);
     }
 
-    /** إرفاق صورة موجودة في المعرض بمحتوى — بلا توليد جديد. */
+    /** إرفاق صورة موجودة في الاستوديو بمحتوى — بلا توليد جديد. */
     public function attach(Request $request, ContentItem $contentItem)
     {
         $data = $request->validate([

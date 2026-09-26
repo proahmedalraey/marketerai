@@ -37,6 +37,7 @@
         'uploadUrl' => route('studio.uploads'),
         'enhanceUrl' => $enhanceUrl,
         'toProductUrl' => route('studio.media.to-product', ['mediaAsset' => '__ASSET__']),
+        'activeTab' => $activeTab,
         'enhanceCost' => $enhanceCost,
         'prompt' => old('prompt', ''),
         'resolution' => $initResolution,
@@ -89,7 +90,7 @@
 
             <p class="mt-2.5 text-xs leading-relaxed" role="status" aria-live="polite">
                 <span x-show="!finished" class="text-fg-muted">توليد الصور يستغرق وقتاً أطول من النص — ابقَ في الصفحة.</span>
-                <span x-show="finished && !failed && !timedOut" x-cloak class="text-success-fg">اكتمل. نحدّث المعرض…</span>
+                <span x-show="finished && !failed && !timedOut" x-cloak class="text-success-fg">اكتمل. نحدّث الاستوديو…</span>
                 <span x-show="failed" x-cloak class="text-danger-fg">
                     <span x-text="error || 'تعذّر التوليد وأُرجعت نقاطك.'"></span>
                     <a href="{{ route('studio.index') }}" class="ms-1 font-semibold underline underline-offset-4">إغلاق</a>
@@ -116,23 +117,24 @@
 
     {{-- أخطاء التحقق والنقاط يعرضها partials.flash في التخطيط؛ تكرارها هنا كان يُظهر الرسالة مرتين --}}
 
-    <div x-data="{ activeTab: 'gallery' }">
+    {{-- التبويب في حالة imageStudio لا محلياً: شريط التوليد يختفي في «من خطة المحتوى» --}}
+    <div>
         <div class="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit mb-3" role="tablist">
             <button
-                type="button" role="tab" @click="activeTab = 'gallery'"
-                :aria-selected="activeTab === 'gallery' ? 'true' : 'false'"
+                type="button" role="tab" @click="switchTab('studio')"
+                :aria-selected="activeTab === 'studio' ? 'true' : 'false'"
                 class="flex items-center gap-2 px-3.5 min-h-9 rounded-lg text-sm transition"
-                :class="activeTab === 'gallery' ? 'bg-card text-fg font-bold shadow-sm' : 'text-fg-muted font-medium hover:text-fg'"
+                :class="activeTab === 'studio' ? 'bg-card text-fg font-bold shadow-sm' : 'text-fg-muted font-medium hover:text-fg'"
             >
                 <x-icon name="grid" class="w-4 h-4" />
-                المعرض
+                الاستوديو
                 @if ($gallery->isNotEmpty())
-                    <span class="text-xs tnum" :class="activeTab === 'gallery' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ $gallery->count() }}{{ $galleryHasMore ? "+" : "" }}</span>
+                    <span class="text-xs tnum" :class="activeTab === 'studio' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ $gallery->count() }}{{ $galleryHasMore ? "+" : "" }}</span>
                 @endif
             </button>
 
             <button
-                type="button" role="tab" @click="activeTab = 'plan'"
+                type="button" role="tab" @click="switchTab('plan')"
                 :aria-selected="activeTab === 'plan' ? 'true' : 'false'"
                 class="flex items-center gap-2 px-3.5 min-h-9 rounded-lg text-sm transition"
                 :class="activeTab === 'plan' ? 'bg-card text-fg font-bold shadow-sm' : 'text-fg-muted font-medium hover:text-fg'"
@@ -145,62 +147,17 @@
             </button>
         </div>
 
-        <section x-show="activeTab === 'gallery'">
+        <section x-show="activeTab === 'studio'" @if ($activeTab !== 'studio') x-cloak @endif>
             @include('content.studio._gallery')
         </section>
 
-        <section x-show="activeTab === 'plan'" x-cloak>
-            @if ($planItems->isEmpty())
-                <x-empty-state icon="calendar" title="لا عناصر جاهزة في الخطة بعد" description="أضف محتوى للخطة الشهرية وسيظهر هنا." />
-            @else
-                <div class="flex items-center justify-end mb-3">
-                    <a href="{{ route('content.plan') }}"
-                       class="inline-flex items-center gap-1 py-1 -my-1 text-sm font-medium text-brand-700 dark:text-brand-400 hover:underline underline-offset-4">
-                        الخطة كاملة
-                        <x-icon name="chevron-left" class="w-4 h-4" />
-                    </a>
-                </div>
-
-                <div class="grid sm:grid-cols-2 gap-3">
-                    @foreach ($planItems->take(6) as $item)
-                        <article class="card p-3.5">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="chip-neutral">
-                                    <x-icon :name="$item->format->icon()" class="w-3.5 h-3.5" />
-                                    {{ $item->format->label() }}
-                                </span>
-                                <span class="text-[11px] text-fg-subtle">{{ $item->platformLabel() }}</span>
-                            </div>
-
-                            <p class="text-xs text-fg-muted line-clamp-2 leading-relaxed">
-                                {{ Str::limit($item->caption, 110) }}
-                            </p>
-
-                            <div class="flex items-center gap-1 mt-2.5">
-                                <a href="{{ route('content.show', $item) }}" class="btn-ghost btn-sm">
-                                    <x-icon name="pencil" class="w-3.5 h-3.5" />
-                                    <span>فتح</span>
-                                </a>
-
-                                @if ($item->format->value === 'carousel')
-                                    <form method="POST" action="{{ route('studio.carousel', $item) }}" class="ms-auto">
-                                        @csrf
-                                        <button type="submit" class="btn-secondary btn-sm">
-                                            <x-icon name="image" class="w-3.5 h-3.5" />
-                                            <span>توليد الصور</span>
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            @endif
+        <section x-show="activeTab === 'plan'" @if ($activeTab !== 'plan') x-cloak @endif>
+            @include('content.studio._plan-tab')
         </section>
     </div>
 
     {{-- مساحة فارغة أسفل الصفحة حتى لا يغطي الشريط العائم آخر صف من المعرض --}}
-    <div class="h-24" aria-hidden="true"></div>
+    <div class="h-24" aria-hidden="true" x-show="activeTab === 'studio'"></div>
 
     @include('content.studio._toolbar')
     @include('content.studio._reference-picker-modal')

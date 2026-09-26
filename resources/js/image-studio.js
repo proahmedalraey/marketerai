@@ -44,6 +44,7 @@ export default function registerImageStudio(Alpine) {
             referenceAssetId: config.referenceAssetId || null,
             referenceAssetUrl: config.referenceAssetUrl || null,
 
+            activeTab: config.activeTab || 'studio', // 'studio' | 'plan'
             popover: null, // null | 'model' | 'quality' | 'ratio' | 'upload'
             lightbox: null, // null | { id, url, prompt }
             referencePickerOpen: false,
@@ -256,6 +257,26 @@ export default function registerImageStudio(Alpine) {
                 const value = this.qualityMatrix[`${this.resolution}_${key}`]?.credits ?? 0;
 
                 return Number.isInteger(value) ? String(value) : value.toFixed(1);
+            },
+
+            /**
+             * التبويب في الرابط (?tab=plan): الرجوع من خطأ تحقق أو التنقل بين أشهر
+             * الخطة يعيد التاجر لنفس التبويب بدل «الاستوديو».
+             */
+            switchTab(tab) {
+                this.activeTab = tab;
+                this.closePopovers();
+
+                try {
+                    const url = new URL(window.location.href);
+
+                    if (tab === 'plan') url.searchParams.set('tab', 'plan');
+                    else url.searchParams.delete('tab');
+
+                    // مهمة انتهت لا تُعاد متابعتها عند التحديث
+                    url.searchParams.delete('job');
+                    window.history.replaceState(null, '', url);
+                } catch (e) { /* متصفح بلا history: يبقى التبويب محلياً */ }
             },
 
             togglePopover(name) {

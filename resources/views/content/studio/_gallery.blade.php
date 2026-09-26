@@ -22,7 +22,7 @@
         @if ($gallery->isNotEmpty())
             <button type="button" @click="selecting ? stopSelecting() : startSelecting()"
                     :aria-pressed="selecting ? 'true' : 'false'"
-                    :class="selecting ? 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300' : 'border-line'"
+                    :class="selecting ? 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' : 'border-line'"
                     class="btn btn-ghost gap-1.5 rounded-full border">
                 <x-icon name="check-circle" class="w-4 h-4" />
                 <span x-text="selecting ? 'إنهاء التحديد' : 'تحديد'">تحديد</span>
@@ -65,7 +65,7 @@
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 -translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
-            class="flex flex-wrap items-center gap-2 mb-3 p-2 ps-3 rounded-2xl border border-brand-200 dark:border-brand-900 bg-brand-50/70 dark:bg-brand-950/40"
+            class="flex flex-wrap items-center gap-2 mb-3 p-2 ps-3 rounded-2xl border border-brand-200 dark:border-brand-900 bg-brand-50/70 dark:bg-brand-900/30"
             role="toolbar" aria-label="إجراءات الصور المحددة"
         >
             <span class="text-sm font-semibold text-fg">
@@ -99,7 +99,7 @@
                     :action="route('studio.media.bulk-destroy')"
                     method="POST"
                     title="حذف الصور المحددة نهائياً؟"
-                    message="لا يمكن التراجع — تُحذف الصور المحددة من المعرض والتخزين."
+                    message="لا يمكن التراجع — تُحذف الصور المحددة من الاستوديو والتخزين."
                     confirm="حذف نهائياً"
                     label="حذف المحدد"
                     :icon-only="false"
@@ -216,9 +216,17 @@
                     </div>
 
                     <figcaption class="p-2.5">
-                        <p class="text-[11px] text-fg-muted line-clamp-2 leading-relaxed">
-                            {{ Str::limit($asset->prompt, 90) }}
-                        </p>
+                        {{-- صورة شريحة كاروسيل: نص الشريحة بالعربية، لا برومبت الصورة الإنجليزي --}}
+                        @if ($asset->slide_index !== null && $asset->contentItem)
+                            <p class="text-[11px] text-fg-muted line-clamp-2 leading-relaxed">
+                                <span class="font-semibold text-brand-700 dark:text-brand-400">الشريحة {{ $asset->slide_index + 1 }}:</span>
+                                {{ Str::limit($asset->contentItem->slides()[$asset->slide_index]['text'] ?? '', 90) }}
+                            </p>
+                        @else
+                            <p class="text-[11px] text-fg-muted line-clamp-2 leading-relaxed">
+                                {{ Str::limit($asset->prompt, 90) }}
+                            </p>
+                        @endif
                         <p class="flex items-center justify-between gap-2 text-[10px] text-fg-subtle mt-1.5">
                             <span class="tnum" dir="ltr">{{ $asset->width }}×{{ $asset->height }}</span>
                             @if ($modelLabel = $studioModelService->labelFor($asset->meta['model'] ?? null))

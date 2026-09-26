@@ -133,7 +133,7 @@
         <x-confirm
             :action="route('studio.media.destroy', $asset)"
             title="حذف هذه الصورة؟"
-            message="لا يمكن التراجع — تُحذف الصورة نهائياً من المعرض والتخزين."
+            message="لا يمكن التراجع — تُحذف الصورة نهائياً من الاستوديو والتخزين."
             confirm="حذف نهائياً"
             label="حذف"
             icon="trash"

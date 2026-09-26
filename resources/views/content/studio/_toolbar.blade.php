@@ -8,7 +8,7 @@
     القوائم المنبثقة تُغلق بنقرة خارج الشريط كله (click.outside واحد هنا) لا خارج كل قائمة:
     كانت كل قائمة تغلق الأخرى أثناء حركة إخفائها، فتظهر القائمة الجديدة وتختفي فوراً.
 --}}
-<div class="sticky bottom-4 z-30">
+<div class="sticky bottom-4 z-30" x-show="activeTab === 'studio'" @if ($activeTab !== 'studio') x-cloak @endif>
     <form
         method="POST" action="{{ route('studio.generate') }}"
         @click.outside="closePopovers()" @submit="stopVoice()"
@@ -40,7 +40,7 @@
             </span>
             <span class="text-xs text-fg-muted flex-1 min-w-0 truncate">
                 <span x-show="referenceMode === 'product'">منتج مرجعي مختار</span>
-                <span x-show="referenceMode === 'gallery'">صورة من المعرض كمرجع</span>
+                <span x-show="referenceMode === 'gallery'">صورة من الاستوديو كمرجع</span>
                 <span x-show="referenceMode === 'upload'">صورة مرفوعة كمرجع</span>
             </span>
             <button type="button" @click="clearReference()" class="btn btn-ghost btn-sm btn-icon">

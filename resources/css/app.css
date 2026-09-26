@@ -552,6 +552,12 @@
         @apply bg-card rounded-2xl border border-line shadow-pop origin-bottom;
     }
 
+    /* زر «توليد صور الكاروسيل» في بطاقات الخطة: محدَّد بلون الهوية، أخف من الزر الأساسي */
+    .studio-plan-action {
+        @apply border border-brand-300 text-brand-700 bg-brand-50/60 hover:bg-brand-50 hover:border-brand-400
+               dark:border-brand-800 dark:text-brand-300 dark:bg-brand-900/30 dark:hover:bg-brand-900/50;
+    }
+
     /* نقش شطرنج خلف الصور الشفافة (بعد إزالة الخلفية) */
     .bg-checker {
         background-color: rgb(var(--card));
