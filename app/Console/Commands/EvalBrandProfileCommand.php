@@ -118,7 +118,9 @@ class EvalBrandProfileCommand extends Command
             ];
 
             try {
+                // المسار نفسه في الإنتاج: مسودة ثم مرور رئيس التحرير
                 $draft = $generator->draft($brand, $sample['answers']);
+                [$draft] = $generator->polish($brand, $sample['answers'], $draft);
             } catch (\Throwable $e) {
                 $this->error('  فشل الاستدعاء: '.$e->getMessage());
                 $rows[] = [$key, '—', '—', '—', 'فشل', $e->getMessage()];
@@ -145,7 +147,7 @@ class EvalBrandProfileCommand extends Command
                 ],
             ];
 
-            $this->line("  النموذج: {$draft['model']} · {$draft['latency_ms']}ms");
+            $this->line("  النموذج: {$draft['model']} · {$draft['latency_ms']}ms · ".(($draft['polished'] ?? false) ? 'حرّره رئيس التحرير' : 'بلا تحرير'));
             $this->line('  الكلمات: مبسط '.$check->words((string) $draft['simple'])
                 .' · تفصيلي '.$check->words((string) $draft['detailed'])
                 .' · ملاحظات '.count((array) ($draft['technical']['important_notes'] ?? [])));

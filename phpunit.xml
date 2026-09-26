@@ -18,5 +18,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="AI_TEXT_PROVIDER" value="fake"/>
         <env name="AI_IMAGE_PROVIDER" value="fake"/>
+        <!-- مرور رئيس التحرير طلب ثانٍ: مطفأ افتراضياً، واختباراته تشغّله صراحة -->
+        <env name="BRAND_PROFILE_POLISH" value="false"/>
     </php>
 </phpunit>

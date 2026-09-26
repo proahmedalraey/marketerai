@@ -36,18 +36,19 @@
     <p class="meta">{{ $generatedAt }}</p>
 
     <table>
-        <tr><th>المشروع</th><th>النموذج</th><th>الدرجة</th><th>أخطاء</th><th>تحذيرات</th><th>الكلمات (مبسط · تفصيلي)</th></tr>
+        <tr><th>المشروع</th><th>النموذج</th><th>الدرجة</th><th>أخطاء</th><th>تحذيرات</th><th>الكلمات (مبسط · تفصيلي)</th><th>التحرير</th></tr>
         @foreach ($results as $r)
             <tr>
                 <td>{{ $r['key'] }}</td>
                 <td class="ltr">{{ $r['model'] ?? '—' }}</td>
                 @if ($r['error'])
-                    <td colspan="4" class="error">فشل الاستدعاء</td>
+                    <td colspan="5" class="error">فشل الاستدعاء</td>
                 @else
                     <td>{{ $r['score'] }}</td>
                     <td>{{ $r['errors'] }}</td>
                     <td>{{ $r['warnings'] }}</td>
                     <td>{{ $r['words']['simple'] }} · {{ $r['words']['detailed'] }}</td>
+                    <td>{{ ($r['draft']['polished'] ?? false) ? 'نعم' : 'لا' }}</td>
                 @endif
             </tr>
         @endforeach
@@ -83,11 +84,26 @@
                 <h3>الموجز الاستراتيجي</h3>
                 <p class="text brief">{{ $r['draft']['brief'] ?? '—' }}</p>
 
+                @if (filled($r['draft']['critique'] ?? null))
+                    <h3>ملاحظات رئيس التحرير</h3>
+                    <p class="text brief">{{ $r['draft']['critique'] }}</p>
+                @endif
+
                 <h3>الوصف المبسط</h3>
                 <p class="text">{{ $r['draft']['simple'] }}</p>
 
                 <h3>الوصف التفصيلي</h3>
                 <p class="text">{{ $r['draft']['detailed'] }}</p>
+
+                @if (! empty($r['draft']['before']))
+                    <details>
+                        <summary>المسودة قبل التحرير</summary>
+                        <h3>المبسط</h3>
+                        <p class="text">{{ $r['draft']['before']['simple'] }}</p>
+                        <h3>التفصيلي</h3>
+                        <p class="text">{{ $r['draft']['before']['detailed'] }}</p>
+                    </details>
+                @endif
 
                 <h3>الوصف التقني</h3>
                 <dl>

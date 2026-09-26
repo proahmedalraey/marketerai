@@ -135,6 +135,8 @@ class BrandProfileGenerator
 
         [$draft, $report, $attempts] = $this->withQualityGate($brand, $answers, $draft, $job, $previous);
 
+        [$draft, $report] = $this->polish($brand, $answers, $draft, $report, $job);
+
         $profile = BrandProfile::createVersion($brand, [
             'answers' => $answers,
             'simple' => $draft['simple'],
@@ -145,6 +147,8 @@ class BrandProfileGenerator
                 'passes' => $report->passes(),
                 'attempts' => $attempts,
                 'issues' => $report->issues(),
+                // مرّ الوصفان على رئيس التحرير وقُبلت نسخته (لم تزد أخطاء الصدق)
+                'polished' => $draft['polished'] ?? false,
                 // حقول بقيت من النسخة السابقة لأن إجاباتها لم تتغير
                 'kept' => $draft['kept'] ?? [],
                 'prompt_version' => self::PROMPT_VERSION,
@@ -223,6 +227,131 @@ class BrandProfileGenerator
             'model' => $response->provider.'/'.$response->model,
             'latency_ms' => $response->latencyMs,
         ];
+    }
+
+    /**
+     * مرور رئيس التحرير: يراجع الوصفين بقائمة معايير ثم يعيد كتابتهما.
+     *
+     * المسودة الأولى تلتزم القواعد لكنها «مقبولة لا لافتة»: النموذج يتبع قائمة
+     * معايير حين يراجع نصاً قائماً أفضل مما يتبعها وهو يكتب من الصفر
+     * (رُصد 2026-09-26: الوصف المبسط سرد 12 صنفاً رغم قاعدة التجميع).
+     *
+     * الوصف التقني لا يُمسّ. والصدق فوق البلاغة: نسخة المحرر تمر على الفحص نفسه،
+     * وإن زادت أخطاؤها بقيت المسودة. فشل الطلب لا يُسقط المهمة.
+     *
+     * @return array{0: array, 1: ?ProfileQualityReport}
+     */
+    public function polish(Brand $brand, array $answers, array $draft, ?ProfileQualityReport $report = null, ?GenerationJob $job = null): array
+    {
+        $report ??= $this->quality->check($draft, $answers, (array) $brand->banned_words);
+        $draft['polished'] = false;
+
+        if (! config('brand.profile_polish', true) || $draft['simple'] === null || $draft['detailed'] === null) {
+            return [$draft, $report];
+        }
+
+        [$provider, $model] = $this->route();
+
+        try {
+            $response = $this->ai->generateText(new TextRequest(
+                system: $this->editorSystem($brand),
+                prompt: $this->editorPrompt($brand, $answers, $draft),
+                schema: [
+                    'type' => 'object',
+                    'properties' => [
+                        'critique' => ['type' => 'string'],
+                        'simple' => ['type' => 'string'],
+                        'detailed' => ['type' => 'string'],
+                    ],
+                    'required' => ['critique', 'simple', 'detailed'],
+                ],
+                temperature: 0.6,
+                maxTokens: 3000,
+                operation: self::OPERATION,
+                model: $model,
+            ), $job, $provider);
+        } catch (\Throwable $e) {
+            Log::warning('تعذّر مرور رئيس التحرير على ملف الهوية؛ حُفظت المسودة', ['job' => $job?->id, 'error' => $e->getMessage()]);
+
+            return [$draft, $report];
+        }
+
+        $data = (array) ($response->data ?? []);
+        $simple = $this->text($data['simple'] ?? null, 800);
+        $detailed = $this->text($data['detailed'] ?? null, 4000);
+
+        $draft['critique'] = $this->text($data['critique'] ?? null, 3000);
+
+        if ($simple === null || $detailed === null) {
+            return [$draft, $report];
+        }
+
+        $candidate = [...$draft, 'simple' => $simple, 'detailed' => $detailed];
+        $candidateReport = $this->quality->check($candidate, $answers, (array) $brand->banned_words);
+
+        if (count($candidateReport->errors()) > count($report->errors())) {
+            Log::info('نسخة رئيس التحرير أضافت ما لم يرد في الإجابات؛ بقيت المسودة', [
+                'job' => $job?->id,
+                'errors' => array_column($candidateReport->errors(), 'message'),
+            ]);
+
+            return [$draft, $report];
+        }
+
+        return [[
+            ...$candidate,
+            'polished' => true,
+            'before' => ['simple' => $draft['simple'], 'detailed' => $draft['detailed']],
+        ], $candidateReport];
+    }
+
+    protected function editorSystem(Brand $brand): string
+    {
+        $banned = $brand->banned_words
+            ? "\n- لا تستخدم هذه الكلمات إطلاقاً بأي تصريف: ".implode('، ', $brand->banned_words)
+            : '';
+
+        $tone = filled($brand->tone)
+            ? "\n- نبرة العلامة كما حددها صاحبها: «{$brand->tone}»."
+            : '';
+
+        $cliches = implode('»، «', (array) config('brand.profile_cliches', []));
+
+        return <<<SYSTEM
+        أنت رئيس تحرير في وكالة إعلانات عربية، تراجع ما يكتبه فريقك قبل أن يصل للعميل.
+        أمامك مسودة وصفين لمشروع — مبسط للبايو، وتفصيلي لصفحة «من نحن» — ومدخلات صاحب المشروع،
+        والموجز الاستراتيجي الذي كُتبت منه. المسودة صحيحة ومقبولة؛ مهمتك أن تجعلها لا تُنسى
+        دون أن تضيف حقيقة واحدة.
+
+        ## راجع أولاً (في critique: سطر لكل معيار — الضعف بعينه وكيف ستصلحه)
+        1. الافتتاح: هل يبدأ التفصيلي بمشهد محدد من يوم العميل يعرفه فوراً، أم بعبارة تصلح لأي نشاط؟
+        2. الزاوية: هل فيه جملة لا يقولها منافس، تقارن ضمنياً بالبديل المعتاد الذي يعانيه العميل؟
+        3. الفوائد: مواقف يعيشها العميل («إن كنت… فـ…») أم صفات مجردة؟
+        4. الصوت: «نحن» تخاطب «أنت» من أول جملة لآخرها؟ لا «المتجر» ولا «الشركة» بصيغة الغائب.
+        5. التجميع: المبسط ثلاث عائلات على الأكثر بلا سرد للأصناف، والتفصيلي يجمعها في جملة لا فقرة.
+        6. الإيقاع: جمل متفاوتة الطول، ولا تتكرر بداية جملتين متتاليتين، ولا حشو.
+        7. التوقيع: هل فيه جملة قصيرة تُحفظ وتصلح شعاراً للمشروع؟
+        8. الجمهور: الأول أولاً، ولبقية الجماهير جملة واحدة خاصة بهم.
+
+        ## ثم أعد الكتابة
+        - simple وdetailed كاملين بعد إصلاح كل ما وجدته: المبسط فقرة واحدة من 35 إلى 60 كلمة،
+          والتفصيلي من 120 إلى 200 كلمة في فقرتين أو ثلاث يفصل بينها سطر فارغ.
+        - كل حقيقة عن المشروع (فئة، ميزة، قيد، مدينة، رابط) ترد في المدخلات كما هي وبقيدها، ولا حقيقة غيرها.
+        - المشاهد من عالم الجمهور مسموحة لأنها وصف لحاجته، لكن لا تنسب للمشروع سرعة ولا جودة ولا ضماناً
+          ولا سعراً ولا توصيلاً ولا مجانية ولا خصماً ولا أي وعد لم يرد نصاً، ولا تضف أرقاماً.
+          ولا تستعمل في المشهد ألفاظ النفاد أو المحدودية («نفد»، «محدود») لأنها تُقرأ ادعاءً عن المشروع.
+        - لا مبالغات ولا صفات تفضيلية مطلقة («الأفضل»، «الأول»، «الوحيد»، «الرائد»).
+        - ممنوع لأنه مستهلك أو مترجم: «{$cliches}».{$banned}
+        - عربية فصحى معاصرة كما يكتبها كاتب إعلانات سعودي محترف. بلا Markdown ولا رموز تعبيرية ولا علامات تعجب.{$tone}
+        SYSTEM;
+    }
+
+    protected function editorPrompt(Brand $brand, array $answers, array $draft): string
+    {
+        return $this->inputs($brand, $answers)
+            ."\n\n## الموجز الاستراتيجي\n".($draft['brief'] ?? '—')
+            ."\n\n## المسودة\n### simple\n{$draft['simple']}\n\n### detailed\n{$draft['detailed']}"
+            ."\n\nراجع المسودة بالمعايير، ثم أعد كتابة الوصفين.";
     }
 
     /**
@@ -522,6 +651,13 @@ class BrandProfileGenerator
         - حقيقة صحيحة لكن لفظها لا يليق بالنشر تُصاغ من زاوية العميل دون تغيير معناها:
           «نبيع منتجات الشركات المنافسة» ← «علامات متعددة في مكان واحد، فتقارن وتختار».
         - أكثر من جمهور: ابدأ بالجمهور الأول كما ذكره صاحب المشروع، وخصّص للبقية جملة واحدة. لا تقسم كل جملة بينهم («مقهاك أو مطبخك»).
+        - الافتتاح مشهد لا شعار: ابدأ التفصيلي بلحظة محددة من يوم الجمهور يعرفها فوراً، لا بعبارة تصلح لأي نشاط («وقتك ثمين»).
+          المشهد وصف لحاجة الجمهور لا ادعاء عن المشروع: لا تنسب له فيه سرعة ولا وعداً لم يرد،
+          ولا تستعمل فيه ألفاظ النفاد أو المحدودية أو التوصيل (تُقرأ ادعاءً عن المشروع).
+          مشاهد صالحة: ساعة الذروة، أول طلب في اليوم، مناسبة تقترب، موسم يبدأ.
+        - الزاوية: جملة واحدة على الأقل لا يقولها منافس، تقارن ضمنياً بالبديل المعتاد الذي يعانيه العميل.
+        - الفوائد مواقف لا صفات: «بالجملة إن كنت تجهّز فرعاً، وبالتجزئة إن كنت تجرّب صنفاً جديداً».
+        - التوقيع: جملة واحدة قصيرة تُحفظ وتصلح شعاراً للمشروع، في المبسط أو في ختام التفصيلي.
         - كل جملة تضيف معلومة أو فائدة. احذف أي جملة تصلح لمتجر آخر لو غيّرت اسمه.
         - ابدأ بما يهم القارئ، ونوّع طول الجمل وإيقاعها، وقدّم الفعل على سلاسل الإضافة.
         - عبارات مستهلكة أو مترجمة ممنوعة لأنها تجعل النص عاماً ضعيفاً: «{$cliches}».
@@ -537,7 +673,7 @@ class BrandProfileGenerator
         - brief: موجزك الاستراتيجي من المنهجية (لا يُنشر): أربعة أسطر قصيرة — الحاجة · الوعد الجوهري · الأدلة من المدخلات · الزاوية المميزة.
         - simple: فقرة واحدة من 35 إلى 60 كلمة تُفهم وحدها في البايو: اسم المشروع، وماذا يقدّم بالتحديد، ولمن، وأقوى سبب وارد يدفع العميل لاختياره.
         - detailed: من 120 إلى 200 كلمة في فقرتين أو ثلاث يفصل بينها سطر فارغ:
-          افتتاحية تضع القارئ في حاجته ثم تقدّم المشروع حلاً لها؛
+          افتتاحية بمشهد من يوم القارئ يضعه في حاجته، ثم تقدّم المشروع حلاً لها؛
           ثم ما يقدّمه في عائلات مع أمثلة منها؛ ثم المزايا الواردة منسوجة بفائدتها للعميل؛
           ثم خاتمة هادئة تدعو للتصفح أو الطلب عبر القنوات الواردة فقط.
         - activity_type: سطر واحد لا يتجاوز 12 كلمة يصنّف النشاط بدقة: النشاط + الفئة الرئيسية + لمن إن كان يبيع لأنشطة تجارية.
@@ -558,6 +694,13 @@ class BrandProfileGenerator
 
     protected function prompt(Brand $brand, array $answers): string
     {
+        return $this->inputs($brand, $answers)
+            ."\n\nابدأ بالموجز الاستراتيجي، ثم اكتب الحقول من هذه المدخلات وحدها.";
+    }
+
+    /** المدخلات كما رآها صاحب المشروع: السؤال بنصه ثم إجابته. */
+    protected function inputs(Brand $brand, array $answers): string
+    {
         $type = ProductType::tryFrom((string) ($answers['type'] ?? '')) ?? ProductType::Good;
 
         $lines = array_filter([
@@ -574,8 +717,7 @@ class BrandProfileGenerator
             $lines[] = "\nس: {$questions[$key]}\nج: ".($answer !== '' ? $answer : BrandProfile::UNANSWERED);
         }
 
-        return "## مدخلات المشروع\n".implode("\n", $lines)
-            ."\n\nابدأ بالموجز الاستراتيجي، ثم اكتب الحقول من هذه المدخلات وحدها.";
+        return "## مدخلات المشروع\n".implode("\n", $lines);
     }
 
     /**
