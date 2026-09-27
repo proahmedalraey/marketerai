@@ -32,7 +32,8 @@ class ImageStudioController extends Controller
         // معرض "توليد" = نتائج فعلية فقط؛ الصور المرفوعة من الجهاز مدخلات مرجعية
         // لا نتائج، فتبقى خارجه وتظهر فقط في مكتبة "الصور المرفوعة مسبقاً"
         // contentItem: صور شرائح الكاروسيل تُعرض بنص شريحتها لا ببرومبت الصورة الإنجليزي
-        $gallery = MediaAsset::where('kind', 'image')->whereNotNull('generation_job_id')->with('contentItem');
+        // contentItem.mediaAssets: شرائح الكاروسيل الواحد تُجمع في بطاقة مكدّسة واحدة (صورة كل شريحة الأحدث)
+        $gallery = MediaAsset::where('kind', 'image')->whereNotNull('generation_job_id')->with('contentItem.mediaAssets');
 
         $pinnedOnly = $request->boolean('pinned');
         $activeFolder = $pinnedOnly ? null : ($request->integer('folder') ?: null);
@@ -57,6 +58,7 @@ class ImageStudioController extends Controller
         // المعرض يكبر بلا سقف صامت: "عرض المزيد" يرفع الحد 60 في كل مرة (نجلب واحداً زائداً لمعرفة وجود المزيد)
         $limit = min(600, max(60, (int) $request->integer('limit', 60)));
         $items = $gallery->take($limit + 1)->get();
+        $galleryEntries = $this->galleryEntries($items->take($limit));
 
         // شكل المهمة الجارية (عدد/نسبة) لعرض هياكل انتظار مطابقة لما سيصل.
         // صور الكاروسيل مهمة أم: عددها في indices ونسبتها عند أول شريحة
@@ -94,6 +96,7 @@ class ImageStudioController extends Controller
             // حين لا توجيه: النموذج الفعلي المُعدّ (للقراءة فقط بدل قائمة مضلِّلة)
             'activeModel' => trim($provider.' · '.(config("ai.providers.{$provider}.image_model") ?? ''), ' ·'),
             'gallery' => $items->take($limit),
+            'galleryEntries' => $galleryEntries,
             'galleryHasMore' => $items->count() > $limit,
             'galleryLimit' => $limit,
             'referenceLibrary' => $referenceLibrary,
@@ -115,6 +118,35 @@ class ImageStudioController extends Controller
             'search' => $search,
             'sort' => $request->get('sort', 'newest'),
         ]);
+    }
+
+    /**
+     * بطاقات شبكة «الاستوديو» بترتيبها: صورة مفردة، أو كاروسيل كامل في بطاقة واحدة مكدّسة
+     * (موضعها موضع أحدث صورة منه). كانت كل شريحة بطاقة مستقلة فيضيع الكاروسيل بين الصور.
+     *
+     * @return list<array{type: 'asset', asset: MediaAsset}|array{type: 'carousel', item: ContentItem}>
+     */
+    protected function galleryEntries(iterable $assets): array
+    {
+        $entries = [];
+        $carousels = [];
+
+        foreach ($assets as $asset) {
+            $item = $asset->contentItem;
+
+            if ($asset->slide_index !== null && $item?->format?->value === 'carousel' && $item->slides() !== []) {
+                if (! isset($carousels[$item->id])) {
+                    $carousels[$item->id] = true;
+                    $entries[] = ['type' => 'carousel', 'item' => $item];
+                }
+
+                continue;
+            }
+
+            $entries[] = ['type' => 'asset', 'asset' => $asset];
+        }
+
+        return $entries;
     }
 
     public function store(Request $request, ImageGenerationService $service, StudioModels $models)

@@ -663,6 +663,16 @@ export default function registerImageStudio(Alpine) {
                 }
             },
 
+            /** عارض الكاروسيل (carousel-viewer.js): شرائح الكاروسيل كما ستُنشر، بحجم كبير. */
+            openCarouselViewer(contentItemId, slideIndex = 0) {
+                this.closePopovers();
+                this.closeLightbox();
+
+                window.dispatchEvent(new CustomEvent('carousel-viewer:open', {
+                    detail: { url: (config.carouselDataUrl || '').replace('__ITEM__', contentItemId), index: slideIndex },
+                }));
+            },
+
             /** نافذة «نظام الكاروسيل» (مكوّن مستقل: carousel-editor.js) — تُفتح بحدث. */
             openCarouselEditor(contentItemId, slideIndex = 0) {
                 this.closePopovers();
@@ -701,6 +711,17 @@ export default function registerImageStudio(Alpine) {
                 this.selected = this.isSelected(id)
                     ? this.selected.filter((value) => value !== id)
                     : [...this.selected, id];
+            },
+
+            /** بطاقة الكاروسيل المكدّسة تُحدَّد كلها معاً (كل صور شرائحه). */
+            isGroupSelected(ids) {
+                return ids.length > 0 && ids.every((id) => this.selected.includes(id));
+            },
+
+            toggleGroup(ids) {
+                this.selected = this.isGroupSelected(ids)
+                    ? this.selected.filter((id) => ! ids.includes(id))
+                    : [...new Set([...this.selected, ...ids])];
             },
 
             selectAll(ids) {

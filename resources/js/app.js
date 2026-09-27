@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import registerContentCalendar from './content-calendar';
 import registerCarouselEditor from './carousel-editor';
+import registerCarouselViewer from './carousel-viewer';
 import registerContentEditor from './content-editor';
 import registerContentWriter from './content-writer';
 import registerImageStudio from './image-studio';
@@ -746,6 +747,7 @@ registerContentWriter(Alpine);
 registerContentCalendar(Alpine);
 registerImageStudio(Alpine);
 registerCarouselEditor(Alpine);
+registerCarouselViewer(Alpine);
 registerOperations(Alpine);
 registerVoiceover(Alpine);
 

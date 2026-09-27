@@ -130,7 +130,8 @@
                 <x-icon name="grid" class="w-4 h-4" />
                 الاستوديو
                 @if ($gallery->isNotEmpty())
-                    <span class="text-xs tnum" :class="activeTab === 'studio' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ $gallery->count() }}{{ $galleryHasMore ? "+" : "" }}</span>
+                    {{-- عدد البطاقات: الكاروسيل بطاقة واحدة مهما كانت شرائحه --}}
+                    <span class="text-xs tnum" :class="activeTab === 'studio' ? 'text-brand-700 dark:text-brand-400' : 'text-fg-subtle'">{{ count($galleryEntries) }}{{ $galleryHasMore ? "+" : "" }}</span>
                 @endif
             </button>
 
@@ -164,6 +165,7 @@
     @include('content.studio._reference-picker-modal')
     @include('content.studio._product-picker-modal')
     @include('content.studio._carousel-editor-modal')
+    @include('content.studio._carousel-viewer-modal')
 
     {{-- رسالة عابرة (المشاركة، النسخ للحافظة) --}}
     <div
