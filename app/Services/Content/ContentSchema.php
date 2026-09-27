@@ -10,7 +10,7 @@ class ContentSchema
 {
     /**
      * @param  array{count?: array{0: int, 1: int}, filming?: bool}  $shape  ما يفرضه شكل المحتوى:
-     *         عدد المشاهد أو الإطارات أو التغريدات، وسكربت التصوير.
+     *                                                                       عدد المشاهد أو الإطارات أو التغريدات، وسكربت التصوير.
      */
     public static function for(string $format, int $slideCount = 0, array $shape = []): array
     {
@@ -238,7 +238,48 @@ class ContentSchema
         }
 
         if ($clean('visual') !== '') {
-            $out['visual'] = $clean('visual');
+            $out['visual'] = mb_substr($clean('visual'), 0, 2000);
+        }
+
+        // تصميم الشريحة من «نظام الكاروسيل»: موضع النص ولونه وحجمه، وإخفاء صورتها
+        if (is_array($slide['layout'] ?? null) && ($layout = self::layout($slide['layout'])) !== []) {
+            $out['layout'] = $layout;
+        }
+
+        if (($slide['image'] ?? null) === false || ($slide['image'] ?? null) === 'false' || ($slide['image'] ?? null) === 0) {
+            $out['image'] = false;
+        }
+
+        return $out;
+    }
+
+    /**
+     * موضع مربع النص (كسور من عرض الشريحة وارتفاعها) وخطّه ولونه — قيم محصورة فقط:
+     * ما يأتي من المتصفح لا يُخزَّن كما هو.
+     *
+     * @return array{x?: float, y?: float, w?: float, scale?: float, color?: string, bold?: bool, italic?: bool, hidden?: bool}
+     */
+    public static function layout(array $layout): array
+    {
+        $fraction = fn ($value, float $min, float $max) => is_numeric($value)
+            ? round(max($min, min($max, (float) $value)), 4)
+            : null;
+
+        $out = array_filter([
+            'x' => $fraction($layout['x'] ?? null, 0.0, 0.9),
+            'y' => $fraction($layout['y'] ?? null, 0.0, 0.95),
+            'w' => $fraction($layout['w'] ?? null, 0.1, 1.0),
+            'scale' => $fraction($layout['scale'] ?? null, 0.4, 3.0),
+        ], fn ($value) => $value !== null);
+
+        if (is_string($layout['color'] ?? null) && preg_match('/^#[0-9a-f]{6}$/i', $layout['color'])) {
+            $out['color'] = strtoupper($layout['color']);
+        }
+
+        foreach (['bold', 'italic', 'hidden'] as $flag) {
+            if (array_key_exists($flag, $layout)) {
+                $out[$flag] = filter_var($layout[$flag], FILTER_VALIDATE_BOOLEAN);
+            }
         }
 
         return $out;

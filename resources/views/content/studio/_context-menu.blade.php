@@ -2,6 +2,7 @@
     قائمة إجراءات الصورة — كل بنودها حقيقية:
       - نشر إلى السوشيال: قائمة المشاركة في الجهاز (Web Share) أو نسخ الصورة للحافظة.
         لا نشر آلي على حسابات المنصات: لا تكامل مع واجهاتها بعد، ولا ندّعيه.
+      - تعديل الكاروسيل (لصور الشرائح): نافذة «نظام الكاروسيل» — _carousel-editor-modal.blade.php.
       - إعادة التوليد، نقل إلى مجلد، إزالة الخلفية (مهمة طابور بنقاط)، حفظها مرجعاً لمنتج، حذف.
     التفاصيل في docs/image-studio-redesign-plan.md.
 
@@ -29,6 +30,18 @@
                 <span class="block text-[10px] text-fg-subtle">عبر تطبيقات جهازك</span>
             </span>
         </button>
+
+        {{-- صورة من كاروسيل: نافذة «نظام الكاروسيل» على هذه الشريحة --}}
+        @if ($asset->contentItem?->format?->value === 'carousel' && $asset->contentItem->slides() !== [])
+            <button
+                type="button" role="menuitem"
+                @click="menu = false; openCarouselEditor({{ $asset->content_item_id }}, {{ (int) ($asset->slide_index ?? 0) }})"
+                class="flex items-center gap-2.5 w-full px-2.5 min-h-10 rounded-lg text-sm font-semibold text-fg hover:bg-muted"
+            >
+                <x-icon name="layers" class="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                <span class="flex-1 text-start">تعديل الكاروسيل</span>
+            </button>
+        @endif
 
         <form method="POST" action="{{ route('studio.regenerate', $asset) }}" data-busy-on-submit>
             @csrf

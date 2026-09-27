@@ -663,6 +663,16 @@ export default function registerImageStudio(Alpine) {
                 }
             },
 
+            /** نافذة «نظام الكاروسيل» (مكوّن مستقل: carousel-editor.js) — تُفتح بحدث. */
+            openCarouselEditor(contentItemId, slideIndex = 0) {
+                this.closePopovers();
+                this.closeLightbox();
+
+                window.dispatchEvent(new CustomEvent('carousel-editor:open', {
+                    detail: { url: (config.carouselDataUrl || '').replace('__ITEM__', contentItemId), index: slideIndex },
+                }));
+            },
+
             openProductPicker(asset) {
                 this.productTarget = asset;
             },

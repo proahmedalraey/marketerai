@@ -94,6 +94,13 @@
                 <footer class="flex items-center gap-2 mt-auto pt-1">
                     <span class="flex-1 min-w-0 truncate text-xs text-fg-subtle">{{ $item->product?->title }}</span>
 
+                    @if ($isCarousel)
+                        <button type="button" @click="openCarouselEditor({{ $item->id }}, 0)" class="btn btn-ghost btn-sm btn-icon" title="تعديل الكاروسيل">
+                            <x-icon name="layers" class="w-3.5 h-3.5" />
+                            <span class="sr-only">تعديل الكاروسيل</span>
+                        </button>
+                    @endif
+
                     <a href="{{ route('content.show', $item) }}" class="btn btn-ghost btn-sm btn-icon" title="فتح المحتوى">
                         <x-icon name="pencil" class="w-3.5 h-3.5" />
                         <span class="sr-only">فتح المحتوى</span>

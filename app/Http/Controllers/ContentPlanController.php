@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ContentItem;
 use App\Models\MediaAsset;
 use App\Services\Brand\ClaimConflicts;
+use App\Services\Content\CarouselEditing;
 use App\Services\Content\ContentGenerationService;
-use App\Services\Content\ContentSchema;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
 use Carbon\CarbonImmutable;
@@ -118,7 +118,7 @@ class ContentPlanController extends Controller
         return view('content.show', ['item' => $contentItem]);
     }
 
-    public function update(Request $request, ContentItem $contentItem, ContentGenerationService $service)
+    public function update(Request $request, ContentItem $contentItem, ContentGenerationService $service, CarouselEditing $editing)
     {
         $data = $request->validate([
             'caption' => ['nullable', 'string', 'max:4000'],
@@ -140,7 +140,7 @@ class ContentPlanController extends Controller
         $moves = null;
 
         if (isset($data['slides'])) {
-            [$body['slides'], $moves] = $this->rebuildSlides($contentItem->slides(), $data['slides']);
+            [$body['slides'], $moves] = $editing->rebuild($contentItem->slides(), $data['slides']);
 
             if ($contentItem->format->value === 'carousel' && count($body['slides']) < 3) {
                 return back()->withInput()->withErrors(['slides' => 'الكاروسيل ثلاث شرائح على الأقل.']);
@@ -159,7 +159,7 @@ class ContentPlanController extends Controller
             $body['caption'] = $data['caption'];
         }
 
-        DB::transaction(function () use ($contentItem, $data, $body, $moves) {
+        DB::transaction(function () use ($contentItem, $data, $body, $moves, $editing) {
             $contentItem->update([
                 'body' => $body,
                 'caption' => $data['caption'] ?? $contentItem->caption,
@@ -171,13 +171,7 @@ class ContentPlanController extends Controller
 
             // الصورة تتبع شريحتها إلى موضعها الجديد؛ صورة شريحة محذوفة تُفصل وتبقى في الاستوديو
             if ($moves !== null) {
-                foreach ($contentItem->mediaAssets()->whereNotNull('slide_index')->get() as $asset) {
-                    $target = $moves[$asset->slide_index] ?? null;
-
-                    if ($target !== $asset->slide_index) {
-                        $asset->update(['slide_index' => $target]);
-                    }
-                }
+                $editing->applyMoves($contentItem, $moves);
             }
         });
 
@@ -215,51 +209,6 @@ class ContentPlanController extends Controller
         }
 
         return redirect()->route('content.show', [$contentItem, 'job' => $job->uuid]);
-    }
-
-    /**
-     * يبني الشرائح بترتيبها الجديد من صفوف النموذج.
-     *
-     * كل صف يحمل أصله (موضعه قبل التعديل)، فتتبعه صورته وتوجيهه البصري.
-     * الصف الفارغ يُحذف. المرتجع: الشرائح، وخريطة «الموضع القديم ← الجديد».
-     *
-     * @return array{0: array<int, array>, 1: array<int, int>}
-     */
-    protected function rebuildSlides(array $old, array $submitted): array
-    {
-        $slides = [];
-        $moves = [];
-
-        foreach (array_values($submitted) as $position => $row) {
-            // الشكل القديم: نص فقط، لنفس الموضع
-            $row = is_array($row) ? $row : ['text' => (string) $row, 'origin' => $position];
-
-            $origin = is_numeric($row['origin'] ?? null) && isset($old[(int) $row['origin']]) ? (int) $row['origin'] : null;
-            $base = $origin !== null ? $old[$origin] : [];
-
-            $pick = fn ($key) => array_key_exists($key, $row) ? $row[$key] : ($base[$key] ?? null);
-
-            $slide = ContentSchema::slide([
-                'role' => $pick('role') ?? 'pull',
-                'text' => $pick('text') ?? '',
-                'kicker' => $pick('kicker'),
-                'focal' => $pick('focal'),
-                'tail' => $pick('tail'),
-                'visual' => $base['visual'] ?? null,
-            ]);
-
-            if ($slide['text'] === '') {
-                continue;
-            }
-
-            if ($origin !== null) {
-                $moves[$origin] = count($slides);
-            }
-
-            $slides[] = $slide;
-        }
-
-        return [$slides, $moves];
     }
 
     public function destroy(ContentItem $contentItem)

@@ -8,6 +8,8 @@ use App\Models\MediaAsset;
 use App\Models\MediaFolder;
 use App\Models\Product;
 use App\Services\AI\ModelCatalog;
+use App\Services\Content\CarouselEditing;
+use App\Services\Content\ContentGenerationService;
 use App\Services\Credits\CreditService;
 use App\Services\Credits\DailyCapReachedException;
 use App\Services\Credits\InsufficientCreditsException;
@@ -21,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ImageStudioController extends Controller
 {
@@ -195,7 +198,12 @@ class ImageStudioController extends Controller
 
         $indices = match ($data['stage']) {
             'cover' => [0],
-            'rest' => array_values(array_diff(array_keys($contentItem->slides()), [0], $existing)),
+            // شريحة أُطفئت صورتها في «نظام الكاروسيل» (image=false) لا تُولَّد لها صورة
+            'rest' => array_values(array_diff(
+                array_keys(array_filter($contentItem->slides(), fn ($slide) => ($slide['image'] ?? true) !== false)),
+                [0],
+                $existing,
+            )),
             'slide' => [(int) $data['index']],
         };
 
@@ -210,9 +218,18 @@ class ImageStudioController extends Controller
         try {
             $job = $service->dispatchSlides($this->brand(), $contentItem, $indices, $data, $request->user()->id);
         } catch (InsufficientCreditsException|DailyCapReachedException $e) {
-            return back()->withErrors(['credits' => $e->getMessage()]);
+            return $request->expectsJson()
+                ? response()->json(['message' => $e->getMessage()], 422)
+                : back()->withErrors(['credits' => $e->getMessage()]);
         } catch (\InvalidArgumentException $e) {
-            return back()->withErrors(['stage' => $e->getMessage()]);
+            return $request->expectsJson()
+                ? response()->json(['message' => $e->getMessage()], 422)
+                : back()->withErrors(['stage' => $e->getMessage()]);
+        }
+
+        // من نافذة «نظام الكاروسيل»: تبقى النافذة مفتوحة وتستطلع المهمة بنفسها
+        if ($request->expectsJson()) {
+            return response()->json(['uuid' => $job->uuid, 'status_url' => route('api.jobs.show', $job)], 202);
         }
 
         if (($data['return'] ?? null) === 'studio') {
@@ -220,6 +237,81 @@ class ImageStudioController extends Controller
         }
 
         return redirect()->route('content.show', [$contentItem, 'job' => $job->uuid]);
+    }
+
+    /** بيانات نافذة «نظام الكاروسيل» (شرائح، صور، تصميم، هوية) — قراءة فقط بلا نموذج. */
+    public function carouselData(ContentItem $contentItem, CarouselEditing $editing)
+    {
+        abort_unless($contentItem->format->value === 'carousel' && $contentItem->slides() !== [], 404);
+
+        return response()->json($editing->payload($contentItem));
+    }
+
+    /** حفظ تعديلات النافذة على الكاروسيل نفسه (مجاني)، ثم إعادة فحص الصدق كأي تعديل يدوي. */
+    public function saveCarousel(Request $request, ContentItem $contentItem, CarouselEditing $editing, ContentGenerationService $content)
+    {
+        abort_unless($contentItem->format->value === 'carousel', 404);
+
+        [$slides, $moves, $design] = $this->editedCarousel($request, $contentItem, $editing);
+
+        DB::transaction(function () use ($contentItem, $slides, $moves, $design, $editing) {
+            $contentItem->update(['body' => ['slides' => $slides, 'design' => $design] + (array) $contentItem->body]);
+            $editing->applyMoves($contentItem, $moves);
+        });
+
+        $contentItem->update(['quality' => $content->recheck($contentItem->refresh())]);
+
+        return response()->json([
+            'message' => $contentItem->needsReview() ? 'حُفظ، وفيه نقاط تحتاج مراجعة قبل النشر.' : 'حُفظت التعديلات.',
+            'needsReview' => $contentItem->needsReview(),
+            'carousel' => $editing->payload($contentItem->refresh()),
+        ]);
+    }
+
+    /** «حفظ كنسخة جديدة»: التعديلات في كاروسيل جديد بصور منسوخة، والأصل كما هو. */
+    public function copyCarousel(Request $request, ContentItem $contentItem, CarouselEditing $editing, ContentGenerationService $content)
+    {
+        abort_unless($contentItem->format->value === 'carousel', 404);
+
+        [$slides, $moves, $design] = $this->editedCarousel($request, $contentItem, $editing);
+
+        $copy = $editing->duplicate($contentItem->load('mediaAssets'), $slides, $moves, $design);
+        $copy->update(['quality' => $content->recheck($copy)]);
+
+        return response()->json([
+            'message' => 'حُفظت كنسخة جديدة — الأصل لم يتغير.',
+            'needsReview' => $copy->needsReview(),
+            'carousel' => $editing->payload($copy->refresh()),
+        ], 201);
+    }
+
+    /** @return array{0: list<array>, 1: array<int, int>, 2: array} */
+    protected function editedCarousel(Request $request, ContentItem $contentItem, CarouselEditing $editing): array
+    {
+        $data = $request->validate([
+            'slides' => ['required', 'array', 'min:3', 'max:'.CarouselEditing::MAX_SLIDES],
+            'slides.*.origin' => ['nullable', 'integer', 'min:0'],
+            'slides.*.role' => ['nullable', 'in:hook,promise,pull,harvest,ask'],
+            'slides.*.text' => ['nullable', 'string', 'max:600'],
+            'slides.*.kicker' => ['nullable', 'string', 'max:160'],
+            'slides.*.focal' => ['nullable', 'string', 'max:160'],
+            'slides.*.tail' => ['nullable', 'string', 'max:300'],
+            'slides.*.visual' => ['nullable', 'string', 'max:2000'],
+            'slides.*.layout' => ['nullable', 'array'],
+            'slides.*.image' => ['nullable', 'boolean'],
+            'design' => ['nullable', 'array'],
+        ], [
+            'slides.min' => 'الكاروسيل ثلاث شرائح على الأقل.',
+            'slides.max' => 'الكاروسيل عشر شرائح على الأكثر.',
+        ], ['slides' => 'الشرائح']);
+
+        [$slides, $moves] = $editing->rebuild($contentItem->slides(), $data['slides']);
+
+        if (count($slides) < 3) {
+            throw ValidationException::withMessages(['slides' => 'الكاروسيل ثلاث شرائح على الأقل — شريحة بلا نص لا تُحفظ.']);
+        }
+
+        return [$slides, $moves, $editing->design($data['design'] ?? null)];
     }
 
     /** إرفاق صورة موجودة في الاستوديو بمحتوى — بلا توليد جديد. */

@@ -572,6 +572,13 @@ class ContentGenerationService
             $slide['visual'] = $current['visual'];
         }
 
+        // تصميم الشريحة (موضع النص ولونه، وإخفاء صورتها) لا يتغير بإعادة كتابة نصها
+        foreach (['layout', 'image'] as $key) {
+            if (array_key_exists($key, $current)) {
+                $slide[$key] = $current[$key];
+            }
+        }
+
         return $slide;
     }
 

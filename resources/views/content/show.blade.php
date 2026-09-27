@@ -53,6 +53,12 @@
             'slug' => $brand?->slug,
         ],
         'urls' => ['rewrite' => route('content.slides.rewrite', [$item, '__INDEX__'])],
+        // تصميم «نظام الكاروسيل» في الاستوديو (الشكل والتاريخ) — يُرسم هنا بالمثل
+        'design' => app(\App\Services\Content\CarouselEditing::class)->design($item->body['design'] ?? null),
+        'dates' => $item->planned_for ? [
+            'month' => $item->planned_for->translatedFormat('F Y'),
+            'day_month' => $item->planned_for->translatedFormat('j F'),
+        ] : null,
     ];
 @endphp
 

@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import registerContentCalendar from './content-calendar';
+import registerCarouselEditor from './carousel-editor';
 import registerContentEditor from './content-editor';
 import registerContentWriter from './content-writer';
 import registerImageStudio from './image-studio';
@@ -743,6 +744,7 @@ registerContentEditor(Alpine);
 registerContentWriter(Alpine);
 registerContentCalendar(Alpine);
 registerImageStudio(Alpine);
+registerCarouselEditor(Alpine);
 registerOperations(Alpine);
 
 window.Alpine = Alpine;

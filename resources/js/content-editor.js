@@ -6,80 +6,10 @@
    الترتيب والحذف والإضافة هنا أيضاً، وتُحفظ مع النص بزر واحد.
    ========================================================================== */
 
-const COMPOSE_SIZES = { '4:5': [1080, 1350], '1:1': [1080, 1080], '9:16': [1080, 1920], '3:4': [1080, 1440], '16:9': [1920, 1080] };
-const FALLBACK_FONT = 'IBM Plex Sans Arabic';
+import { COMPOSE_SIZES, loadFont, renderSlide, hasParts as slideHasParts } from './carousel-render';
 
-export const arabicDigits = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
-
-const fontRequests = {};
-
-// خط العلامة من Google Fonts. إن لم يوجد، يرسم المتصفح بالخط الاحتياطي الذي يلي اسمه
-const loadFont = (family) => fontRequests[family || FALLBACK_FONT] ??= (async () => {
-    if (family && !document.querySelector(`link[data-font="${family}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.dataset.font = family;
-        link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family).replace(/%20/g, '+')}:wght@400;600;700;800&display=swap`;
-        document.head.appendChild(link);
-    }
-
-    await Promise.race([
-        Promise.all([600, 700, 800].map((w) => document.fonts.load(`${w} 64px "${family || FALLBACK_FONT}"`).catch(() => null))),
-        new Promise((resolve) => setTimeout(resolve, 4000)),
-    ]);
-
-    await document.fonts.load(`700 64px "${FALLBACK_FONT}"`).catch(() => null);
-})();
-
-const imageRequests = {};
-
-const loadImage = (url) => {
-    if (!url) return Promise.resolve(null);
-
-    return imageRequests[url] ??= new Promise((resolve) => {
-        const img = new Image();
-        // صورة من نطاق آخر بلا CORS تجعل التنزيل مستحيلاً؛ نطلبها بـ CORS صراحة
-        if (new URL(url, window.location.href).origin !== window.location.origin) img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
-    });
-};
-
-const drawCover = (ctx, img, W, H) => {
-    const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
-    ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-};
-
-const shade = (hex, amount) => {
-    const value = parseInt((hex || '#6F4E37').replace('#', '').padEnd(6, '0').slice(0, 6), 16);
-    const channel = (shift) => Math.max(0, Math.min(255, Math.round(((value >> shift) & 255) * (1 + amount))));
-
-    return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
-};
-
-// التفاف بالكلمات لا بالحروف: العربية المتصلة لا تُكسر وسط الكلمة
-export const wrapLines = (ctx, text, maxWidth) => {
-    const lines = [];
-    let line = '';
-
-    for (const word of (text || '').trim().split(/\s+/).filter(Boolean)) {
-        const candidate = line ? `${line} ${word}` : word;
-
-        if (line && ctx.measureText(candidate).width > maxWidth) {
-            lines.push(line);
-            line = word;
-        } else {
-            line = candidate;
-        }
-    }
-
-    if (line) lines.push(line);
-
-    return lines;
-};
+// كانت هنا؛ تبقى مصدَّرة لمن يستوردها من هذا الملف
+export { arabicDigits, wrapLines } from './carousel-render';
 
 export default function registerContentEditor(Alpine) {
     Alpine.data('contentEditor', (config = {}) => ({
@@ -93,7 +23,12 @@ export default function registerContentEditor(Alpine) {
             kicker: slide.kicker ?? null,
             focal: slide.focal ?? null,
             tail: slide.tail ?? null,
+            // تصميم «نظام الكاروسيل»: يُرسم هنا ويبقى في الخادم عند الحفظ
+            layout: slide.layout ?? null,
+            image: slide.image ?? true,
         })),
+        design: config.design || {},
+        dates: config.dates || null,
         images: config.images || {},
         errors: config.errors || [],
         roles: config.roles || {},
@@ -125,7 +60,7 @@ export default function registerContentEditor(Alpine) {
         },
 
         hasParts(slide) {
-            return slide.role === 'hook' && slide.focal !== null;
+            return slideHasParts(slide);
         },
 
         joined(slide) {
@@ -156,7 +91,7 @@ export default function registerContentEditor(Alpine) {
 
         add() {
             const key = `n${++this.counter}`;
-            this.slides.push({ key, origin: null, role: 'pull', text: '', kicker: null, focal: null, tail: null });
+            this.slides.push({ key, origin: null, role: 'pull', text: '', kicker: null, focal: null, tail: null, layout: null, image: true });
             this.$nextTick(() => this.$root.querySelector(`[data-slide-text="${key}"]`)?.focus());
         },
 
@@ -185,7 +120,7 @@ export default function registerContentEditor(Alpine) {
             this.submitExternal('imageForm', { stage: 'slide', index: slide.origin, quality: this.quality });
         },
 
-        // ---------- الرسم ----------
+        // ---------- الرسم (carousel-render.js: نفس رسم نافذة «نظام الكاروسيل») ----------
         schedule() {
             clearTimeout(this.renderTimer);
             this.renderTimer = setTimeout(() => this.$nextTick(() => this.renderAll()), 120);
@@ -206,124 +141,16 @@ export default function registerContentEditor(Alpine) {
             const slide = this.slides[index];
             if (!slide) return;
 
-            const [W, H] = this.size;
-            canvas.width = W;
-            canvas.height = H;
-
-            const ctx = canvas.getContext('2d');
-            const family = this.brand.font || FALLBACK_FONT;
-            const font = (weight, size) => `${weight} ${Math.round(size)}px "${family}", "${FALLBACK_FONT}", sans-serif`;
-            const primary = this.brand.primary || '#6F4E37';
-            const accent = this.brand.accent || '#F59E0B';
-
-            // الخلفية: صورة الشريحة، أو تدرّج بلون العلامة حتى تُولَّد
-            const background = await loadImage(this.images[slide.origin]);
-
-            if (background) {
-                drawCover(ctx, background, W, H);
-            } else {
-                const gradient = ctx.createLinearGradient(0, 0, W, H);
-                gradient.addColorStop(0, primary);
-                gradient.addColorStop(1, shade(primary, -0.4));
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, W, H);
-            }
-
-            // ظلال تجعل النص الأبيض مقروءاً على أي صورة
-            const top = ctx.createLinearGradient(0, 0, 0, H * 0.66);
-            top.addColorStop(0, 'rgba(0,0,0,0.66)');
-            top.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = top;
-            ctx.fillRect(0, 0, W, H * 0.66);
-
-            const bottom = ctx.createLinearGradient(0, H * 0.8, 0, H);
-            bottom.addColorStop(0, 'rgba(0,0,0,0)');
-            bottom.addColorStop(1, 'rgba(0,0,0,0.5)');
-            ctx.fillStyle = bottom;
-            ctx.fillRect(0, H * 0.8, W, H * 0.2);
-
-            const M = Math.round(W * 0.067);
-            let y = M;
-
-            const logo = await loadImage(this.brand.logo);
-
-            if (logo) {
-                const height = Math.round(W * 0.075);
-                const width = Math.min(height * logo.naturalWidth / logo.naturalHeight, W * 0.3);
-                const pad = Math.round(W * 0.016);
-
-                // شارة فاتحة خلف الشعار: شعار داكن على صورة داكنة يختفي، والصور تتغير
-                ctx.fillStyle = 'rgba(255,255,255,0.92)';
-                ctx.beginPath();
-                if (ctx.roundRect) ctx.roundRect(W - M - width - pad, y - pad, width + pad * 2, height + pad * 2, pad * 1.5);
-                else ctx.rect(W - M - width - pad, y - pad, width + pad * 2, height + pad * 2);
-                ctx.fill();
-
-                ctx.drawImage(logo, W - M - width, y, width, height);
-                y += height + pad + M * 0.6;
-            } else {
-                y += M * 0.3;
-            }
-
-            ctx.direction = 'rtl';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'top';
-
-            const x = W - M;
-            const maxWidth = W - 2 * M;
-            const limit = H * 0.62;
-
-            const draw = (lines, size, weight, color, leading) => {
-                ctx.font = font(weight, size);
-                ctx.fillStyle = color;
-                lines.forEach((line) => { ctx.fillText(line, x, y); y += size * leading; });
-            };
-
-            if (this.hasParts(slide)) {
-                // الهوك ثلاث طبقات: تمهيد صغير، عبارة محورية كبيرة بلون العلامة، تكملة
-                ctx.font = font(600, W * 0.045);
-                draw(wrapLines(ctx, slide.kicker, maxWidth), W * 0.045, 600, '#fff', 1.35);
-                y += W * 0.01;
-
-                let size = W * 0.12;
-                let lines;
-                do {
-                    ctx.font = font(800, size);
-                    lines = wrapLines(ctx, slide.focal, maxWidth);
-                    if (lines.length <= 2) break;
-                    size -= 6;
-                } while (size > W * 0.07);
-                draw(lines, size, 800, accent, 1.18);
-                y += W * 0.01;
-
-                ctx.font = font(700, W * 0.058);
-                draw(wrapLines(ctx, slide.tail, maxWidth), W * 0.058, 700, '#fff', 1.35);
-
-                ctx.fillStyle = accent;
-                ctx.fillRect(x - W * 0.13, y + W * 0.02, W * 0.13, Math.max(6, W * 0.009));
-            } else {
-                let size = W * 0.068;
-                let lines;
-                do {
-                    ctx.font = font(700, size);
-                    lines = wrapLines(ctx, slide.text, maxWidth);
-                    if (lines.length * size * 1.4 <= limit - y) break;
-                    size -= 4;
-                } while (size > W * 0.04);
-                draw(lines, size, 700, '#fff', 1.4);
-            }
-
-            // مؤشر الشريحة، و«اسحب» على كل شريحة إلا الأخيرة
-            const footer = H - M - W * 0.04;
-            ctx.font = font(600, W * 0.035);
-            ctx.fillStyle = 'rgba(255,255,255,0.92)';
-            ctx.textAlign = 'right';
-            ctx.fillText(`${arabicDigits(index + 1)}/${arabicDigits(this.slides.length)}`, W - M, footer);
-
-            if (index < this.slides.length - 1) {
-                ctx.textAlign = 'left';
-                ctx.fillText('اسحب ←', M, footer);
-            }
+            await renderSlide(canvas, {
+                slide,
+                index,
+                total: this.slides.length,
+                image: this.images[slide.origin],
+                brand: this.brand,
+                design: this.design,
+                dates: this.dates,
+                size: this.size,
+            });
         },
 
         // ---------- التنزيل والنسخ ----------

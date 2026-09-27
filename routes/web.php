@@ -99,6 +99,10 @@ Route::middleware(['auth', 'brand.ready'])->group(function () {
     Route::get('/studio', [ImageStudioController::class, 'index'])->name('studio.index');
     Route::post('/studio', [ImageStudioController::class, 'store'])->name('studio.generate');
     Route::post('/studio/carousel/{contentItem}', [ImageStudioController::class, 'carousel'])->name('studio.carousel');
+    // نافذة «نظام الكاروسيل» في الاستوديو: قراءة وحفظ وحفظ كنسخة (JSON، مجاني)
+    Route::get('/studio/carousels/{contentItem}', [ImageStudioController::class, 'carouselData'])->name('studio.carousels.show');
+    Route::put('/studio/carousels/{contentItem}', [ImageStudioController::class, 'saveCarousel'])->name('studio.carousels.update');
+    Route::post('/studio/carousels/{contentItem}/copy', [ImageStudioController::class, 'copyCarousel'])->name('studio.carousels.copy');
     Route::post('/studio/{contentItem}/attach', [ImageStudioController::class, 'attach'])->name('studio.attach');
     // الجماعية قبل مسارات {mediaAsset}: «bulk-destroy» ليست معرّف صورة
     Route::post('/studio/media/bulk-destroy', [ImageStudioController::class, 'bulkDestroy'])->name('studio.media.bulk-destroy');

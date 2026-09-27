@@ -38,6 +38,7 @@
         'enhanceUrl' => $enhanceUrl,
         'toProductUrl' => route('studio.media.to-product', ['mediaAsset' => '__ASSET__']),
         'activeTab' => $activeTab,
+        'carouselDataUrl' => route('studio.carousels.show', ['contentItem' => '__ITEM__']),
         'enhanceCost' => $enhanceCost,
         'prompt' => old('prompt', ''),
         'resolution' => $initResolution,
@@ -162,6 +163,7 @@
     @include('content.studio._toolbar')
     @include('content.studio._reference-picker-modal')
     @include('content.studio._product-picker-modal')
+    @include('content.studio._carousel-editor-modal')
 
     {{-- رسالة عابرة (المشاركة، النسخ للحافظة) --}}
     <div

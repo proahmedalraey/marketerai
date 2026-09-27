@@ -558,6 +558,12 @@
                dark:border-brand-800 dark:text-brand-300 dark:bg-brand-900/30 dark:hover:bg-brand-900/50;
     }
 
+    /* نص شريحة فارغ قيد التحرير في «نظام الكاروسيل» */
+    [contenteditable][data-placeholder]:empty::before {
+        content: attr(data-placeholder);
+        opacity: .55;
+    }
+
     /* نقش شطرنج خلف الصور الشفافة (بعد إزالة الخلفية) */
     .bg-checker {
         background-color: rgb(var(--card));
