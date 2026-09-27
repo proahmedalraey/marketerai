@@ -23,6 +23,10 @@ return [
     'text_provider' => env('AI_TEXT_PROVIDER', 'fake'),
     'image_provider' => env('AI_IMAGE_PROVIDER', 'fake'),
 
+    // التعليق الصوتي (Beta): Gemini وحده ينطق من بين المزودين المدعومين (fake للاختبارات).
+    // نموذج كل مستوى جودة في config/voiceover.php؛ مفتاح Gemini يأتي من صفحة الإعدادات كالبقية.
+    'speech_provider' => env('AI_SPEECH_PROVIDER', 'gemini'),
+
     'providers' => [
 
         'anthropic' => [
@@ -51,6 +55,8 @@ return [
             // 2.5 لم يعد متاحاً للحسابات الجديدة؛ القائمة الحية في صفحة الإعدادات تعرض المتاح لمفتاحك
             'model' => env('GEMINI_TEXT_MODEL', 'gemini-3.6-flash'),
             'image_model' => env('GEMINI_IMAGE_MODEL', 'gemini-3.1-flash-image'),
+            // النطق: الافتراضي حين لا يحدد الطلب نموذجاً (مستويات الجودة تحدده عادةً)
+            'speech_model' => env('GEMINI_SPEECH_MODEL', 'gemini-3.8-flash-tts'),
             // أعلى من غيره: تفكير نماذج Gemini يُحسب من نفس سقف المخرجات.
             // 8192 لم يكفِ: كاروسيل استهلكه كله تفكيراً فانقطع JSON في منتصفه (سجل 2026-09-22)
             'max_tokens' => 16384,
@@ -151,6 +157,11 @@ return [
 
     'prompt_enhance' => [
         'model' => env('AI_PROMPT_ENHANCE_MODEL') ?: null,
+    ],
+
+    // أدوات نص التعليق الصوتي (تحسين للإلقاء، تشكيل، توجيه مخصص): طلبات نصية صغيرة
+    'voice_script' => [
+        'model' => env('AI_VOICE_SCRIPT_MODEL') ?: null,
     ],
 
     'retry' => [

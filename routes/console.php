@@ -33,3 +33,6 @@ Schedule::call(function (CreditService $credits) {
 
 // مهام التوليد العالقة (عامل طابور متوقف) تُنهى وتُرجع نقاطها بدل حجزها بلا نهاية
 Schedule::command('ai:reap-stuck-jobs')->everyFiveMinutes()->withoutOverlapping();
+
+// التعليقات الصوتية غير المحفوظة تُحذف بعد مدة الاحتفاظ (config/voiceover.php)
+Schedule::command('voiceover:prune')->dailyAt('03:30')->withoutOverlapping();

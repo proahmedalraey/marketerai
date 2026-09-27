@@ -23,6 +23,7 @@
             'icon'  => 'sparkles',
             'items' => [
                 ['route' => 'studio.index', 'label' => 'استوديو الصور', 'icon' => 'image', 'active' => ['studio.*']],
+                ['route' => 'voiceover.index', 'label' => 'التعليق الصوتي', 'icon' => 'mic', 'active' => ['voiceover.*'], 'badge' => 'Beta'],
             ],
         ],
     ];
@@ -179,6 +180,9 @@
                         >
                             <x-icon :name="$item['icon']" class="w-[18px] h-[18px]" />
                             <span class="sidebar-text truncate">{{ $item['label'] }}</span>
+                            @isset($item['badge'])
+                                <span class="sidebar-text nav-badge">{{ $item['badge'] }}</span>
+                            @endisset
                         </a>
                     @endforeach
                 </div>

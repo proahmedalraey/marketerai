@@ -67,9 +67,12 @@
                 </button>
 
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-base sm:text-lg font-bold text-fg truncate leading-tight">
-                        @yield('title', 'المنصة')
-                    </h1>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h1 class="text-base sm:text-lg font-bold text-fg truncate leading-tight">
+                            @yield('title', 'المنصة')
+                        </h1>
+                        @yield('title_badge')
+                    </div>
 
                     @hasSection('subtitle')
                         <p class="hidden sm:block text-xs text-fg-muted truncate mt-0.5">@yield('subtitle')</p>

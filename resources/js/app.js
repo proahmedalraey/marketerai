@@ -5,6 +5,7 @@ import registerContentEditor from './content-editor';
 import registerContentWriter from './content-writer';
 import registerImageStudio from './image-studio';
 import registerOperations from './operations';
+import registerVoiceover from './voiceover';
 
 /* ==========================================================================
    1. المظهر (فاتح / داكن / تبع النظام)
@@ -746,6 +747,7 @@ registerContentCalendar(Alpine);
 registerImageStudio(Alpine);
 registerCarouselEditor(Alpine);
 registerOperations(Alpine);
+registerVoiceover(Alpine);
 
 window.Alpine = Alpine;
 Alpine.start();
