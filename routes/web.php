@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\ScheduledPostController;
 use App\Http\Controllers\StoreFactsController;
+use App\Http\Controllers\VoiceoverController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
@@ -115,6 +116,19 @@ Route::middleware(['auth', 'brand.ready'])->group(function () {
     Route::post('/studio/media/{mediaAsset}/pin', [ImageStudioController::class, 'pin'])->name('studio.media.pin');
     Route::post('/studio/folders', [MediaFolderController::class, 'store'])->name('studio.folders.store');
     Route::delete('/studio/folders/{folder}', [MediaFolderController::class, 'destroy'])->name('studio.folders.destroy');
+
+    // التعليق الصوتي (Beta) — كل توليد مهمة طابور، والواجهة تتعامل بـ fetch
+    Route::get('/voiceover', [VoiceoverController::class, 'index'])->name('voiceover.index');
+    Route::get('/voiceover/history', [VoiceoverController::class, 'historyJson'])->name('voiceover.history');
+    Route::post('/voiceover', [VoiceoverController::class, 'store'])
+        ->middleware('throttle:20,1')->name('voiceover.store');
+    Route::post('/voiceover/tools/{tool}', [VoiceoverController::class, 'tool'])
+        ->whereIn('tool', ['enhance', 'diacritize', 'direction'])
+        ->middleware('throttle:30,1')->name('voiceover.tool');
+    Route::get('/voiceover/voices/{voice}/sample', [VoiceoverController::class, 'sample'])
+        ->middleware('throttle:120,1')->name('voiceover.sample');
+    Route::post('/voiceover/{mediaAsset}/pin', [VoiceoverController::class, 'pin'])->name('voiceover.pin');
+    Route::delete('/voiceover/{mediaAsset}', [VoiceoverController::class, 'destroy'])->name('voiceover.destroy');
 
     // استطلاع حالة المهام
     Route::get('/api/jobs/{job}', [JobStatusController::class, 'show'])->name('api.jobs.show');

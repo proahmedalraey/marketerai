@@ -271,6 +271,14 @@
     .dark .nav-link-active { @apply bg-brand-500/15 text-brand-300; }
     .dark .nav-link-active::before { @apply bg-brand-400; }
 
+    /* وسم صفحة تجريبية (Beta) بجانب اسمها في القائمة وفي رأس الصفحة */
+    .nav-badge {
+        @apply ms-auto shrink-0 rounded-md border border-brand-200 bg-brand-50 px-1.5 py-px
+               text-[10px] font-bold leading-4 text-brand-700 tracking-wide;
+    }
+
+    .dark .nav-badge { @apply border-brand-500/30 bg-brand-500/15 text-brand-300; }
+
     /* رأس قسم قابل للطي (أكورديون): أيقونة + عنوان، والسهم يدور بدل الظهور والاختفاء */
     .nav-group-toggle {
         @apply relative flex items-center justify-between gap-2 w-full rounded-xl px-3 min-h-11 text-sm font-semibold
@@ -563,6 +571,179 @@
         background-size: 16px 16px;
         background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     }
+
+    /* ---------- التعليق الصوتي ---------- */
+    /*
+     * المختار داكن (bg-fg) كزر الإنشاء؛ ينقلب فاتحاً في الوضع الداكن تلقائياً لأن fg ينقلب.
+     */
+    .vo-card { @apply card; }
+
+    .vo-head {
+        @apply flex items-center gap-3 w-full px-4 sm:px-6 min-h-[4.5rem] text-start rounded-2xl;
+    }
+
+    button.vo-head { @apply transition-colors hover:bg-muted/40; }
+
+    .vo-head-icon {
+        @apply grid place-items-center w-9 h-9 shrink-0 rounded-xl bg-fg text-fg-inverse;
+    }
+
+    .vo-head-check {
+        @apply grid place-items-center w-6 h-6 shrink-0 rounded-full border border-line-strong text-fg-muted;
+    }
+
+    .vo-sub-icon {
+        @apply grid place-items-center w-8 h-8 shrink-0 rounded-lg bg-muted text-fg-muted;
+    }
+
+    /* بطاقة نمط الإلقاء */
+    .vo-tile {
+        @apply relative flex flex-col items-center justify-center gap-2 min-h-[5.25rem] rounded-2xl border border-line bg-card
+               px-1 py-3 text-[11.5px] text-fg-muted cursor-pointer select-none transition duration-150 ease-out
+               hover:border-line-strong hover:text-fg;
+    }
+
+    .vo-tile-icon {
+        @apply grid place-items-center w-10 h-10 rounded-xl border border-line bg-card text-fg-muted transition;
+    }
+
+    .vo-tile[data-dashed] { @apply border-dashed border-line-strong; }
+
+    .vo-tile[aria-checked="true"] { @apply border-solid border-fg ring-1 ring-fg text-fg font-bold shadow-sm; }
+    .vo-tile[aria-checked="true"] .vo-tile-icon { @apply bg-fg border-fg text-fg-inverse; }
+
+    /* مفتاح تبديل بأقسام متساوية */
+    .vo-seg { @apply grid grid-flow-col auto-cols-fr gap-1 p-1 rounded-xl bg-muted; }
+
+    .vo-seg-btn {
+        @apply inline-flex items-center justify-center gap-2 min-h-10 rounded-lg px-3 text-sm text-fg-subtle
+               transition duration-150 hover:text-fg;
+    }
+
+    .vo-seg-btn[aria-pressed="true"],
+    .vo-seg-btn[aria-selected="true"] { @apply bg-card text-fg font-semibold shadow-xs; }
+
+    /* خيار لهجة/لكنة */
+    .vo-option {
+        @apply flex items-center min-h-10 w-full rounded-xl border border-line bg-card px-3.5 text-sm text-fg text-start
+               transition duration-150 hover:border-line-strong;
+    }
+
+    .vo-option[aria-checked="true"] { @apply border-fg ring-1 ring-fg font-semibold; }
+    .vo-option-muted { @apply bg-muted/70 text-fg-muted; }
+
+    /* بطاقة مذيع */
+    .vo-voice {
+        @apply relative flex flex-col items-center gap-1.5 rounded-2xl border border-line bg-card px-2 pt-4 pb-3
+               cursor-pointer select-none transition duration-150 ease-out hover:border-line-strong;
+    }
+
+    .vo-voice[aria-checked="true"] { @apply bg-fg border-fg text-fg-inverse shadow-md; }
+
+    .vo-avatar {
+        @apply grid place-items-center w-12 h-12 shrink-0 rounded-full text-lg font-bold select-none;
+        background: linear-gradient(140deg, hsl(var(--h, 24) 75% 88%), hsl(calc(var(--h, 24) + 28) 60% 74%));
+        color: hsl(var(--h, 24) 45% 26%);
+    }
+
+    .dark .vo-avatar {
+        background: linear-gradient(140deg, hsl(var(--h, 24) 30% 34%), hsl(calc(var(--h, 24) + 28) 28% 24%));
+        color: hsl(var(--h, 24) 70% 86%);
+    }
+
+    .vo-voice[aria-checked="true"] .vo-avatar {
+        box-shadow: 0 0 0 2px rgb(var(--fg-inverse)), 0 0 0 4px rgb(var(--fg-inverse) / .3);
+    }
+
+    .vo-listen {
+        @apply relative inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] text-fg-subtle transition hover:text-fg;
+    }
+
+    .vo-voice[aria-checked="true"] .vo-listen { @apply bg-fg-inverse/15 text-fg-inverse/80 hover:text-fg-inverse; }
+
+    /* أدوات النص الصغيرة (تحسين الصوت، تشكيل، إملاء) */
+    .vo-tool {
+        @apply relative inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-line bg-card text-xs text-fg-muted
+               transition hover:text-fg hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .vo-tool[data-busy="true"] { @apply pointer-events-none; }
+    .vo-tool[data-busy="true"] > * { @apply invisible; }
+    .vo-tool[data-busy="true"]::after {
+        content: "";
+        @apply absolute inset-0 m-auto w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent;
+        animation: spin .6s linear infinite;
+    }
+
+    .vo-tool[aria-pressed="true"] { @apply border-danger/40 bg-danger-soft text-danger-fg; }
+
+    .vo-count { @apply inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-fg-subtle tnum; }
+
+    /* بطاقة محتوى من الخطة */
+    .vo-plan {
+        @apply relative flex flex-col gap-1.5 rounded-xl border border-line bg-card p-3.5 text-start
+               cursor-pointer transition duration-150 hover:border-line-strong;
+        border-inline-end-width: 3px;
+        border-inline-end-color: rgb(var(--line-strong));
+    }
+
+    .vo-plan[aria-checked="true"] { @apply bg-fg border-fg text-fg-inverse shadow-md; }
+    .vo-plan-tag { @apply inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-fg-muted; }
+    .vo-plan[aria-checked="true"] .vo-plan-tag { @apply bg-fg-inverse/15 text-fg-inverse/85; }
+
+    .vo-filter {
+        @apply inline-flex items-center gap-1 min-h-8 rounded-lg border border-line bg-card px-3 text-xs text-fg-muted transition hover:text-fg;
+    }
+
+    .vo-filter[aria-pressed="true"] { @apply bg-fg border-fg text-fg-inverse font-semibold; }
+
+    /* مستوى الجودة */
+    .vo-tier {
+        @apply flex items-center gap-3 w-full min-h-12 rounded-xl border border-line bg-card px-4 text-sm text-fg-muted text-start
+               cursor-pointer transition hover:border-line-strong;
+    }
+
+    .vo-tier[aria-checked="true"] { @apply bg-fg border-fg text-fg-inverse; }
+
+    .vo-radio { @apply grid place-items-center w-5 h-5 shrink-0 rounded-full border-2 border-line-strong; }
+    .vo-tier[aria-checked="true"] .vo-radio { @apply border-fg-inverse; }
+    .vo-tier[aria-checked="true"] .vo-radio::after { content: ""; @apply w-2 h-2 rounded-full bg-fg-inverse; }
+
+    /* منطقة تمرير بشريط بلون الهوية (قوائم المذيعين والمحتوى والسجل) */
+    .vo-scroll {
+        @apply overflow-y-auto overscroll-contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--brand-500)) rgb(var(--muted));
+    }
+
+    .vo-scroll::-webkit-scrollbar { width: 8px; }
+    .vo-scroll::-webkit-scrollbar-track { background: rgb(var(--muted)); border-radius: 9999px; }
+    .vo-scroll::-webkit-scrollbar-thumb { background: rgb(var(--brand-500)); border: 0; border-radius: 9999px; }
+
+    /* السجل والمشغّل */
+    .vo-history-item { @apply rounded-2xl border border-line bg-card p-4 transition; }
+    .vo-history-item[data-active="true"] { @apply border-fg ring-1 ring-fg; }
+
+    .vo-play {
+        @apply grid place-items-center w-10 h-10 shrink-0 rounded-full bg-fg text-fg-inverse shadow-sm transition
+               hover:scale-105 active:scale-95;
+    }
+
+    .vo-player { @apply rounded-2xl bg-fg text-fg-inverse p-3.5 space-y-3; }
+
+    .vo-player-btn {
+        @apply grid place-items-center w-8 h-8 shrink-0 rounded-full bg-fg-inverse/15 text-fg-inverse transition hover:bg-fg-inverse/25;
+    }
+
+    .vo-player-chip {
+        @apply inline-flex items-center gap-1.5 h-8 rounded-lg bg-fg-inverse/15 px-2.5 text-[11px] font-semibold text-fg-inverse
+               transition hover:bg-fg-inverse/25;
+    }
+
+    /* الموجة تُقرأ من اليسار لليمين كالوقت نفسه، حتى في صفحة عربية */
+    .vo-wave { @apply flex items-center gap-[2px] h-9 w-full cursor-pointer; direction: ltr; }
+    .vo-wave > span { @apply flex-1 rounded-full bg-fg-inverse/25 transition-colors duration-150; min-height: 3px; }
+    .vo-wave > span[data-on="true"] { @apply bg-brand-400; }
 
     /* رابط تخطي للوحة المفاتيح وقارئات الشاشة */
     .skip-link {

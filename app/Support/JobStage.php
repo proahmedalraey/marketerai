@@ -27,6 +27,8 @@ class JobStage
         'proofreading' => ['label' => 'يراجع الإملاء واللغة', 'progress' => 80],
         'drawing' => ['label' => 'يرسم الصورة', 'progress' => 50],
         'enhancing' => ['label' => 'يحسّن الوصف', 'progress' => 50],
+        'scripting' => ['label' => 'يجهّز النص للإلقاء', 'progress' => 50],
+        'voicing' => ['label' => 'يسجّل التعليق الصوتي', 'progress' => 45],
         'saving' => ['label' => 'يحفظ النتيجة', 'progress' => 92],
     ];
 
@@ -37,6 +39,8 @@ class JobStage
             $operation === 'content.correction' => 'fixing',
             $operation === 'content.proofread' => 'proofreading',
             $operation === 'prompt.enhance' => 'enhancing',
+            $operation === 'voice.script' => 'scripting',
+            $operation === 'voice.speech' => 'voicing',
             str_starts_with($operation, 'image') => 'drawing',
             str_starts_with($operation, 'content.'),
             str_starts_with($operation, 'brand.'),
@@ -49,7 +53,8 @@ class JobStage
     public static function after(string $operation): ?string
     {
         return match (true) {
-            $operation === 'content.proofread' => 'saving',
+            $operation === 'content.proofread',
+            $operation === 'voice.speech' => 'saving',
             // بعد الكتابة والتصحيح تمر النسخة ببوابة الصدق قبل أن تُدقَّق
             str_starts_with($operation, 'content.') => 'checking',
             str_starts_with($operation, 'brand.'),

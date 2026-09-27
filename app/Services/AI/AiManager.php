@@ -5,11 +5,14 @@ namespace App\Services\AI;
 use App\Models\AiUsageLog;
 use App\Models\GenerationJob;
 use App\Services\AI\Contracts\ImageProvider;
+use App\Services\AI\Contracts\SpeechProvider;
 use App\Services\AI\Contracts\TextProvider;
 use App\Services\AI\Drivers\AnthropicTextProvider;
 use App\Services\AI\Drivers\FakeImageProvider;
+use App\Services\AI\Drivers\FakeSpeechProvider;
 use App\Services\AI\Drivers\FakeTextProvider;
 use App\Services\AI\Drivers\GeminiImageProvider;
+use App\Services\AI\Drivers\GeminiSpeechProvider;
 use App\Services\AI\Drivers\GeminiTextProvider;
 use App\Services\AI\Drivers\OpenAiImageProvider;
 use App\Services\AI\Drivers\OpenAiTextProvider;
@@ -17,6 +20,8 @@ use App\Services\AI\Drivers\OpenRouterImageProvider;
 use App\Services\AI\Drivers\OpenRouterTextProvider;
 use App\Services\AI\DTO\ImageRequest;
 use App\Services\AI\DTO\ImageResponse;
+use App\Services\AI\DTO\SpeechRequest;
+use App\Services\AI\DTO\SpeechResponse;
 use App\Services\AI\DTO\TextRequest;
 use App\Services\AI\DTO\TextResponse;
 use App\Services\Settings\AiSettings;
@@ -69,6 +74,15 @@ class AiManager
         $key = 'image.'.($provider ?? config('ai.image_provider'));
 
         return $this->resolved[$key] ??= $this->makeImageProvider($provider ?? config('ai.image_provider'));
+    }
+
+    public function speech(?string $provider = null): SpeechProvider
+    {
+        $this->syncSettings();
+
+        $key = 'speech.'.($provider ?? config('ai.speech_provider'));
+
+        return $this->resolved[$key] ??= $this->makeSpeechProvider($provider ?? config('ai.speech_provider'));
     }
 
     /**
@@ -130,6 +144,43 @@ class AiManager
         $this->logUsage($job, $driver->name(), $response->model, $request->operation, [
             'attempt' => $attempt,
             'images' => $response->count(),
+            'latency_ms' => $response->latencyMs,
+            'cost_usd' => $response->costUsd,
+        ]);
+
+        return $response;
+    }
+
+    /**
+     * نطق نص (التعليق الصوتي). المدة الفعلية تُسجَّل بدل عدد الصور، وهي أساس التسوية.
+     */
+    public function generateSpeech(SpeechRequest $request, ?GenerationJob $job = null, ?string $provider = null): SpeechResponse
+    {
+        $driver = $this->speech($provider);
+
+        if ($request->model && method_exists($driver, 'withModel')) {
+            $driver = $driver->withModel($request->model);
+        }
+
+        $attempt = 1;
+
+        JobStage::set($job, JobStage::forOperation($request->operation));
+
+        $response = $this->withRetries(
+            fn () => $driver->synthesize($request),
+            $driver->name(),
+            $driver->model(),
+            $request->operation,
+            $job,
+            $attempt
+        );
+
+        JobStage::set($job, JobStage::after($request->operation));
+
+        $this->logUsage($job, $driver->name(), $response->model, $request->operation, [
+            'attempt' => $attempt,
+            'tokens_in' => $response->tokensIn,
+            'tokens_out' => $response->tokensOut,
             'latency_ms' => $response->latencyMs,
             'cost_usd' => $response->costUsd,
         ]);
@@ -272,6 +323,21 @@ class AiManager
             'openrouter' => new OpenRouterImageProvider($config),
             'fake' => new FakeImageProvider,
             default => throw new InvalidArgumentException("محرك صور غير مدعوم: {$config['driver']}"),
+        };
+    }
+
+    protected function makeSpeechProvider(string $name): SpeechProvider
+    {
+        $config = config("ai.providers.{$name}");
+
+        if (! $config) {
+            throw new InvalidArgumentException("مزود الصوت [{$name}] غير معرّف في config/ai.php");
+        }
+
+        return match ($config['driver']) {
+            'gemini' => new GeminiSpeechProvider($config),
+            'fake' => new FakeSpeechProvider,
+            default => throw new InvalidArgumentException("محرك صوت غير مدعوم: {$config['driver']}"),
         };
     }
 }

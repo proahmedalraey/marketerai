@@ -24,6 +24,8 @@ class JobSummary
         'image' => ['label' => 'توليد صورة', 'icon' => 'image'],
         'carousel_images' => ['label' => 'صور كاروسيل', 'icon' => 'layers'],
         'prompt_enhance' => ['label' => 'تحسين وصف صورة', 'icon' => 'wand'],
+        'voiceover' => ['label' => 'تعليق صوتي', 'icon' => 'mic'],
+        'voice_script' => ['label' => 'تجهيز نص التعليق', 'icon' => 'wand'],
         'brand_profile' => ['label' => 'أوصاف العلامة', 'icon' => 'file-text'],
         'store_scan' => ['label' => 'قراءة متجر', 'icon' => 'store'],
         'product_import' => ['label' => 'استيراد منتجات', 'icon' => 'package'],
@@ -99,6 +101,7 @@ class JobSummary
             'store_scan' => 'قراءة متجر '.Str::limit(preg_replace('#^https?://(www\.)?#', '', (string) ($payload['store_url'] ?? '')), 40),
             'product_import' => 'استيراد '.count($payload['products'] ?? []).' منتجاً',
             'image', 'carousel_images', 'prompt_enhance' => Str::limit((string) ($payload['prompt'] ?? ''), 70) ?: (self::TYPES[$job->type]['label'] ?? 'صور'),
+            'voiceover', 'voice_script' => Str::limit((string) ($payload['text'] ?? ''), 70) ?: self::TYPES[$job->type]['label'],
             default => self::TYPES[$job->type]['label'] ?? $job->type,
         };
     }
@@ -151,6 +154,7 @@ class JobSummary
         return match ($this->job->type) {
             'carousel_images' => ($id = $this->job->payload['content_item_id'] ?? null) ? route('content.show', $id) : route('studio.index'),
             'image' => route('studio.index'),
+            'voiceover' => route('voiceover.index'),
             'brand_profile' => route('brand.profile'),
             'store_scan', 'product_import' => route('products.index'),
             default => null,
