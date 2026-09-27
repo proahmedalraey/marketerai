@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Brand;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\CurrentBrand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -86,6 +87,9 @@ class ImageStudioDeleteTest extends TestCase
             'path' => 'brands/2/media/foreign.png',
             'prompt' => 'صورة العلامة الأخرى',
         ]);
+
+        // عملية جديدة: بلا براند متبقٍ يحجب الخلل (انظر BrandRouteBindingIsolationTest)
+        CurrentBrand::clear();
 
         $this->actingAs($this->user)
             ->delete(route('studio.media.destroy', $foreignAsset))

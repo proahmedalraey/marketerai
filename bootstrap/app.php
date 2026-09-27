@@ -17,9 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'brand.ready' => EnsureBrandIsReady::class,
         ]);
 
-        // العلامة الحالية قبل ربط النماذج بالمسار ({contentItem}، {mediaAsset}…): النطاق العام
-        // BelongsToBrand يقرأ CurrentBrand، وبدونه يُربط محتوى أي علامة بمعرّفه فيُفتح
-        // ويُعدّل ويُحذف من حساب آخر (tests/Feature/BrandIsolationBindingTest.php)
+        // عزل المستأجر: CurrentBrand يُضبط قبل ربط النماذج بالمسار ({contentItem}، {mediaAsset}،
+        // {product}…)، وإلا جاء نطاق BelongsToBrand فارغاً فيُفتح ويُعدَّل ويُحذف صف أي علامة بمعرّفه.
+        // موضعه في قائمة الأولوية بعد المصادقة، فيبقى توجيهه لـlogin وbrand.profile كما هو.
+        // (tests/Feature/BrandRouteBindingIsolationTest.php و BrandIsolationBindingTest.php)
         $middleware->prependToPriorityList(
             before: SubstituteBindings::class,
             prepend: EnsureBrandIsReady::class,
