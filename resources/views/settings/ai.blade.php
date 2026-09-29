@@ -112,6 +112,88 @@
             @endif
         </x-section>
 
+        {{-- ================= التعليق الصوتي ================= --}}
+        @php
+            $speechProvider = old('speech_provider', $fields['ai.speech_provider']['value']);
+            $speechLive = $catalogs['gemini']['speech'] ?? null;
+            $speechSuggest = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'];
+            $speechOptions = $speechLive ?: $speechSuggest;
+            $tierFields = [
+                'standard' => ['field' => 'voiceover.standard_model', 'input' => 'voiceover_standard_model'],
+                'hd' => ['field' => 'voiceover.hd_model', 'input' => 'voiceover_hd_model'],
+            ];
+        @endphp
+
+        <x-section
+            icon="mic" title="التعليق الصوتي"
+            description="مزود النطق، والنموذج خلف كل مستوى جودة يراه التاجر. المفتاح من قسم Google Gemini أدناه."
+        >
+            <x-slot:actions>
+                <span class="nav-badge ms-0">Beta</span>
+            </x-slot:actions>
+
+            <div class="space-y-4">
+                <x-field label="مزود الصوت" name="speech_provider" hint="للتعليق الصوتي وعينات «استمع».">
+                    <select id="speech_provider" name="speech_provider" class="field sm:max-w-sm @error('speech_provider') field-invalid @enderror">
+                        @foreach ($speechProviders as $value => $label)
+                            <option value="{{ $value }}" @selected($speechProvider === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </x-field>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    @foreach ($tierFields as $tierKey => $t)
+                        @php
+                            $current = (string) old($t['input'], $fields[$t['field']]['value']);
+                            $unavailable = $speechLive && $current !== '' && ! in_array($current, $speechLive, true);
+                            $tierMeta = $voiceTiers[$tierKey] ?? [];
+                        @endphp
+
+                        <x-field
+                            :label="'نموذج '.($tierMeta['label'] ?? $tierKey).' — '.($tierMeta['hint'] ?? '')"
+                            :for="$t['input'].'_select'" :name="$t['input']"
+                            :hint="$speechLive ? count($speechLive).' نموذج نطق متاح لمفتاحك — القائمة من Gemini مباشرة.' : 'احفظ مفتاح Gemini لتظهر نماذج النطق المتاحة لحسابك.'"
+                        >
+                            <div x-data="{ choice: @js(in_array($current, $speechOptions, true) || $unavailable ? $current : ($current === '' ? ($speechOptions[0] ?? '') : '__custom')), custom: @js($current) }" class="space-y-2">
+                                <input type="hidden" name="{{ $t['input'] }}" value="{{ $current }}" :value="choice === '__custom' ? custom : choice">
+
+                                <div class="flex gap-2">
+                                    <select id="{{ $t['input'] }}_select" x-model="choice" dir="ltr"
+                                            class="field font-mono text-sm flex-1 @error($t['input']) field-invalid @enderror">
+                                        @if ($unavailable)
+                                            <option value="{{ $current }}">{{ $current }} — غير متاح لحسابك</option>
+                                        @endif
+                                        @foreach ($speechOptions as $option)
+                                            <option value="{{ $option }}" @selected($option === $current)>{{ $option }}</option>
+                                        @endforeach
+                                        <option value="__custom">اسم آخر…</option>
+                                    </select>
+
+                                    <button type="submit" form="test-speech-{{ $tierKey }}" class="btn-secondary btn-icon shrink-0"
+                                            title="اختبار: يسجّل كلمة واحدة بالنموذج المحفوظ" @disabled(! $fields['gemini.api_key']['mask'])>
+                                        <x-icon name="volume" class="w-[18px] h-[18px]" />
+                                        <span class="sr-only">اختبار {{ $tierMeta['label'] ?? $tierKey }}</span>
+                                    </button>
+                                </div>
+
+                                <input x-show="choice === '__custom'" x-cloak x-model="custom" type="text" dir="ltr" maxlength="100" spellcheck="false"
+                                       class="field font-mono text-sm" placeholder="gemini-3.8-flash-tts" aria-label="اسم النموذج">
+                            </div>
+                        </x-field>
+                    @endforeach
+                </div>
+
+                <div class="alert-info">
+                    <x-icon name="info" class="w-5 h-5 shrink-0 mt-px" />
+                    <p class="leading-relaxed">
+                        مفتاح Gemini المجاني يسمح بـ<strong class="tnum">10</strong> طلبات نطق يومياً لكل نموذج، وعينات «استمع» تُحسب منها —
+                        تكفي للتجربة لا لتشغيل المتاجر. فعّل الفوترة في Google AI Studio قبل إتاحة التعليق الصوتي للتجار.
+                        زر <x-icon name="volume" class="inline w-3.5 h-3.5 align-[-2px]" /> يختبر المستوى بنموذجه المحفوظ (احفظ أولاً).
+                    </p>
+                </div>
+            </div>
+        </x-section>
+
         {{-- ================= المزودون ================= --}}
         @foreach ($providers as $id => $p)
             @php
@@ -318,6 +400,14 @@
         <form id="test-{{ $id }}" method="POST" action="{{ route('settings.ai.test') }}" class="hidden">
             @csrf
             <input type="hidden" name="provider" value="{{ $id }}">
+        </form>
+    @endforeach
+
+    @foreach (array_keys($voiceTiers) as $tierKey)
+        <form id="test-speech-{{ $tierKey }}" method="POST" action="{{ route('settings.ai.test') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="kind" value="speech">
+            <input type="hidden" name="tier" value="{{ $tierKey }}">
         </form>
     @endforeach
 @endsection

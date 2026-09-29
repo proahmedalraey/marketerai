@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  */
 class VoiceoverSamplesCommand extends Command
 {
-    protected $signature = 'voiceover:samples {--language=ar : ar أو en أو all} {--voice= : مذيع واحد} {--force : أعد توليد الموجود}';
+    protected $signature = 'voiceover:samples {--language=ar : ar أو en أو all} {--voice= : مذيع واحد} {--force : أعد توليد الموجود} {--model= : نموذج نطق بعينه (الحصة المجانية لكل نموذج منفصلة)}';
 
     protected $description = 'توليد عينات أصوات المذيعين في التعليق الصوتي';
 
@@ -35,7 +35,7 @@ class VoiceoverSamplesCommand extends Command
                 }
 
                 try {
-                    $samples->generate($voice, $language);
+                    $samples->generate($voice, $language, $this->option('model') ?: null);
                     $this->info("✓ {$voice} ({$language})");
                 } catch (\Throwable $e) {
                     $failed++;

@@ -16,7 +16,7 @@ use Throwable;
 class ModelCatalog
 {
     /**
-     * @return array{text: string[], image: string[]}|null  null = تعذر الجلب (لا مفتاح، أو خطأ)
+     * @return array{text: string[], image: string[], speech?: string[]}|null null = تعذر الجلب (لا مفتاح، أو خطأ)
      */
     public function for(string $provider): ?array
     {
@@ -137,15 +137,23 @@ class ModelCatalog
             return null;
         }
 
-        $ids = collect($response->json('models', []))
+        $all = collect($response->json('models', []))
             ->filter(fn ($m) => in_array('generateContent', $m['supportedGenerationMethods'] ?? [], true))
-            ->map(fn ($m) => str_replace('models/', '', $m['name']))
-            // Gemini ونانو بنانا فقط: Lyria للموسيقى وGemma وVeo ليست لهذا الاستخدام،
-            // والصوت والتفريغ والتضمين والروبوتات لا تكتب منشوراً
+            ->map(fn ($m) => str_replace('models/', '', $m['name']));
+
+        // Gemini ونانو بنانا فقط: Lyria للموسيقى وGemma وVeo ليست لهذا الاستخدام،
+        // والصوت والتفريغ والتضمين والروبوتات لا تكتب منشوراً
+        $ids = $all
             ->filter(fn ($id) => preg_match('/^(gemini-|nano-banana)/', $id))
             ->reject(fn ($id) => preg_match('/tts|audio|live|transcribe|omni|embedding|robotics|computer-use|aqa|learnlm/', $id));
 
-        return $this->split($ids->all(), fn ($id) => str_contains($id, 'image') || str_starts_with($id, 'nano-banana'));
+        // نماذج النطق للتعليق الصوتي: قائمتها الخاصة، الأحدث أولاً
+        $speech = $all->filter(fn ($id) => preg_match('/^gemini-.*-tts/', $id))->values()->all();
+        rsort($speech, SORT_NATURAL);
+
+        $split = $this->split($ids->all(), fn ($id) => str_contains($id, 'image') || str_starts_with($id, 'nano-banana'));
+
+        return $split ? $split + ['speech' => $speech] : null;
     }
 
     protected function openai(array $config): ?array

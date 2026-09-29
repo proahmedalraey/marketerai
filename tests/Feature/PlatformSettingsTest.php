@@ -120,13 +120,20 @@ class PlatformSettingsTest extends TestCase
             'gemini_model' => 'gemini-2.5-flash',
         ]));
 
-        $this->actingAs($this->admin)->get('/settings/ai')
+        $html = $this->actingAs($this->admin)->get('/settings/ai')
             ->assertOk()
             ->assertSee('gemini-3.8-flash')
             ->assertSee('gemini-3.1-flash-image')
             ->assertDontSee('gemini-embedding-001')
-            ->assertDontSee('gemini-3.6-flash-tts')
-            ->assertSee('gemini-2.5-flash — غير متاح لحسابك');
+            ->assertSee('gemini-2.5-flash — غير متاح لحسابك')
+            ->getContent();
+
+        // نموذج النطق لا يكتب منشوراً: غائب عن قائمة النصوص، وحاضر في قسم التعليق الصوتي
+        $menu = fn (string $id) => preg_match('/<select id="'.$id.'".*?<\/select>/s', $html, $m) ? $m[0] : '';
+
+        $this->assertStringNotContainsString('gemini-3.6-flash-tts', $menu('gemini_model_select'));
+        $this->assertStringContainsString('gemini-3.6-flash-tts', $menu('voiceover_hd_model_select'));
+        $this->assertStringNotContainsString('gemini-3.8-flash"', $menu('voiceover_hd_model_select'));
     }
 
     public function test_value_equal_to_default_is_not_pinned(): void

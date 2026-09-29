@@ -47,20 +47,43 @@ class VoiceSamples
         return null;
     }
 
-    public function generate(string $voice, string $language): string
+    /**
+     * @param  ?string  $model  نموذج بعينه بدل نموذج مستوى العينات (voiceover:samples --model):
+     *                          الحصة المجانية 10 طلبات يومياً لكل نموذج، فتُوزَّع العينات عليها.
+     */
+    public function generate(string $voice, string $language, ?string $model = null): string
     {
         $config = $this->catalog->voice($voice) ?? throw new \InvalidArgumentException("مذيع غير معروف: {$voice}");
         $tier = $this->catalog->tier(config('voiceover.samples.tier', 'standard'));
         $name = $language === 'en' ? ($config['en'] ?? $config['name']) : $config['name'];
 
-        $response = $this->ai->generateSpeech(new SpeechRequest(
+        // العينة تعرض طابع المذيع نفسه: «in … Arabic, informative and composed, as a friendly self-introduction»
+        $direction = implode(', ', array_filter([
+            $this->catalog->accentDirection($language === 'en'
+                ? ['language' => 'en', 'accent' => 'american']
+                : ['language' => 'ar', 'dialect' => 'saudi', 'variant' => 'white']),
+            $config['character'] ?? null,
+            config('voiceover.samples.direction'),
+        ]));
+
+        $request = new SpeechRequest(
             transcript: str_replace(':name', $name, (string) config("voiceover.samples.{$language}")),
             voice: $config['provider_voice'],
-            direction: 'Style: '.config('voiceover.samples.direction')."\nAccent: "
-                .($language === 'en' ? 'Speak in English. General American English accent.' : 'Speak in Arabic. Neutral "white" Saudi/Gulf Arabic.'),
-            model: $tier['model'] ?? null,
+            direction: $direction,
+            model: $model ?? $tier['model'] ?? null,
             operation: 'voice.sample',
-        ));
+        );
+
+        $response = $this->ai->generateSpeech($request);
+
+        // عينة قرأ فيها النموذج التوجيه أو كرر الجملة أسوأ من لا عينة: محاولة ثانية ثم رفض
+        if ($this->catalog->looksOverlong($request->transcript, $response->durationSeconds)) {
+            $response = $this->ai->generateSpeech($request);
+
+            if ($this->catalog->looksOverlong($request->transcript, $response->durationSeconds)) {
+                throw new \RuntimeException("عينة {$voice} أطول من جملتها مرتين ({$response->durationSeconds} ث)");
+            }
+        }
 
         $path = $this->path($voice, $language);
         Storage::disk(config('ai.media_disk'))->put($path, $response->audio);
@@ -72,6 +95,22 @@ class VoiceSamples
     public function forgetPending(string $voice, string $language): void
     {
         Cache::forget($this->pendingKey($voice, $language));
+    }
+
+    /** سبب فشل آخر محاولة: تعرضه الواجهة فوراً بدل انتظار عينة لن تصل. يُقرأ مرة ثم يُمسح. */
+    public function markFailed(string $voice, string $language, string $reason): void
+    {
+        Cache::put($this->failedKey($voice, $language), $reason, 600);
+    }
+
+    public function pullFailure(string $voice, string $language): ?string
+    {
+        return Cache::pull($this->failedKey($voice, $language));
+    }
+
+    protected function failedKey(string $voice, string $language): string
+    {
+        return "voice-sample.failed.{$voice}.{$language}";
     }
 
     protected function pendingKey(string $voice, string $language): string

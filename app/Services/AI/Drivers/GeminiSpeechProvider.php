@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Http;
 /**
  * النطق بنماذج Gemini TTS (generateContent بمخرج صوتي).
  *
- * التوجيه والنص في رسالة واحدة: النموذج يقرأ «ملاحظات المخرج» ويؤدي ما تحت
- * TRANSCRIPT وحده. جُرّب على gemini-3.8-flash-tts: لا ينطق الملاحظات ولا وسوم [short pause].
+ * التوجيه جملة قصيرة واحدة تنتهي بنقطتين ثم النص («Read aloud …:» ثم سطر جديد) — صيغة Google الموثّقة.
+ * لا عناوين ولا «لا تنطق هذه التعليمات»: gemini-3.8-flash-lite-tts كان يقرأ كتلة
+ * «DIRECTOR'S NOTES / TRANSCRIPT» بصوت عالٍ قبل النص (رُصد 2026-09-29 في عينات «استمع»)،
+ * ولا يقبل systemInstruction (HTTP 400). بهذه الصيغة ينطق النص وحده، ووسوم [short pause] لا تُنطق.
  */
 class GeminiSpeechProvider implements SpeechProvider
 {
@@ -60,20 +62,26 @@ class GeminiSpeechProvider implements SpeechProvider
 
         $json = $response->json();
 
-        if ($blocked = data_get($json, 'promptFeedback.blockReason')) {
-            throw new ProviderException("رفض Gemini الطلب ({$blocked}).", $this->name(), 200,
-                display: 'رفض مزود الصوت هذا النص. عدّل الصياغة وجرّب مجدداً — أُرجعت نقاطك.');
+        $finish = data_get($json, 'candidates.0.finishReason');
+
+        // الحجب قرار لا عطل عابر: الإعادة تُرفض مثله، فالتاجر يعدّل النص أو الأسلوب
+        if (($blocked = data_get($json, 'promptFeedback.blockReason')) || in_array($finish, ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST'], true)) {
+            throw new ProviderException('رفض Gemini الطلب ('.($blocked ?: $finish).').', $this->name(), 200,
+                display: 'رفض مزود الصوت هذا الطلب. عدّل النص أو أسلوب الإلقاء وجرّب مجدداً — أُرجعت نقاطك.');
         }
 
         $inline = collect(data_get($json, 'candidates.0.content.parts', []))
             ->pluck('inlineData')
             ->first(fn ($data) => filled($data['data'] ?? null));
 
+        // نماذج النطق تعيد أحياناً نصاً أو رداً فارغاً بدل الصوت (موثّق عند Google، ورأيناه مع
+        // gemini-3.1-flash-tts-preview): عابر، والإعادة تنجح غالباً — فتمر بإعادة AiManager
         if (! $inline) {
             throw new ProviderException(
                 'لم يُعد Gemini صوتاً (finishReason: '.data_get($json, 'candidates.0.finishReason', '?').')',
                 $this->name(),
                 200,
+                retryable: true,
                 display: 'لم يُعد مزود الصوت تسجيلاً. أُرجعت نقاطك — جرّب مجدداً.',
             );
         }
@@ -91,15 +99,11 @@ class GeminiSpeechProvider implements SpeechProvider
         );
     }
 
-    /** ملاحظات الأداء ثم النص. التوجيه الفارغ = قراءة طبيعية. */
+    /** «Read aloud <التوجيه>:» ثم النص. نقطتان داخل التوجيه تُقرأ حدّاً للنص، فتصير فاصلة. */
     public static function prompt(SpeechRequest $request): string
     {
-        $notes = trim($request->direction);
+        $direction = trim(str_replace(':', ',', (string) preg_replace('/\s+/u', ' ', $request->direction)), ' ,.');
 
-        return 'You are a professional voice actor recording a voice-over. '
-            .'Perform ONLY the text under TRANSCRIPT, word for word. '
-            .'Never read these notes, headings or bracketed tags aloud; bracketed tags are performance cues.'
-            .($notes !== '' ? "\n\nDIRECTOR'S NOTES:\n{$notes}" : '')
-            ."\n\nTRANSCRIPT:\n".trim($request->transcript);
+        return 'Read aloud'.($direction !== '' ? " {$direction}" : ' naturally').":\n".trim($request->transcript);
     }
 }

@@ -26,6 +26,11 @@ class AiSettings
     public const FIELDS = [
         'ai.text_provider' => ['config' => 'ai.text_provider', 'secret' => false],
         'ai.image_provider' => ['config' => 'ai.image_provider', 'secret' => false],
+        'ai.speech_provider' => ['config' => 'ai.speech_provider', 'secret' => false],
+
+        // التعليق الصوتي: نموذج كل مستوى جودة (Marketerai 2.3 / 3.1)
+        'voiceover.standard_model' => ['config' => 'voiceover.tiers.standard.model', 'secret' => false],
+        'voiceover.hd_model' => ['config' => 'voiceover.tiers.hd.model', 'secret' => false],
 
         'anthropic.api_key' => ['config' => 'ai.providers.anthropic.api_key', 'secret' => true],
         'anthropic.model' => ['config' => 'ai.providers.anthropic.model', 'secret' => false],

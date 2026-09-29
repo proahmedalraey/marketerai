@@ -9,10 +9,14 @@ use App\Models\GenerationJob;
 use App\Models\MediaAsset;
 use App\Models\User;
 use App\Services\AI\AiManager;
+use App\Services\AI\DTO\SpeechRequest;
+use App\Services\AI\DTO\SpeechResponse;
 use App\Services\AI\DTO\TextRequest;
 use App\Services\AI\DTO\TextResponse;
+use App\Services\AI\ProviderException;
 use App\Services\AI\Support\Wav;
 use App\Services\Settings\AiSettings;
+use App\Support\CurrentBrand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -230,28 +234,138 @@ class VoiceoverTest extends TestCase
         $this->assertSame(0, MediaAsset::withoutBrandScope()->count());
     }
 
-    public function test_style_and_dialect_become_the_performance_direction(): void
+    /**
+     * نطق يسجّل ما وصله ويرد بما نحدده (مدة بعينها أو استثناء)، ونص يرد بترجمة التوجيه.
+     *
+     * @param  list<float|\Throwable>  $durations  مدة كل تسجيل بالترتيب؛ فارغة = النطق الوهمي الحقيقي
+     */
+    protected function fakeSpeech(array $durations = [], ?string $translation = null): object
     {
-        $fake = new class(app(AiSettings::class)) extends AiManager
+        $fake = new class(app(AiSettings::class), $durations, $translation) extends AiManager
         {
-            public array $seen = [];
+            public array $speech = [];
 
-            public function generateSpeech(\App\Services\AI\DTO\SpeechRequest $request, ?GenerationJob $job = null, ?string $provider = null): \App\Services\AI\DTO\SpeechResponse
+            public array $text = [];
+
+            public function __construct(AiSettings $settings, public array $durations, public ?string $translation)
             {
-                $this->seen[] = $request;
+                parent::__construct($settings);
+            }
 
-                return parent::generateSpeech($request, $job, $provider);
+            public function generateSpeech(SpeechRequest $request, ?GenerationJob $job = null, ?string $provider = null): SpeechResponse
+            {
+                $this->speech[] = $request;
+
+                if ($this->durations === []) {
+                    return parent::generateSpeech($request, $job, $provider);
+                }
+
+                $next = array_shift($this->durations);
+
+                if ($next instanceof \Throwable) {
+                    throw $next;
+                }
+
+                $audio = Wav::fromPcm(str_repeat("\0", (int) ($next * 16000)), 8000);
+
+                return new SpeechResponse(audio: $audio, durationSeconds: Wav::duration($audio), provider: 'fake', model: 'fake-tts');
+            }
+
+            public function generateText(TextRequest $request, ?GenerationJob $job = null, ?string $provider = null): TextResponse
+            {
+                $this->text[] = $request;
+
+                if ($this->translation === null) {
+                    throw new ProviderException('down', 'fake', 503);
+                }
+
+                return new TextResponse(raw: '', data: ['direction' => $this->translation], provider: 'fake', model: 'fake');
             }
         };
+
         $this->app->instance(AiManager::class, $fake);
+
+        return $fake;
+    }
+
+    public function test_style_and_dialect_become_one_direction_phrase(): void
+    {
+        $fake = $this->fakeSpeech();
+
+        $this->generate([$this->item()])->assertStatus(202);
+
+        $request = $fake->speech[0];
+        $this->assertSame('Kore', $request->voice);
+        $this->assertSame('gemini-3.8-flash-tts', $request->model);
+        $this->assertSame(
+            'in Najdi Saudi Arabic (Riyadh accent), like an energetic Reels and TikTok creator, punchy, upbeat and fast-paced, with a strong hook in the first words',
+            $request->direction,
+        );
+    }
+
+    public function test_custom_notes_are_translated_to_english_before_recording(): void
+    {
+        $fake = $this->fakeSpeech(translation: 'Read aloud in Arabic, in a soft hushed whisper at a very slow pace: ');
+
+        $this->generate([$this->item(['style' => 'custom', 'custom_style' => 'بصوت هامس وبطيء جداً'])])->assertStatus(202);
+
+        // التمهيد والنقطتان يُحذفان: العبارة تُكمل «Read aloud …» عند المزود
+        $this->assertSame('in Najdi Saudi Arabic (Riyadh accent), in a soft hushed whisper at a very slow pace', $fake->speech[0]->direction);
+        $this->assertStringContainsString('بصوت هامس وبطيء جداً', $fake->text[0]->prompt);
+
+        $asset = MediaAsset::withoutBrandScope()->where('kind', 'audio')->firstOrFail();
+        $this->assertSame('in a soft hushed whisper at a very slow pace', $asset->meta['custom_style_en']);
+        $this->assertSame('بصوت هامس وبطيء جداً', $asset->meta['custom_style']);
+    }
+
+    public function test_custom_notes_fall_back_to_arabic_when_translation_fails(): void
+    {
+        $fake = $this->fakeSpeech(translation: null);
 
         $this->generate([$this->item(['style' => 'custom', 'custom_style' => 'بهدوء وثقة'])])->assertStatus(202);
 
-        $request = $fake->seen[0];
-        $this->assertSame('Kore', $request->voice);
-        $this->assertSame('gemini-3.8-flash-tts', $request->model);
-        $this->assertStringContainsString('«بهدوء وثقة»', $request->direction);
-        $this->assertStringContainsString('Najdi', $request->direction);
+        $this->assertStringContainsString('«بهدوء وثقة»', $fake->speech[0]->direction);
+        $this->assertSame(JobStatus::Completed, GenerationJob::withoutBrandScope()->where('type', 'voiceover')->first()->status);
+    }
+
+    public function test_overlong_recording_is_redone_once(): void
+    {
+        // النص ~14 كلمة ≈ 7 ث متوقعة: 30 ث تعني أن النموذج قرأ التوجيه أو كرر
+        $fake = $this->fakeSpeech([30.0, 7.5]);
+
+        $this->generate([$this->item()])->assertStatus(202);
+
+        $job = GenerationJob::withoutBrandScope()->where('type', 'voiceover')->firstOrFail();
+
+        $this->assertCount(2, $fake->speech);
+        $this->assertSame(JobStatus::Completed, $job->status);
+        $this->assertEquals(7.5, $job->result['duration']);
+        $this->assertEquals(97, $this->brand->fresh()->credit_balance);
+    }
+
+    public function test_recording_that_stays_overlong_fails_and_refunds(): void
+    {
+        $this->fakeSpeech([30.0, 28.0]);
+
+        $this->generate([$this->item()])->assertStatus(202);
+
+        $job = GenerationJob::withoutBrandScope()->where('type', 'voiceover')->firstOrFail();
+
+        $this->assertSame(JobStatus::Failed, $job->status);
+        $this->assertStringContainsString('أُرجعت نقاطك', $job->error);
+        $this->assertSame(0, MediaAsset::withoutBrandScope()->where('kind', 'audio')->count());
+        $this->assertEquals(100, $this->brand->fresh()->credit_balance);
+    }
+
+    public function test_custom_style_is_exempt_from_the_length_guard(): void
+    {
+        // «ببطء شديد» طويل بحق: لا إعادة ولا رفض
+        $fake = $this->fakeSpeech([30.0], translation: 'very slowly');
+
+        $this->generate([$this->item(['style' => 'custom', 'custom_style' => 'ببطء شديد'])])->assertStatus(202);
+
+        $this->assertCount(1, $fake->speech);
+        $this->assertSame(JobStatus::Completed, GenerationJob::withoutBrandScope()->where('type', 'voiceover')->first()->status);
     }
 
     // ------------------------------------------------------------------
@@ -323,13 +437,13 @@ class VoiceoverTest extends TestCase
         $other->update(['current_brand_id' => $otherBrand->id]);
 
         // كما في عملية PHP جديدة لكل طلب: لا براند سابق عالق في CurrentBrand وقت ربط المسار
-        \App\Support\CurrentBrand::clear();
+        CurrentBrand::clear();
         $this->actingAs($other)->deleteJson(route('voiceover.destroy', $asset))->assertNotFound();
-        \App\Support\CurrentBrand::clear();
+        CurrentBrand::clear();
         $this->actingAs($other)->postJson(route('voiceover.pin', $asset))->assertNotFound();
         $this->actingAs($other)->getJson(route('voiceover.history'))->assertJsonCount(0, 'items');
 
-        \App\Support\CurrentBrand::clear();
+        CurrentBrand::clear();
         $this->actingAs($this->user)->deleteJson(route('voiceover.destroy', $asset))->assertOk();
         Storage::disk('public')->assertMissing($asset->path);
         $this->assertNull(MediaAsset::withoutBrandScope()->find($asset->id));

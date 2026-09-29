@@ -10,7 +10,9 @@ use App\Services\AI\AiManager;
 use App\Services\AI\DTO\TextRequest;
 use App\Services\Credits\CreditService;
 use App\Support\Arabic\ArabicText;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -35,6 +37,60 @@ class VoiceScriptTools
         protected CreditService $credits,
         protected VoiceCatalog $catalog,
     ) {}
+
+    /**
+     * ملاحظات «أسلوب مخصص» العربية ← عبارة إنجليزية تُكمل «Read aloud …»، داخل مهمة التسجيل نفسها.
+     *
+     * نماذج النطق تلتزم بالتوجيه الإنجليزي أدق (gemini-3.8-flash-tts تجاهل «بصوت هامس وبطيء»
+     * بالعربية). تُخزَّن الترجمة شهراً فلا تُعاد لنفس الملاحظات في الدفعة. أي فشل = null،
+     * فتُرسل الملاحظات العربية كما هي بدل أن يسقط التسجيل كله بسبب خطوة مساعدة.
+     */
+    public function englishDirection(string $notes, ?GenerationJob $job = null): ?string
+    {
+        $notes = trim($notes);
+
+        if ($notes === '') {
+            return null;
+        }
+
+        $key = 'voice.direction.en.'.md5($notes);
+
+        if ($cached = Cache::get($key)) {
+            return $cached;
+        }
+
+        try {
+            $response = $this->ai->generateText(new TextRequest(
+                system: <<<'TXT'
+Translate a client's Arabic voice-over delivery notes into ONE short English phrase (up to 30 words) that completes this sentence: "Read aloud in Arabic, ___".
+Describe only HOW to speak: tone, pace, energy, volume, emotion. Keep every instruction the client gave; add nothing.
+No colons, no quotation marks, no full stops, no mention of the script or of reading. Example output: in a soft hushed whisper at a very slow pace, warm and intimate
+TXT,
+                prompt: "Client notes (Arabic):\n{$notes}",
+                schema: ['type' => 'object', 'required' => ['direction'], 'properties' => ['direction' => ['type' => 'string']]],
+                temperature: 0.2,
+                maxTokens: 200,
+                operation: self::OPERATION,
+                model: config('ai.voice_script.model'),
+            ), $job);
+        } catch (\Throwable $e) {
+            Log::warning('تعذّرت ترجمة توجيه الأسلوب المخصص؛ تُرسل الملاحظات العربية', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        $english = Str::squish(str_replace([':', '"', '«', '»', '“', '”'], [',', '', '', '', '', ''], (string) ($response->data['direction'] ?? '')));
+        $english = trim((string) preg_replace('/^read aloud( in arabic)?,?\s*/i', '', $english), ' ,.;');
+
+        // لا حرف عربي في النتيجة ولا طول مبالغ: غير ذلك ليس ترجمة
+        if ($english === '' || mb_strlen($english) > 300 || preg_match('/\p{Arabic}/u', $english)) {
+            return null;
+        }
+
+        Cache::put($key, $english, now()->addDays(30));
+
+        return $english;
+    }
 
     /** @param  array{text: string, style?: ?string, language?: ?string}  $input */
     public function dispatch(Brand $brand, string $tool, array $input, ?int $userId = null): GenerationJob
@@ -157,7 +213,7 @@ TXT,
     protected function clean(string $tool, string $text): string
     {
         $text = trim($text);
-        $text = trim($text, "«»\"“”");
+        $text = trim($text, '«»"“”');
 
         if ($tool === 'direction') {
             return Str::squish(preg_replace('/[*_`#]+/u', '', $text));

@@ -169,6 +169,11 @@ class VoiceoverController extends Controller
             return response()->json(['message' => 'العينات تحتاج تفعيل التعليق الصوتي (مفتاح Gemini).'], 422);
         }
 
+        // فشلت آخر محاولة (حصة المزود مثلاً): السبب الآن بدل انتظار 45 ثانية ثم «تتأخر»
+        if ($reason = $samples->pullFailure($voice, $language)) {
+            return response()->json(['message' => $reason], 422);
+        }
+
         $url = $samples->request($voice, $language);
 
         return $url ? response()->json(['url' => $url]) : response()->json(['pending' => true], 202);

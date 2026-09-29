@@ -3,6 +3,7 @@
 namespace App\Services\Voiceover;
 
 use App\Services\Credits\CreditService;
+use App\Services\Settings\AiSettings;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\File;
  */
 class VoiceCatalog
 {
-    public function __construct(protected CreditService $credits) {}
+    public function __construct(protected CreditService $credits, protected AiSettings $settings) {}
 
     /** @return array<string, array> */
     public function voices(): array
@@ -34,7 +35,7 @@ class VoiceCatalog
             'gender' => $voice['gender'],
             'tone' => $voice['tone'] ?? '',
             'initial' => mb_substr($voice['name'], 0, 1),
-            'avatar' => $this->avatarUrl($voice),
+            'avatar' => $this->avatarUrl($key, $voice),
         ])->values()->all();
     }
 
@@ -55,6 +56,9 @@ class VoiceCatalog
 
     public function tiers(): array
     {
+        // نموذج كل مستوى قد يُضبط من صفحة الإعدادات: يُطبَّق قبل القراءة لا عند أول طلب للمزود
+        $this->settings->apply();
+
         return config('voiceover.tiers', []);
     }
 
@@ -69,6 +73,28 @@ class VoiceCatalog
         $words = VoiceScript::words($text);
 
         return max(1, (int) ceil($words / max(1, (int) config('voiceover.words_per_minute', 120))));
+    }
+
+    /** مدة تقريبية لنطق النص: الكلمات بسرعة الكلام المقيسة، وكل وسم أداء يضيف وقفة قصيرة. */
+    public function expectedSeconds(string $text): float
+    {
+        $tags = preg_match_all('/\[[^\]\n]{1,40}\]/u', $text);
+
+        return VoiceScript::words($text) / max(0.5, (float) config('voiceover.overlong.words_per_second', 2.0)) + $tags * 0.8;
+    }
+
+    /**
+     * تسجيل أطول بكثير من نصه: النموذج قرأ التوجيه أو كرر النص.
+     * الأسلوب المخصص مستثنى — «ببطء شديد» طويل بحق (همس بطيء بلغ ثلاثة أضعاف المعتاد في المراجعة).
+     */
+    public function looksOverlong(string $text, float $seconds, ?string $style = null): bool
+    {
+        if ($style === 'custom') {
+            return false;
+        }
+
+        return $seconds > $this->expectedSeconds($text) * (float) config('voiceover.overlong.factor', 1.8)
+            + (float) config('voiceover.overlong.grace_seconds', 3);
     }
 
     /** الدقائق المحتسبة من المدة الفعلية: كل دقيقة بدأت تُحسب. */
@@ -94,41 +120,41 @@ class VoiceCatalog
     }
 
     /**
-     * توجيه الأداء الذي يُرسل مع النص (لا يُنطق): الأسلوب ثم اللهجة.
+     * توجيه الأداء (لا يُنطق): عبارة واحدة، اللهجة ثم الأسلوب، تُكمل «Read aloud …:» عند المزود.
      *
-     * @param  array{style: string, custom_style?: ?string, language: string, dialect?: ?string, variant?: ?string, accent?: ?string}  $choice
+     * الأسلوب المخصص يُرسل مترجماً (custom_style_en) إن وُجد: ملاحظات التاجر العربية تجاهلها
+     * gemini-3.8-flash-tts في مراجعة الأنماط، والمترجمة التزم بها. بلا ترجمة تُرسل العربية كما هي.
+     *
+     * @param  array{style: string, custom_style?: ?string, custom_style_en?: ?string, language: string, dialect?: ?string, variant?: ?string, accent?: ?string}  $choice
      */
     public function direction(array $choice): string
     {
-        $lines = [];
+        $parts = [$this->accentDirection($choice)];
 
         if ($choice['style'] === 'custom') {
-            $custom = trim((string) ($choice['custom_style'] ?? ''));
+            $english = trim((string) ($choice['custom_style_en'] ?? ''));
+            $arabic = trim((string) ($choice['custom_style'] ?? ''));
 
-            if ($custom !== '') {
-                $lines[] = "Style: follow the client's delivery notes exactly (written in Arabic): «{$custom}»";
-            }
-        } elseif ($direction = $this->styles()[$choice['style']]['direction'] ?? null) {
-            $lines[] = "Style: {$direction}";
+            $parts[] = $english !== '' ? $english : ($arabic !== '' ? "following these delivery notes written in Arabic «{$arabic}»" : null);
+        } else {
+            $parts[] = $this->styles()[$choice['style']]['direction'] ?? null;
         }
 
-        $lines[] = 'Accent: '.$this->accentDirection($choice);
-
-        return implode("\n", $lines);
+        return implode(', ', array_filter($parts));
     }
 
-    protected function accentDirection(array $choice): string
+    public function accentDirection(array $choice): string
     {
         if (($choice['language'] ?? 'ar') === 'en') {
             $accent = $this->accents()[$choice['accent'] ?? ''] ?? $this->accents()[config('voiceover.default_accent')];
 
-            return 'Speak in English. '.$accent['direction'];
+            return $accent['direction'];
         }
 
         $dialect = $this->dialects()[$choice['dialect'] ?? ''] ?? $this->dialects()['auto'];
         $variant = $dialect['variants'][$choice['variant'] ?? ''] ?? null;
 
-        return 'Speak in Arabic. '.($variant['direction'] ?? $dialect['direction']);
+        return $variant['direction'] ?? $dialect['direction'];
     }
 
     /** «سعودية بيضاء»، «مصرية»، «English — British». */
@@ -156,11 +182,15 @@ class VoiceCatalog
         return $this->styles()[$style]['label'] ?? $style;
     }
 
-    /** صورة المذيع إن وُضعت في public/، وإلا null فتظهر أيقونة الحرف. */
-    protected function avatarUrl(array $voice): ?string
+    /**
+     * صورة المذيع (voiceover:avatars يولّدها في public/images/voices/<key>.jpg)، أو avatar صريح
+     * في الإعداد. بلا صورة = null فتظهر أيقونة الحرف الأول. بصمة وقت الملف تكسر الكاش عند إعادة التوليد.
+     */
+    protected function avatarUrl(string $key, array $voice): ?string
     {
-        $path = $voice['avatar'] ?? null;
+        $path = $voice['avatar'] ?? "images/voices/{$key}.jpg";
+        $file = public_path($path);
 
-        return $path && File::exists(public_path($path)) ? asset($path) : null;
+        return File::exists($file) ? asset($path).'?v='.File::lastModified($file) : null;
     }
 }

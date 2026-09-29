@@ -9,8 +9,11 @@ use App\Models\GenerationJob;
 use App\Models\MediaAsset;
 use App\Services\AI\AiManager;
 use App\Services\AI\DTO\SpeechRequest;
+use App\Services\AI\ProviderException;
 use App\Services\Credits\CreditService;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -33,6 +36,7 @@ class VoiceoverService
         protected AiManager $ai,
         protected CreditService $credits,
         protected VoiceCatalog $catalog,
+        protected VoiceScriptTools $scriptTools,
     ) {}
 
     /**
@@ -84,13 +88,38 @@ class VoiceoverService
 
         $job->markProcessing();
 
-        $response = $this->ai->generateSpeech(new SpeechRequest(
+        if (($payload['style'] ?? null) === 'custom' && filled($payload['custom_style'] ?? null)) {
+            $payload['custom_style_en'] = $this->scriptTools->englishDirection($payload['custom_style'], $job);
+        }
+
+        $request = new SpeechRequest(
             transcript: (string) $payload['text'],
             voice: $voice['provider_voice'],
             direction: $this->catalog->direction($payload),
             model: $tier['model'] ?? null,
             operation: self::OPERATION,
-        ), $job);
+        );
+
+        $response = $this->ai->generateSpeech($request, $job);
+
+        // حارس المدة: أطول بكثير من النص = قرأ التوجيه أو كرر. محاولة ثانية، ثم فشل بإرجاع النقاط
+        if ($this->catalog->looksOverlong($request->transcript, $response->durationSeconds, $payload['style'] ?? null)) {
+            Log::warning('تسجيل أطول من نصه؛ إعادة مرة', [
+                'job' => $job->id, 'model' => $response->model,
+                'seconds' => $response->durationSeconds, 'expected' => round($this->catalog->expectedSeconds($request->transcript), 1),
+            ]);
+
+            $response = $this->ai->generateSpeech($request, $job);
+
+            if ($this->catalog->looksOverlong($request->transcript, $response->durationSeconds, $payload['style'] ?? null)) {
+                throw new ProviderException(
+                    "التسجيل أطول من نصه مرتين ({$response->durationSeconds} ث)",
+                    $response->provider,
+                    200,
+                    display: 'تعذّر تسجيل نظيف لهذا النص (أضاف النموذج كلاماً ليس فيه). أُرجعت نقاطك — جرّب مستوى الجودة الآخر.',
+                );
+            }
+        }
 
         $disk = config('ai.media_disk');
         $path = "brands/{$brand->id}/voiceovers/".Str::uuid().'.wav';
@@ -110,6 +139,8 @@ class VoiceoverService
                 'voice' => $payload['voice'],
                 'style' => $payload['style'],
                 'custom_style' => $payload['custom_style'] ?? null,
+                // ما وصل النموذج فعلاً من الأسلوب المخصص (null = العربية كما هي)
+                'custom_style_en' => $payload['custom_style_en'] ?? null,
                 'language' => $payload['language'],
                 'dialect' => $payload['dialect'] ?? null,
                 'variant' => $payload['variant'] ?? null,
@@ -163,7 +194,7 @@ class VoiceoverService
     }
 
     /** «29 يوم و 23 ساعة» حتى الحذف التلقائي. */
-    protected function remaining(\Carbon\CarbonInterface $at): string
+    protected function remaining(CarbonInterface $at): string
     {
         $hours = max(0, (int) floor(now()->diffInMinutes($at, false) / 60));
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AI\AiManager;
+use App\Services\AI\DTO\SpeechRequest;
 use App\Services\AI\DTO\TextRequest;
 use App\Services\AI\ModelCatalog;
 use App\Services\AI\ProviderException;
@@ -32,6 +33,12 @@ class PlatformSettingsController extends Controller
         'gemini' => 'Google Gemini (Nano Banana)',
         'openrouter' => 'OpenRouter (عشرات نماذج الصور)',
         'fake' => 'وضع التجربة — بلا مفاتيح ولا تكلفة',
+    ];
+
+    /** النطق للتعليق الصوتي: Gemini TTS وحده بين المزودين المدعومين */
+    public const SPEECH_PROVIDERS = [
+        'gemini' => 'Google Gemini (TTS)',
+        'fake' => 'وضع التجربة — نغمة بدل الصوت، بلا تكلفة',
     ];
 
     /** أسماء العرض: ucfirst يعطي «Openrouter» */
@@ -65,6 +72,8 @@ class PlatformSettingsController extends Controller
                 ->all(),
             'textProviders' => self::TEXT_PROVIDERS,
             'imageProviders' => self::IMAGE_PROVIDERS,
+            'speechProviders' => self::SPEECH_PROVIDERS,
+            'voiceTiers' => config('voiceover.tiers', []),
         ]);
     }
 
@@ -73,6 +82,10 @@ class PlatformSettingsController extends Controller
         $data = $request->validate([
             'text_provider' => ['required', Rule::in(array_keys(self::TEXT_PROVIDERS))],
             'image_provider' => ['required', Rule::in(array_keys(self::IMAGE_PROVIDERS))],
+            // sometimes: نموذج حُفظ قبل قسم التعليق الصوتي (أو اختبار قديم) لا يُسقط الحفظ ولا يمسح اختياره
+            'speech_provider' => ['sometimes', 'required', Rule::in(array_keys(self::SPEECH_PROVIDERS))],
+            'voiceover_standard_model' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:\/-]+$/'],
+            'voiceover_hd_model' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:\/-]+$/'],
 
             'anthropic_api_key' => ['nullable', 'string', 'max:500'],
             'anthropic_model' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:\/-]+$/'],
@@ -100,6 +113,9 @@ class PlatformSettingsController extends Controller
         ], [
             'text_provider' => 'مزود النصوص',
             'image_provider' => 'مزود الصور',
+            'speech_provider' => 'مزود الصوت',
+            'voiceover_standard_model' => 'نموذج Marketerai 2.3',
+            'voiceover_hd_model' => 'نموذج Marketerai 3.1',
             'anthropic_api_key' => 'مفتاح Anthropic',
             'anthropic_model' => 'نموذج Anthropic',
             'anthropic_base_url' => 'رابط Anthropic',
@@ -137,12 +153,17 @@ class PlatformSettingsController extends Controller
             'openrouter.model' => $data['openrouter_model'] ?? null,
             'openrouter.image_model' => $data['openrouter_image_model'] ?? null,
             'openrouter.base_url' => $data['openrouter_base_url'] ?? null,
-        ], $clear, $request->user()->id);
+        ] + ($request->has('speech_provider') ? [
+            'ai.speech_provider' => $data['speech_provider'],
+            'voiceover.standard_model' => $data['voiceover_standard_model'] ?? null,
+            'voiceover.hd_model' => $data['voiceover_hd_model'] ?? null,
+        ] : []), $clear, $request->user()->id);
 
         $this->settings->apply();
 
         // مزود مختار بلا مفتاح سيُسقط كل توليد لاحق؛ الأفضل أن يعرف المدير الآن
-        $missing = collect([$data['text_provider'], $data['image_provider']])
+        $missing = collect([$data['text_provider'], $data['image_provider'], $data['speech_provider'] ?? null])
+            ->filter()
             ->unique()
             ->reject(fn ($p) => $p === 'fake' || filled(config("ai.providers.{$p}.api_key")));
 
@@ -158,6 +179,10 @@ class PlatformSettingsController extends Controller
      */
     public function test(Request $request, AiManager $ai): RedirectResponse
     {
+        if ($request->input('kind') === 'speech') {
+            return $this->testSpeech($request, $ai);
+        }
+
         $provider = $request->validate([
             'provider' => ['required', Rule::in(array_keys(self::LABELS))],
         ])['provider'];
@@ -196,6 +221,58 @@ class PlatformSettingsController extends Controller
             'الاتصال بـ %s يعمل — النموذج %s ردّ خلال %s ث.',
             self::LABELS[$provider] ?? $provider,
             $response->model,
+            number_format($response->latencyMs / 1000, 1)
+        ));
+    }
+
+    /**
+     * اختبار التعليق الصوتي لمستوى جودة بعينه: تسجيل كلمة واحدة بنموذجه.
+     * يكشف أيضاً نفاد الحصة: الحساب المجاني 10 طلبات نطق يومياً لكل نموذج.
+     */
+    protected function testSpeech(Request $request, AiManager $ai): RedirectResponse
+    {
+        $this->settings->apply();
+
+        $tier = $request->validate([
+            'tier' => ['required', Rule::in(array_keys(config('voiceover.tiers', [])))],
+        ])['tier'];
+
+        $provider = (string) config('ai.speech_provider');
+        $model = (string) config("voiceover.tiers.{$tier}.model");
+        $label = config("voiceover.tiers.{$tier}.label");
+
+        if (! $ai->ready($provider)) {
+            return back()->withErrors(['speech' => 'أضف مفتاح Gemini واحفظه أولاً، ثم اختبر التعليق الصوتي.']);
+        }
+
+        try {
+            $response = $ai->generateSpeech(new SpeechRequest(
+                transcript: 'مرحباً',
+                voice: 'Kore',
+                direction: 'in Arabic',
+                model: $model,
+                operation: 'settings.test',
+            ), null, $provider);
+        } catch (Throwable $e) {
+            $status = $e instanceof ProviderException ? $e->statusCode : null;
+
+            $hint = match (true) {
+                $e instanceof ProviderException && $e->quotaExhausted => ' — انتهت الحصة اليومية لهذا النموذج. الحساب المجاني يسمح بـ10 طلبات نطق يومياً لكل نموذج: فعّل الفوترة في Google AI Studio، أو اختر لهذا المستوى نموذجاً آخر.',
+                $status === 404 => " — النموذج «{$model}» غير متاح لحسابك؛ اختر نموذجاً آخر من القائمة واحفظ.",
+                $status === 401, $status === 403 => ' — المفتاح غير صحيح أو ملغى؛ الصق مفتاحاً جديداً في قسم Gemini.',
+                default => '',
+            };
+
+            return back()->withErrors([
+                'speech' => "فشل اختبار {$label} ({$model}){$hint} التفاصيل: ".mb_substr($e->getMessage(), 0, 200),
+            ]);
+        }
+
+        return back()->with('status', sprintf(
+            'التعليق الصوتي يعمل — %s بنموذج %s سجّل %s ث من الصوت خلال %s ث.',
+            $label,
+            $response->model,
+            number_format($response->durationSeconds, 1),
             number_format($response->latencyMs / 1000, 1)
         ));
     }
