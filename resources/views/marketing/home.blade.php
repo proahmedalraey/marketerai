@@ -64,7 +64,7 @@
             <div class="space-y-8 text-center lg:w-1/2 lg:text-start">
                 <div>
                     <span class="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-800">
-                        <x-icon name="rocket" class="h-4 w-4 text-primary" />
+                        <x-public.icon name="rocket" class="h-4 w-4 text-primary" />
                         محتوى بهويتك.. يبيع عنك.
                     </span>
 
@@ -85,7 +85,7 @@
                 <div class="flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
                     <a href="{{ route('register', ['trial' => 1]) }}" class="{{ $btnPrimary }}">
                         {{ Offer::trialLabel() }}
-                        <x-icon name="arrow-left" class="h-5 w-5" />
+                        <x-public.icon name="arrow-left" class="h-5 w-5" />
                     </a>
                     <a href="{{ route('login') }}" class="{{ $btnOutline }}">لدي حساب بالفعل</a>
                 </div>
@@ -112,7 +112,7 @@
                             <div class="absolute inset-0 bg-gradient-to-tr from-amber-50 to-white opacity-50"></div>
                             <div class="relative p-8 text-center">
                                 <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-primary">
-                                    <x-icon name="upload" class="h-7 w-7" />
+                                    <x-public.icon name="upload" class="h-7 w-7" />
                                 </span>
                                 <p class="mb-2 text-xl font-bold text-gray-800">مسوّقك الذكي يعمل</p>
                                 <p class="text-sm text-gray-500">يجهّز خطة محتوى لشهر كامل…</p>
@@ -127,7 +127,7 @@
                         <div class="absolute -bottom-6 -right-6 rounded-xl border border-gray-100 bg-white p-4 shadow-xl motion-safe:animate-float-y">
                             <div class="flex items-center gap-3">
                                 <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-600">
-                                    <x-icon name="check-circle" class="h-5 w-5" />
+                                    <x-public.icon name="check-circle" class="h-5 w-5" />
                                 </span>
                                 <div>
                                     <p class="font-bold text-gray-800">جاهز للنشر</p>
@@ -164,7 +164,7 @@
                 <div x-show="!playing" class="absolute inset-0 grid place-items-center">
                     <div class="-mt-6 flex flex-col items-center gap-2 text-center md:mt-0 md:gap-4">
                         <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-white shadow-xl shadow-primary/30 md:h-24 md:w-24 md:rounded-3xl">
-                            <x-icon name="sparkles" class="h-6 w-6 md:h-12 md:w-12" />
+                            <x-public.icon name="sparkles" class="h-6 w-6 md:h-12 md:w-12" />
                         </span>
                         <span class="text-3xl font-extrabold text-gray-900 md:text-6xl">مسوّق</span>
                         <span class="text-sm font-bold text-primary-ink md:text-xl">المحتوى صار أسرع… وأصدق</span>
@@ -173,7 +173,7 @@
                     @if ($video)
                         <button type="button" @click="playing = true" class="group absolute inset-0 grid place-items-center">
                             <span class="grid h-20 w-20 place-items-center rounded-full bg-white text-primary shadow-2xl transition-transform duration-300 group-hover:scale-110">
-                                <x-icon name="play" class="h-8 w-8" />
+                                <x-public.icon name="play" class="h-8 w-8" />
                             </span>
                             <span class="sr-only">تشغيل الفيديو التعريفي</span>
                         </button>
@@ -226,7 +226,7 @@
                     <div class="flex flex-1 flex-col p-6">
                         <div class="mb-3 flex items-center gap-3">
                             <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-50 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
-                                <x-icon :name="$icon" class="h-5 w-5" />
+                                <x-public.icon :name="$icon" class="h-5 w-5" />
                             </span>
                             <h3 class="text-lg font-bold leading-tight text-gray-900">{{ $title }}</h3>
                         </div>
@@ -264,7 +264,7 @@
                         </div>
 
                         <div class="absolute start-0 z-10 grid h-16 w-16 shrink-0 place-items-center rounded-full border-4 border-amber-500 bg-white shadow-lg shadow-amber-200/50 md:relative md:start-auto">
-                            <x-icon :name="$icon" class="h-6 w-6 text-amber-600" />
+                            <x-public.icon :name="$icon" class="h-6 w-6 text-amber-600" />
                             <span class="absolute -left-2 -top-2 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-gray-900 text-xs font-bold text-white">{{ sprintf('%02d', $i + 1) }}</span>
                         </div>
 
@@ -308,7 +308,7 @@
                         @foreach ($plan['features'] as $item)
                             <li class="flex items-center gap-3">
                                 <span class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-green-100 text-green-600">
-                                    <x-icon name="check" class="h-3 w-3" stroke="3" />
+                                    <x-public.icon name="check" class="h-3 w-3" stroke="3" />
                                 </span>
                                 <span class="text-sm font-medium text-gray-600">{{ $item }}</span>
                             </li>
@@ -337,7 +337,7 @@
             @foreach ($audience as [$icon, $label])
                 <div class="flex flex-col items-center rounded-xl bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md">
                     <span class="mb-4 grid h-16 w-16 place-items-center rounded-full bg-amber-50 text-primary">
-                        <x-icon :name="$icon" class="h-8 w-8" />
+                        <x-public.icon :name="$icon" class="h-8 w-8" />
                     </span>
                     <h3 class="font-bold text-gray-800">{{ $label }}</h3>
                 </div>
@@ -353,7 +353,7 @@
 
     <div class="mx-auto max-w-7xl px-4 text-center md:px-6">
         <span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-gray-200 bg-white text-primary shadow-sm">
-            <x-icon name="handshake" class="h-6 w-6" />
+            <x-public.icon name="handshake" class="h-6 w-6" />
         </span>
         <h2 class="mt-5 text-3xl font-bold text-gray-900">الوكلاء والشركاء المعتمدون</h2>
         <p class="mt-2 text-xs font-semibold tracking-[0.25em] text-gray-500" dir="ltr">AUTHORIZED PARTNERS &amp; AGENTS</p>
@@ -367,7 +367,7 @@
                     </div>
                     <div class="flex-1 p-6">
                         <span class="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-gray-700">
-                            <x-icon name="check-circle" class="h-3.5 w-3.5 text-primary" />
+                            <x-public.icon name="check-circle" class="h-3.5 w-3.5 text-primary" />
                             شريك ووكيل معتمد
                             <span class="h-3 w-px bg-orange-200" aria-hidden="true"></span>
                             <span class="text-[10px] tracking-wider text-gray-500" dir="ltr">AUTHORIZED PARTNER</span>
@@ -381,11 +381,11 @@
             @empty
                 <article class="flex overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                     <div class="grid w-32 shrink-0 place-items-center border-e border-gray-100 bg-gray-50 p-4 text-primary">
-                        <x-icon name="handshake" class="h-12 w-12" stroke="1.25" />
+                        <x-public.icon name="handshake" class="h-12 w-12" stroke="1.25" />
                     </div>
                     <div class="flex-1 p-6">
                         <span class="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-gray-700">
-                            <x-icon name="sparkles" class="h-3.5 w-3.5 text-primary" />
+                            <x-public.icon name="sparkles" class="h-3.5 w-3.5 text-primary" />
                             برنامج الشركاء
                             <span class="h-3 w-px bg-orange-200" aria-hidden="true"></span>
                             <span class="text-[10px] tracking-wider text-gray-500" dir="ltr">PARTNER PROGRAM</span>
@@ -394,7 +394,7 @@
                         <p class="mt-1 text-sm text-gray-500">كن وكيلًا معتمدًا وقدّم المنصة لعملائك في منطقتك.</p>
                         @if ($salesEmail)
                             <a href="mailto:{{ $salesEmail }}" class="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary-ink hover:underline">
-                                تواصل معنا <x-icon name="arrow-left" class="h-4 w-4" />
+                                تواصل معنا <x-public.icon name="arrow-left" class="h-4 w-4" />
                             </a>
                         @endif
                     </div>
@@ -417,7 +417,7 @@
                 <details class="group overflow-hidden rounded-xl border border-gray-200 bg-white px-6">
                     <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-start text-sm font-medium text-gray-900 [&::-webkit-details-marker]:hidden">
                         {{ $question }}
-                        <x-icon name="chevron-down" class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 group-open:rotate-180" />
+                        <x-public.icon name="chevron-down" class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 group-open:rotate-180" />
                     </summary>
                     <p class="pb-5 text-sm leading-relaxed text-gray-600">{{ $answer }}</p>
                 </details>
@@ -431,7 +431,7 @@
     <div class="mx-auto max-w-7xl px-4 md:px-6">
         <div class="mx-auto max-w-4xl rounded-2xl border-2 border-orange-500 bg-white p-8 text-center md:p-12">
             <span class="mb-8 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1 text-primary-ink">
-                <x-icon name="sparkles" class="h-4 w-4" />
+                <x-public.icon name="sparkles" class="h-4 w-4" />
                 <span class="text-sm font-medium">ابدأ رحلتك اليوم</span>
             </span>
 
@@ -446,7 +446,7 @@
             <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <a href="{{ route('register') }}" class="{{ $btnPrimary }} px-10">
                     اشترك الآن بـ {{ Offer::monthly() }}
-                    <x-icon name="arrow-left" class="h-5 w-5" />
+                    <x-public.icon name="arrow-left" class="h-5 w-5" />
                 </a>
                 @if ($salesEmail)
                     <a href="mailto:{{ $salesEmail }}" class="inline-flex w-full items-center justify-center rounded-full border-2 border-gray-300 px-8 py-4 text-lg font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">تواصل مع المبيعات</a>
@@ -455,7 +455,7 @@
 
             <div class="mt-6 flex justify-center">
                 <a href="{{ route('register', ['trial' => 1]) }}" class="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-primary bg-white px-8 py-4 text-[1.1875rem] font-bold text-primary transition-colors hover:bg-amber-50 sm:w-auto">
-                    <x-icon name="pointer-click" class="h-5 w-5" />
+                    <x-public.icon name="pointer-click" class="h-5 w-5" />
                     {{ Offer::trialLabel() }}
                 </a>
             </div>

@@ -1,7 +1,7 @@
 {{-- شعار «مسوق AI»: بلاطة الشرارة، والاسم العربي وتحته الاسم اللاتيني --}}
 <span {{ $attributes->class('inline-flex items-center gap-2.5') }}>
     <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-md shadow-primary/30">
-        <x-icon name="sparkles" class="h-5 w-5" />
+        <x-public.icon name="sparkles" class="h-5 w-5" />
     </span>
     <span class="flex flex-col items-start leading-none">
         <span class="font-cairo text-[1.6rem] font-extrabold leading-[1.05] text-gray-900">مسوّق</span>

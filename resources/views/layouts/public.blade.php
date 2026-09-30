@@ -59,8 +59,8 @@
 
         <button type="button" class="grid h-11 w-11 place-items-center rounded-full text-gray-600 md:hidden"
                 @click="open = !open" :aria-expanded="open.toString()" aria-controls="mobile-nav">
-            <x-icon name="menu" class="h-6 w-6" x-show="!open" />
-            <x-icon name="close" class="h-6 w-6" x-show="open" x-cloak />
+            <x-public.icon name="menu" class="h-6 w-6" x-show="!open" />
+            <x-public.icon name="close" class="h-6 w-6" x-show="open" x-cloak />
             <span class="sr-only">القائمة</span>
         </button>
     </div>
@@ -126,17 +126,17 @@
             <div class="flex items-center gap-2">
                 @if ($contact['email'])
                     <a href="mailto:{{ $contact['email'] }}" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-blue-100 hover:text-blue-700">
-                        <x-icon name="mail" class="h-4 w-4" /><span class="sr-only">البريد الإلكتروني</span>
+                        <x-public.icon name="mail" class="h-4 w-4" /><span class="sr-only">البريد الإلكتروني</span>
                     </a>
                 @endif
                 @if ($contact['whatsapp'])
                     <a href="https://wa.me/{{ preg_replace('/\D/', '', $contact['whatsapp']) }}" target="_blank" rel="noopener" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-green-100 hover:text-green-700">
-                        <x-icon name="thread" class="h-4 w-4" /><span class="sr-only">واتساب</span>
+                        <x-public.icon name="thread" class="h-4 w-4" /><span class="sr-only">واتساب</span>
                     </a>
                 @endif
                 @if ($contact['instagram'])
                     <a href="{{ $contact['instagram'] }}" target="_blank" rel="noopener" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-pink-100 hover:text-pink-700">
-                        <x-icon name="instagram" class="h-4 w-4" /><span class="sr-only">إنستغرام</span>
+                        <x-public.icon name="instagram" class="h-4 w-4" /><span class="sr-only">إنستغرام</span>
                     </a>
                 @endif
             </div>

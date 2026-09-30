@@ -31,7 +31,7 @@
     <div class="mx-auto max-w-3xl px-4">
         <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-800">
             من نحن
-            <x-icon name="sparkles" class="h-4 w-4 text-primary" />
+            <x-public.icon name="sparkles" class="h-4 w-4 text-primary" />
         </span>
         <h1 class="mt-6 text-4xl font-bold leading-tight text-gray-900 md:text-5xl">
             منصة عربية تفهم<br>
@@ -55,7 +55,7 @@
             @foreach ($pillars as [$icon, $title, $text])
                 <article class="flex items-start gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-50 text-primary">
-                        <x-icon :name="$icon" class="h-5 w-5" />
+                        <x-public.icon :name="$icon" class="h-5 w-5" />
                     </span>
                     <div>
                         <h2 class="font-bold text-gray-900">{{ $title }}</h2>
@@ -80,7 +80,7 @@
             @foreach ($uses as [$icon, $title, $tag, $text])
                 <article class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
                     <span class="mb-6 grid h-10 w-10 place-items-center rounded-lg bg-amber-50 text-primary">
-                        <x-icon :name="$icon" class="h-5 w-5" />
+                        <x-public.icon :name="$icon" class="h-5 w-5" />
                     </span>
                     <h3 class="font-bold leading-snug text-gray-900">{{ $title }}</h3>
                     <p class="mt-1 text-sm font-semibold text-primary-ink">{{ $tag }}</p>
@@ -100,10 +100,10 @@
             <div class="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <a href="{{ route('register') }}" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-[1.1875rem] font-bold text-white shadow-lg shadow-amber-200/50 transition-colors hover:bg-primary-hover sm:w-auto">
                     اشترك الآن
-                    <x-icon name="arrow-left" class="h-5 w-5" />
+                    <x-public.icon name="arrow-left" class="h-5 w-5" />
                 </a>
                 <a href="{{ route('home') }}" class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-8 py-4 text-lg font-semibold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
-                    <x-icon name="arrow-right" class="h-5 w-5" />
+                    <x-public.icon name="arrow-right" class="h-5 w-5" />
                     العودة للرئيسية
                 </a>
             </div>

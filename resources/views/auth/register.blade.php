@@ -7,7 +7,7 @@
 
 @section('switch')
     <a href="{{ route('login') }}" class="inline-flex items-center gap-1.5 text-lg font-semibold text-primary-ink hover:underline underline-offset-4">
-        <x-icon name="login" class="h-5 w-5" />
+        <x-public.icon name="login" class="h-5 w-5" />
         لدي حساب بالفعل
     </a>
 @endsection
@@ -30,7 +30,7 @@
     @csrf
 
     <div>
-        <label for="name" class="{{ $label }}"><x-icon name="user" class="h-4 w-4 text-gray-400" /> الاسم</label>
+        <label for="name" class="{{ $label }}"><x-public.icon name="user" class="h-4 w-4 text-gray-400" /> الاسم</label>
         <input id="name" name="name" type="text" value="{{ old('name') }}" placeholder="أدخل اسمك"
                class="{{ $input }} @error('name') {{ $bad }} @else {{ $ok }} @enderror"
                autocomplete="name" required autofocus
@@ -39,7 +39,7 @@
     </div>
 
     <div>
-        <label for="email" class="{{ $label }}"><x-icon name="mail" class="h-4 w-4 text-gray-400" /> البريد الإلكتروني</label>
+        <label for="email" class="{{ $label }}"><x-public.icon name="mail" class="h-4 w-4 text-gray-400" /> البريد الإلكتروني</label>
         <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="example@email.com" dir="ltr"
                class="{{ $input }} text-left @error('email') {{ $bad }} @else {{ $ok }} @enderror"
                autocomplete="email" inputmode="email" required
@@ -48,7 +48,7 @@
     </div>
 
     <div>
-        <label for="password" class="{{ $label }}"><x-icon name="lock" class="h-4 w-4 text-gray-400" /> كلمة السر</label>
+        <label for="password" class="{{ $label }}"><x-public.icon name="lock" class="h-4 w-4 text-gray-400" /> كلمة السر</label>
         <div class="relative" x-data="{ show: false }">
             <input id="password" name="password" type="password" :type="show ? 'text' : 'password'"
                    placeholder="أدخل كلمة السر (8 أحرف على الأقل)"
@@ -57,7 +57,7 @@
                    @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
             <button type="button" @click="show = !show" :aria-pressed="show.toString()"
                     class="absolute inset-y-0 end-0 grid w-12 place-items-center rounded-xl text-gray-400 transition-colors hover:text-gray-600">
-                <x-icon name="eye" class="h-5 w-5" />
+                <x-public.icon name="eye" class="h-5 w-5" />
                 <span class="sr-only">إظهار كلمة السر</span>
             </button>
         </div>
@@ -65,7 +65,7 @@
     </div>
 
     <fieldset>
-        <legend class="{{ $label }}"><x-icon name="sparkles" class="h-4 w-4 text-primary" /> اختر الباقة</legend>
+        <legend class="{{ $label }}"><x-public.icon name="sparkles" class="h-4 w-4 text-primary" /> اختر الباقة</legend>
         <div class="flex gap-3 pt-1">
             @foreach ([
                 'monthly' => [Offer::monthly(), 'شهر'],
@@ -80,7 +80,7 @@
                         <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary-strong px-2.5 py-0.5 text-[11px] font-bold text-white">الأفضل</span>
                     @endif
                     <span x-show="plan === '{{ $key }}'" x-cloak class="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-primary text-white" aria-hidden="true">
-                        <x-icon name="check" class="h-3 w-3" stroke="3" />
+                        <x-public.icon name="check" class="h-3 w-3" stroke="3" />
                     </span>
 
                     <span class="text-base font-bold text-gray-900">{{ config("marketing.plans.$key.short") }}</span>
@@ -102,7 +102,7 @@
     </label>
 
     <div>
-        <label for="coupon" class="{{ $label }}"><x-icon name="tag" class="h-4 w-4 text-gray-400" /> كود الخصم (اختياري)</label>
+        <label for="coupon" class="{{ $label }}"><x-public.icon name="tag" class="h-4 w-4 text-gray-400" /> كود الخصم (اختياري)</label>
         <input id="coupon" name="coupon" type="text" value="{{ old('coupon') }}" placeholder="أدخل كود الخصم"
                class="{{ $input }} {{ $ok }} text-center" autocomplete="off">
     </div>

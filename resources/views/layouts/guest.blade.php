@@ -39,7 +39,7 @@
         </div>
 
         <a href="{{ route('home') }}" class="mx-auto mt-6 flex w-fit items-center gap-2 text-gray-500 transition-colors hover:text-gray-800">
-            <x-icon name="arrow-right" class="h-5 w-5" />
+            <x-public.icon name="arrow-right" class="h-5 w-5" />
             العودة للصفحة الرئيسية
         </a>
     </main>

@@ -5,7 +5,7 @@
 
 @section('switch')
     <a href="{{ route('register') }}" class="inline-flex items-center gap-1.5 text-lg font-semibold text-primary-ink hover:underline underline-offset-4">
-        <x-icon name="user-plus" class="h-5 w-5" />
+        <x-public.icon name="user-plus" class="h-5 w-5" />
         ليس لدي حساب
     </a>
 @endsection
@@ -22,7 +22,7 @@
     @csrf
 
     <div>
-        <label for="email" class="{{ $label }}"><x-icon name="mail" class="h-4 w-4 text-gray-400" /> البريد الإلكتروني</label>
+        <label for="email" class="{{ $label }}"><x-public.icon name="mail" class="h-4 w-4 text-gray-400" /> البريد الإلكتروني</label>
         <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="example@email.com" dir="ltr"
                class="{{ $input }} text-left @error('email') {{ $bad }} @else {{ $ok }} @enderror"
                autocomplete="email" inputmode="email" required autofocus
@@ -31,7 +31,7 @@
     </div>
 
     <div>
-        <label for="password" class="{{ $label }}"><x-icon name="lock" class="h-4 w-4 text-gray-400" /> كلمة السر</label>
+        <label for="password" class="{{ $label }}"><x-public.icon name="lock" class="h-4 w-4 text-gray-400" /> كلمة السر</label>
         <div class="relative" x-data="{ show: false }">
             <input id="password" name="password" type="password" :type="show ? 'text' : 'password'"
                    placeholder="أدخل كلمة السر"
@@ -40,7 +40,7 @@
                    @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
             <button type="button" @click="show = !show" :aria-pressed="show.toString()"
                     class="absolute inset-y-0 end-0 grid w-12 place-items-center rounded-xl text-gray-400 transition-colors hover:text-gray-600">
-                <x-icon name="eye" class="h-5 w-5" />
+                <x-public.icon name="eye" class="h-5 w-5" />
                 <span class="sr-only">إظهار كلمة السر</span>
             </button>
         </div>
