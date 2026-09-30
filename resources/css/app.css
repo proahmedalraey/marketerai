@@ -265,7 +265,7 @@
     /* مؤشر بصري ثانٍ غير اللون — الحالة لا تُنقل باللون وحده */
     .nav-link-active::before {
         content: "";
-        @apply absolute end-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-s-full bg-brand-600;
+        @apply absolute start-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-e-full bg-brand-600;
     }
 
     .dark .nav-link-active { @apply bg-brand-500/15 text-brand-300; }
@@ -290,6 +290,12 @@
     .dark .nav-group-toggle-active { @apply text-brand-300; }
 
     .nav-group-chevron { @apply w-4 h-4 text-fg-subtle shrink-0 transition-transform duration-200; }
+
+    /* السهم عند فتح القسم: دائرة بارزة */
+    .nav-group-chevron-open {
+        @apply w-6 h-6 p-1 rounded-full bg-brand-500/15 text-brand-600 ring-1 ring-brand-500/40;
+    }
+    .dark .nav-group-chevron-open { @apply text-brand-300; }
 
     /* ---------- القائمة الجانبية: الوضع المطوي (أيقونات فقط) ---------- */
     /*

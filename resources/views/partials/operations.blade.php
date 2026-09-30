@@ -25,8 +25,30 @@
     {{-- المقبض الجانبي: نصفه داخل الحافة، وعدده هو ما يعمل الآن --}}
     <button
         type="button"
-        @click="toggle()"
-        class="fixed z-30 top-1/2 -translate-y-1/2 end-0 flex flex-col items-center gap-1 py-3 px-2
+        x-data="{
+            y: 0.5, dragging: false, moved: false, startY: 0, startFrac: 0,
+            init() {
+                try { const v = parseFloat(localStorage.getItem('ops-handle-y')); if (v >= 0.08 && v <= 0.92) this.y = v; } catch (e) {}
+            },
+            down(e) { this.dragging = true; this.moved = false; this.startY = e.clientY; this.startFrac = this.y; e.currentTarget.setPointerCapture(e.pointerId); },
+            move(e) {
+                if (! this.dragging) return;
+                const dy = e.clientY - this.startY;
+                if (Math.abs(dy) > 4) this.moved = true;
+                if (this.moved) this.y = Math.min(0.92, Math.max(0.08, this.startFrac + dy / window.innerHeight));
+            },
+            up() {
+                this.dragging = false;
+                if (this.moved) { try { localStorage.setItem('ops-handle-y', this.y); } catch (e) {} }
+            },
+        }"
+        @pointerdown="down($event)"
+        @pointermove="move($event)"
+        @pointerup="up()"
+        @pointercancel="up()"
+        @click="moved ? (moved = false) : toggle()"
+        :style="`top: ${y * 100}%`"
+        class="fixed z-30 -translate-y-1/2 end-0 touch-none select-none cursor-grab active:cursor-grabbing flex flex-col items-center gap-1 py-3 px-2
                rounded-s-2xl border border-e-0 border-line bg-card shadow-lg text-fg-muted
                transition hover:text-fg hover:ps-3"
         :aria-expanded="isOpen ? 'true' : 'false'"
