@@ -5,7 +5,7 @@
         <h2 id="vo-voice-title" class="text-[15px] font-bold text-fg">إعدادات الصوت</h2>
         <span x-show="voice" class="vo-head-check"><x-icon name="check" class="w-3.5 h-3.5" /></span>
         <span class="text-xs text-fg-subtle truncate" x-text="selectedVoice?.name ?? ''"></span>
-        <x-icon name="chevron-up" class="ms-auto w-5 h-5 text-fg-subtle transition-transform duration-200" x-bind:class="! open.voice && 'rotate-180'" />
+        @include('content.voiceover._toggle', ['open' => 'open.voice', 'class' => 'ms-auto'])
     </button>
 
     <div x-show="open.voice" class="border-t border-line px-4 sm:px-6 py-5 space-y-4">

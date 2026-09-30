@@ -5,11 +5,11 @@
         <h2 id="vo-history-title" class="text-[15px] font-bold text-fg">السجل السابق</h2>
         <span class="vo-count" x-text="`${history.length} ملف`"></span>
         <button
-            type="button" @click="historyOpen = ! historyOpen" class="ms-auto btn-ghost btn-sm btn-icon"
+            type="button" @click="historyOpen = ! historyOpen" class="vo-toggle-btn ms-auto rounded-full"
             :aria-expanded="historyOpen ? 'true' : 'false'" aria-controls="vo-history-list"
             :aria-label="historyOpen ? 'طي السجل' : 'فتح السجل'"
         >
-            <x-icon name="chevron-up" class="w-5 h-5 transition-transform duration-200" x-bind:class="! historyOpen && 'rotate-180'" />
+            @include('content.voiceover._toggle', ['open' => 'historyOpen'])
         </button>
     </div>
 

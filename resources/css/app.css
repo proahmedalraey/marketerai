@@ -604,6 +604,30 @@
         @apply grid place-items-center w-6 h-6 shrink-0 rounded-full border border-line-strong text-fg-muted;
     }
 
+    /* زر طي القسم: دائرة بظل خفيف ترتفع قليلاً عند المرور، و«+» تصير «−» حين يُفتح */
+    .vo-toggle {
+        @apply grid place-items-center w-9 h-9 shrink-0 rounded-full border border-line bg-card text-fg-muted
+               shadow-[0_1px_2px_rgb(41_31_24/.06),0_4px_10px_-4px_rgb(41_31_24/.18)]
+               transition duration-200 ease-out;
+    }
+
+    .dark .vo-toggle { @apply shadow-[0_1px_2px_rgb(0_0_0/.4),0_6px_14px_-6px_rgb(0_0_0/.6)]; }
+
+    :is(button.vo-head, .vo-toggle-btn):hover .vo-toggle {
+        @apply -translate-y-px border-line-strong text-fg shadow-[0_2px_4px_rgb(41_31_24/.08),0_8px_18px_-6px_rgb(41_31_24/.28)];
+    }
+
+    :is(button.vo-head, .vo-toggle-btn)[aria-expanded="true"] .vo-toggle { @apply text-fg; }
+
+    :is(button.vo-head, .vo-toggle-btn):focus-visible .vo-toggle { @apply ring-2 ring-brand-500 ring-offset-2 ring-offset-card; }
+
+    /* الخط العمودي ينطوي حول مركزه */
+    .vo-toggle-bar {
+        transform-box: fill-box;
+        transform-origin: center;
+        transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1), opacity .2s ease-out;
+    }
+
     .vo-sub-icon {
         @apply grid place-items-center w-8 h-8 shrink-0 rounded-lg bg-muted text-fg-muted;
     }
