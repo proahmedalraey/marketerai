@@ -11,8 +11,8 @@
             ],
         ],
         [
-            'label' => 'كتابة المحتوى',
-            'icon'  => 'pen',
+            'label' => 'الكتابة والتخطيط',
+            'icon'  => 'layers',
             'items' => [
                 ['route' => 'content.generator', 'label' => 'كتابة المحتوى', 'icon' => 'pen', 'active' => ['content.generator']],
                 ['route' => 'content.plan',      'label' => 'الخطة الشهرية', 'icon' => 'calendar', 'active' => ['content.plan', 'content.show']],
@@ -31,7 +31,7 @@
     if (auth()->user()?->can('manage-platform')) {
         $groups[] = [
             'label' => 'المنصة',
-            'icon'  => 'settings',
+            'icon'  => 'shield-check',
             'items' => [
                 ['route' => 'settings.ai', 'label' => 'الإعدادات', 'icon' => 'settings', 'active' => ['settings.*']],
             ],
@@ -109,7 +109,7 @@
         <button
             type="button"
             @click="$store.nav.toggleCollapsed()"
-            class="btn btn-ghost btn-sm btn-icon hidden lg:inline-flex shrink-0"
+            class="btn btn-icon hidden lg:inline-flex shrink-0 !w-8 !h-8 !min-h-0 rounded-full border border-brand-500/40 bg-brand-500/15 text-brand-600 shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-500/25 dark:text-brand-300"
             :aria-pressed="$store.nav.collapsed ? 'true' : 'false'"
         >
             <x-icon
@@ -159,7 +159,7 @@
                     <x-icon
                         name="chevron-down"
                         class="nav-group-chevron"
-                        x-bind:class="{ 'rotate-180': $store.navGroups.isOpen('{{ $groupKey }}', {{ $groupActiveJs }}) }"
+                        x-bind:class="{ 'rotate-180 nav-group-chevron-open': $store.navGroups.isOpen('{{ $groupKey }}', {{ $groupActiveJs }}) }"
                     />
                 </button>
 

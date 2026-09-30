@@ -62,7 +62,7 @@
                     aria-controls="app-sidebar"
                     :aria-expanded="$store.nav.open ? 'true' : 'false'"
                 >
-                    <x-icon name="menu" class="w-5 h-5" />
+                    <x-icon name="panel-right" class="w-5 h-5" />
                     <span class="sr-only">فتح القائمة</span>
                 </button>
 
