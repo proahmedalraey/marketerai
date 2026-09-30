@@ -33,13 +33,35 @@
     @endunless
 
     <div class="grid gap-5 items-start lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div class="min-w-0 space-y-4">
-            @include('content.voiceover._style')
-            @include('content.voiceover._content')
-            @include('content.voiceover._language')
-            @include('content.voiceover._voice')
-            @include('content.voiceover._actions')
-        </div>
+        {{-- مسار الخطوات: كل قسم خطوة، والخط يُملأ كلما اكتملت واحدة حتى زر التوليد --}}
+        @php
+            $steps = ['style' => 'نمط الإلقاء', 'content' => 'المحتوى', 'language' => 'اللغة واللهجة', 'voice' => 'إعدادات الصوت'];
+        @endphp
+
+        <ol class="vo-steps min-w-0 space-y-4" aria-label="خطوات التعليق الصوتي">
+            @foreach ($steps as $step => $label)
+                <li
+                    class="vo-step" :data-state="stepState('{{ $step }}')"
+                    @if ($loop->last) style="--next-dot: 1.5rem" @endif
+                >
+                    <span class="vo-step-dot" aria-hidden="true">
+                        <x-icon name="check" stroke="3" class="w-3.5 h-3.5" x-show="stepState('{{ $step }}') === 'done'" />
+                        <span x-show="stepState('{{ $step }}') !== 'done'">{{ $loop->iteration }}</span>
+                    </span>
+                    <span class="sr-only" x-text="`الخطوة {{ $loop->iteration }} ({{ $label }}): ${stepState('{{ $step }}') === 'done' ? 'مكتملة' : 'غير مكتملة'}`"></span>
+
+                    @include('content.voiceover._'.$step)
+                </li>
+            @endforeach
+
+            <li class="vo-step vo-step-final" :data-state="complete ? 'done' : 'todo'">
+                <span class="vo-step-dot" aria-hidden="true">
+                    <x-icon name="sparkles" class="w-3.5 h-3.5" />
+                </span>
+
+                @include('content.voiceover._actions')
+            </li>
+        </ol>
 
         @include('content.voiceover._history')
     </div>

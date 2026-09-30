@@ -1,5 +1,22 @@
 {{-- ================= التوليد والدفعة ================= --}}
+{{-- الزر أولاً: نقطة نهاية مسار الخطوات تُحاذي منتصفه، والتنبيهات تظهر تحته لا فوقه --}}
 <div class="space-y-3">
+
+    <button
+        type="button" @click="generate()"
+        class="btn-dark btn-lg w-full" :data-busy="generating ? 'true' : 'false'"
+        :disabled="! speechReady"
+    >
+        <x-icon name="refresh" class="w-[18px] h-[18px]" />
+        <span>توليد التعليق الصوتي</span>
+        <span x-show="cost" x-cloak class="text-xs font-normal opacity-75 tnum" x-text="`· ≈ ${cost} نقطة`"></span>
+    </button>
+
+    <button type="button" @click="addToBatch()" class="btn-secondary btn-lg w-full" :disabled="! speechReady">
+        <x-icon name="plus" class="w-[18px] h-[18px]" />
+        <span>إضافة للدفعة</span>
+        <span x-show="batch.length" x-cloak class="chip-neutral tnum" x-text="batch.length"></span>
+    </button>
 
     <div x-show="showErrors && ! complete" x-cloak class="alert-warning" role="alert">
         <x-icon name="alert" class="w-5 h-5 shrink-0 mt-px" />
@@ -25,22 +42,6 @@
     <p x-show="cost > balance" x-cloak class="text-xs text-warning-fg px-1">
         رصيدك <span class="tnum" x-text="balance"></span> نقطة، والتقدير لهذا النص ≈ <span class="tnum" x-text="cost"></span>. اختصر النص أو اختر جودة أخف.
     </p>
-
-    <button
-        type="button" @click="generate()"
-        class="btn-dark btn-lg w-full" :data-busy="generating ? 'true' : 'false'"
-        :disabled="! speechReady"
-    >
-        <x-icon name="refresh" class="w-[18px] h-[18px]" />
-        <span>توليد التعليق الصوتي</span>
-        <span x-show="cost" x-cloak class="text-xs font-normal opacity-75 tnum" x-text="`· ≈ ${cost} نقطة`"></span>
-    </button>
-
-    <button type="button" @click="addToBatch()" class="btn-secondary btn-lg w-full" :disabled="! speechReady">
-        <x-icon name="plus" class="w-[18px] h-[18px]" />
-        <span>إضافة للدفعة</span>
-        <span x-show="batch.length" x-cloak class="chip-neutral tnum" x-text="batch.length"></span>
-    </button>
 
     <p class="text-center text-[11px] text-fg-subtle leading-relaxed">
         تُحجز نقاط تقديرية حسب طول النص، ويُرجع ما لم يُستهلك بعد التسجيل بمدته الفعلية.

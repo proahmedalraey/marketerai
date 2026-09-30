@@ -721,8 +721,12 @@
     .vo-tier[aria-checked="true"] .vo-radio::after { content: ""; @apply w-2 h-2 rounded-full bg-fg-inverse; }
 
     /* منطقة تمرير بشريط بلون الهوية (قوائم المذيعين والمحتوى والسجل) */
+    /*
+     * بلا overscroll-contain عمداً: عند آخر القائمة يكمل التمرير الصفحة نفسها،
+     * وإلا علق المؤشر داخل القائمة حتى يُخرجه التاجر منها.
+     */
     .vo-scroll {
-        @apply overflow-y-auto overscroll-contain;
+        @apply overflow-y-auto;
         scrollbar-width: thin;
         scrollbar-color: rgb(var(--brand-500)) rgb(var(--muted));
     }
@@ -730,6 +734,51 @@
     .vo-scroll::-webkit-scrollbar { width: 8px; }
     .vo-scroll::-webkit-scrollbar-track { background: rgb(var(--muted)); border-radius: 9999px; }
     .vo-scroll::-webkit-scrollbar-thumb { background: rgb(var(--brand-500)); border: 0; border-radius: 9999px; }
+
+    /*
+     * مسار الخطوات: خط عمودي على جانب البداية يربط الأقسام حتى زر التوليد.
+     * لكل خطوة نقطة عند منتصف رأسها (--dot)، وقطعة خط منها إلى نقطة التالية
+     * (الفاصل بين الأقسام 1rem + موضع نقطة التالية --next-dot). المكتمل يُملأ.
+     */
+    .vo-steps {
+        --rail: 2.5rem;
+        @apply relative list-none m-0 p-0;
+        padding-inline-start: var(--rail);
+    }
+
+    @media (min-width: 640px) {
+        .vo-steps { --rail: 3rem; }
+    }
+
+    .vo-step { position: relative; --dot: 2.25rem; --next-dot: 2.25rem; }
+    .vo-step-final { --dot: 1.5rem; }
+
+    .vo-step:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        inset-inline-start: calc(var(--rail) / -2 - 1px);
+        top: var(--dot);
+        bottom: calc(-1rem - var(--next-dot));
+        width: 2px;
+        border-radius: 9999px;
+        background: rgb(var(--line-strong));
+        transition: background-color .3s ease-out;
+    }
+
+    .vo-step[data-state="done"]:not(:last-child)::before { background: rgb(var(--fg)); }
+
+    .vo-step-dot {
+        @apply absolute z-[1] grid place-items-center w-7 h-7 rounded-full border-2 border-line-strong bg-card
+               text-[11px] font-bold text-fg-subtle transition-colors duration-300;
+        font-variant-numeric: tabular-nums;
+        inset-inline-start: calc(var(--rail) / -2 - .875rem);
+        top: calc(var(--dot) - .875rem);
+    }
+
+    .vo-step[data-state="current"] > .vo-step-dot { @apply border-brand-500 text-brand-600 ring-4 ring-brand-500/15; }
+    .dark .vo-step[data-state="current"] > .vo-step-dot { @apply text-brand-300; }
+    .vo-step[data-state="done"] > .vo-step-dot { @apply bg-fg border-fg text-fg-inverse; }
+    .vo-step-final[data-state="done"] > .vo-step-dot { @apply bg-brand-600 border-brand-600 text-white ring-4 ring-brand-500/20; }
 
     /* السجل والمشغّل */
     .vo-history-item { @apply rounded-2xl border border-line bg-card p-4 transition; }
