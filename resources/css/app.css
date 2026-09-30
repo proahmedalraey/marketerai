@@ -841,6 +841,68 @@
                focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-brand-600 focus:text-white
                focus:font-semibold focus:shadow-lg;
     }
+
+    /* ---------- الصفحة الرئيسية: «كل الأدوات في منصة واحدة» (resources/js/landing/assembly.js) ----------
+       بلا JavaScript أو مع «تقليل الحركة» يظهر المشهد الأخير ثابتًا: الأدوات صغيرة داخل الجملة.
+       .is-animated يضيفه السكربت: قسم طويل يثبت فيه المسرح، والأدوات بحجمها الكبير. */
+    .assembly { --hole: 2.1rem; }
+    @screen md { .assembly { --hole: 3.4rem; } }
+
+    .assembly-stage { @apply relative overflow-hidden bg-amber-50 px-4 py-24; transition: background-color .35s ease; }
+    .assembly-header { display: none; }
+
+    .assembly-hole {
+        @apply relative inline-block;
+        width: var(--hole);
+        height: var(--hole);
+        margin-inline: .12em;
+        vertical-align: -0.3em;
+    }
+
+    .assembly-chip {
+        @apply absolute z-10 grid place-items-center;
+        left: 50%;
+        top: 50%;
+        width: var(--hole);
+        height: var(--hole);
+        margin: calc(var(--hole) / -2) 0 0 calc(var(--hole) / -2);
+        border-radius: 24%;
+        box-shadow: 0 12px 28px -14px rgb(17 24 39 / .5);
+    }
+
+    .assembly-label { display: none; }
+
+    .assembly.is-animated { height: 400svh; }
+    .assembly.is-animated .assembly-stage { @apply sticky top-0 flex items-center justify-center py-0; height: 100svh; }
+    .assembly.is-animated.is-dark .assembly-stage { @apply bg-gray-900; }
+    .assembly.is-animated .assembly-header { display: block; }
+
+    .assembly.is-animated .assembly-chip {
+        width: var(--tile);
+        height: var(--tile);
+        margin: calc(var(--tile) / -2) 0 0 calc(var(--tile) / -2);
+    }
+
+    .assembly.is-animated .assembly-label {
+        @apply absolute inset-x-0 block text-center font-bold;
+        bottom: 9%;
+        font-size: calc(var(--tile) * .09);
+    }
+
+    @media (max-width: 639px) {
+        .assembly.is-animated { height: 340svh; }
+        .assembly.is-animated .assembly-label { display: none; }
+    }
+
+    /* ---------- الصفحة الرئيسية: «كيف يعمل» (resources/js/landing/timeline.js) ----------
+       الخطوة تبقى خافتة حتى يصلها الخط المرسوم؛ بلا سكربت تظهر كلها مضاءة. */
+    .timeline-dot { transition: border-color .4s ease, box-shadow .4s ease, transform .5s cubic-bezier(.16, 1, .3, 1); }
+    .timeline-dot svg { transition: color .4s ease; }
+    .timeline-card { transition: opacity .5s ease, transform .5s cubic-bezier(.16, 1, .3, 1), box-shadow .2s ease; }
+
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-dot { @apply border-gray-200 shadow-none; }
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-dot svg { @apply text-gray-300; }
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-card { opacity: .6; transform: translateY(12px); }
 }
 
 @layer utilities {

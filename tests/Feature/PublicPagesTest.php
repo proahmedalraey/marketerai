@@ -27,6 +27,18 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('سهل AI', $html, "بقي اسم المنافس في {$uri}");
     }
 
+    public function test_home_motion_sections_keep_their_content_in_the_html(): void
+    {
+        // الحركة تحسين فوق محتوى كامل: بلا سكربت (أو مع «تقليل الحركة») يبقى النص والصور والروابط
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('data-showcase', false)
+            ->assertSee('images/marketing/tour-writer.webp', false)
+            ->assertSee('data-assembly', false)
+            ->assertSee('كلها في مسوق AI.')
+            ->assertSee('data-timeline', false);
+    }
+
     public function test_home_sends_signed_in_users_to_the_dashboard(): void
     {
         $user = User::create(['name' => 'تاجر', 'email' => 'merchant@example.com', 'password' => 'secret123']);

@@ -8,8 +8,24 @@
 
 @php
     $guarantee = config('marketing.guarantee');
-    $video = config('marketing.video_url');
     $salesEmail = config('marketing.contact.email');
+
+    // لقطات حقيقية من الحساب التجريبي بدقة مضاعفة (public/images/marketing/tour-*.webp)
+    $tour = [
+        ['writer', 'الكتابة', 'منشور جاهز بصوت علامتك', 'شاشة كتابة المحتوى: الهدف والمنتج والمنصة واللهجة'],
+        ['carousel', 'الكاروسيل', 'شرائح بهويتك تعدّلها كما تريد', 'محرر الكاروسيل: شرائح بألوان العلامة ونصوص قابلة للتعديل'],
+        ['studio', 'الصور', 'صور منتجات بدقة حتى 4K', 'استوديو الصور: صور منتجات مولّدة وكاروسيلات جاهزة'],
+        ['voiceover', 'الصوت', 'تعليق صوتي بلهجة جمهورك', 'التعليق الصوتي: أنماط الإلقاء ونص جاهز للتسجيل'],
+    ];
+
+    // أدوات مشهد «كل الأدوات في منصة واحدة»: الأيقونة، اسم الأداة، فعلها في الجملة، لونها
+    $tools = [
+        ['pen', 'كاتب المحتوى', 'اكتب،', 'bg-primary text-white'],
+        ['image', 'مصمم الصور', 'صمّم،', 'bg-amber-300 text-gray-900'],
+        ['mic', 'المعلّق الصوتي', 'علّق،', 'bg-rose-300 text-gray-900'],
+        ['calendar', 'مخطط الشهر', 'خطّط،', 'bg-emerald-300 text-gray-900'],
+        ['shield-check', 'مدقق الصدق', 'وانشر بثقة', 'bg-sky-300 text-gray-900'],
+    ];
 
     $features = [
         ['palette', 'هويتك البصرية', 'ارفع شعارك وألوانك وأنماطك مرة واحدة، فتلتزم بها كل صورة وتصميم تولّده المنصة.', 'identity.jpg'],
@@ -142,60 +158,90 @@
     </div>
 </section>
 
-{{-- ================= الفيديو التعريفي ================= --}}
+{{-- ================= جولة في المنصة ================= --}}
 <section class="relative isolate overflow-hidden bg-white py-24">
     <div class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-white to-white" aria-hidden="true"></div>
 
     <div class="mx-auto max-w-7xl px-4 md:px-6">
         <div class="mb-16 text-center">
             <h2 class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">شاهد مسوق AI أثناء العمل</h2>
-            <p class="mx-auto max-w-2xl text-lg text-gray-500">جولة قصيرة تريك كيف يتحول منتجك إلى منشور وصورة وتعليق صوتي في دقائق.</p>
+            <p class="mx-auto max-w-2xl text-lg text-gray-500">جولة سريعة في أهم الشاشات: من كتابة المنشور حتى التعليق الصوتي.</p>
         </div>
 
-        <div class="relative mx-auto max-w-5xl">
-            <div class="relative aspect-video overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.30),0_10px_30px_-10px_rgba(217,119,6,0.35)]"
-                 x-data="{ playing: false }">
-                @if ($video)
-                    <template x-if="playing">
-                        <video src="{{ $video }}" class="absolute inset-0 h-full w-full bg-black object-contain" controls autoplay playsinline></video>
-                    </template>
-                @endif
-
-                <div x-show="!playing" class="absolute inset-0 grid place-items-center">
-                    <div class="-mt-6 flex flex-col items-center gap-2 text-center md:mt-0 md:gap-4">
-                        <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-white shadow-xl shadow-primary/30 md:h-24 md:w-24 md:rounded-3xl">
-                            <x-public.icon name="sparkles" class="h-6 w-6 md:h-12 md:w-12" />
-                        </span>
-                        <span class="text-3xl font-extrabold text-gray-900 md:text-6xl">مسوّق</span>
-                        <span class="text-sm font-bold text-primary-ink md:text-xl">المحتوى صار أسرع… وأصدق</span>
-                    </div>
-
-                    @if ($video)
-                        <button type="button" @click="playing = true" class="group absolute inset-0 grid place-items-center">
-                            <span class="grid h-20 w-20 place-items-center rounded-full bg-white text-primary shadow-2xl transition-transform duration-300 group-hover:scale-110">
-                                <x-public.icon name="play" class="h-8 w-8" />
-                            </span>
-                            <span class="sr-only">تشغيل الفيديو التعريفي</span>
-                        </button>
-                    @else
-                        <span class="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gray-900/80 px-4 py-1.5 text-xs font-medium text-white md:bottom-5">الفيديو التعريفي قريبًا</span>
-                    @endif
-                </div>
+        {{-- الشاشات تتبدّل على ساعة (resources/js/landing/showcase.js)؛ بلا سكربت تبقى الأولى ظاهرة --}}
+        <div class="relative mx-auto max-w-5xl" data-showcase role="region" aria-roledescription="عرض متتابع" aria-label="جولة في شاشات مسوق AI">
+            <div data-deck aria-live="off"
+                 class="relative aspect-video overflow-hidden rounded-3xl border border-gray-200 bg-gray-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.30),0_10px_30px_-10px_rgba(217,119,6,0.35)]">
+                @foreach ($tour as $i => [$key, $title, $caption, $alt])
+                    <figure data-slide role="group" aria-roledescription="شاشة" aria-label="{{ $i + 1 }} من {{ count($tour) }}: {{ $title }}"
+                            aria-hidden="{{ $i ? 'true' : 'false' }}"
+                            class="absolute inset-0 transition-opacity duration-700 ease-out {{ $i ? 'opacity-0' : '' }}">
+                        <img src="{{ asset('images/marketing/tour-'.$key.'.webp') }}" alt="{{ $alt }}"
+                             width="2880" height="1620" loading="lazy" decoding="async"
+                             class="h-full w-full object-cover object-top">
+                    </figure>
+                @endforeach
             </div>
+
+            <div class="mt-6 flex items-start gap-4 md:gap-6">
+                <div class="grid flex-1 grid-cols-4 gap-3 md:gap-5">
+                    @foreach ($tour as $i => [$key, $title, $caption])
+                        <button type="button" data-tick aria-current="{{ $i ? 'false' : 'true' }}" class="group py-2 text-start">
+                            <span class="block h-1 overflow-hidden rounded-full bg-gray-200">
+                                <span data-fill class="block h-full w-0 rounded-full bg-primary"></span>
+                            </span>
+                            <span class="mt-3 block text-sm font-bold text-gray-500 transition-colors group-hover:text-gray-800 group-aria-[current=true]:text-gray-900 md:text-base">{{ $title }}</span>
+                            <span class="mt-1 hidden text-sm leading-snug text-gray-500 md:block">{{ $caption }}</span>
+                        </button>
+                    @endforeach
+                </div>
+
+                <button type="button" data-toggle aria-label="إيقاف العرض التلقائي"
+                        class="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50">
+                    <x-public.icon name="pause" class="h-4 w-4" data-when="playing" />
+                    <x-public.icon name="play" class="hidden h-4 w-4" data-when="paused" />
+                </button>
+            </div>
+
             <div class="absolute -right-12 -top-12 -z-10 h-24 w-24 rounded-full bg-amber-400/20 blur-2xl" aria-hidden="true"></div>
         </div>
     </div>
 </section>
 
-{{-- ================= الحل الشامل ================= --}}
-<section class="py-16 md:py-24">
-    <div class="mx-auto max-w-7xl px-4 md:px-6">
-        <div class="rounded-2xl border-2 border-orange-500 bg-white p-8 text-center md:p-12">
-            <h2 class="mb-6 text-3xl font-bold text-gray-900 md:text-4xl">كل أدوات التسويق في منصة واحدة</h2>
-            <p class="mx-auto mb-8 max-w-3xl text-lg leading-relaxed text-gray-600 md:text-xl">
-                مقابل <span class="font-bold text-primary-ink">{{ Offer::monthly() }} شهريًا</span> فقط، يصير عندك كاتب محتوى ومصمم ومعلّق صوتي يشتغلون بهوية علامتك.
-            </p>
-            <a href="{{ route('register') }}" class="{{ $btnPrimary }}">ابدأ مع مسوق AI</a>
+{{-- ================= كل الأدوات في منصة واحدة ================= --}}
+{{-- مشهد يثبت أثناء التمرير (resources/js/landing/assembly.js)؛ بلا سكربت أو مع «تقليل الحركة» يظهر مشهده الأخير --}}
+<section data-assembly class="assembly" aria-labelledby="assembly-title">
+    <div data-assembly-stage class="assembly-stage">
+        <div data-assembly-header class="assembly-header absolute inset-x-4 top-[18%] text-center md:top-[22%]">
+            <span class="rounded-full bg-white/10 px-3 py-1 text-sm font-bold text-amber-300">الحل الشامل</span>
+            <p class="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">خمس أدوات… وخمسة اشتراكات؟</p>
+            <p class="mx-auto mt-4 max-w-xl text-lg text-gray-300">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق، كلٌّ في مكان مختلف.</p>
+        </div>
+
+        <div class="mx-auto max-w-4xl text-center">
+            <p data-assembly-seg class="mb-8 inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800">كل أدوات التسويق في منصة واحدة</p>
+
+            <h2 id="assembly-title" class="text-[2rem] font-bold leading-[1.5] text-gray-900 md:text-6xl md:leading-[1.4]">
+                {{-- الأداة وفعلها وحدة واحدة: التفاف السطر لا يفصل الأيقونة عن كلمتها --}}
+                @foreach ($tools as [$icon, $name, $verb, $colors])
+                    <span class="whitespace-nowrap">
+                        <span class="assembly-hole" aria-hidden="true">
+                            <span data-assembly-chip class="assembly-chip {{ $colors }}">
+                                <x-public.icon :name="$icon" class="size-1/2" stroke="2" />
+                                <span data-assembly-label class="assembly-label">{{ $name }}</span>
+                            </span>
+                        </span>
+                        <span data-assembly-seg>{{ $verb }}</span>
+                    </span>
+                @endforeach
+                <br class="hidden md:inline">
+                <span data-assembly-seg class="text-primary">كلها في مسوق AI.</span>
+            </h2>
+
+            <div data-assembly-outro class="mt-10">
+                <p class="text-lg text-gray-600 md:text-xl">كل ذلك مقابل <span class="font-bold text-primary-ink">{{ Offer::monthly() }} شهريًا</span> فقط.</p>
+                <a href="{{ route('register') }}" class="{{ $btnPrimary }} mt-6">ابدأ مع مسوق AI</a>
+            </div>
         </div>
     </div>
 </section>
@@ -246,16 +292,22 @@
             <p class="text-lg text-gray-500">خمس خطوات تفصلك عن أول منشور جاهز.</p>
         </div>
 
-        <div class="relative mx-auto max-w-4xl">
-            <div class="absolute bottom-0 left-1/2 top-0 hidden w-0.5 -translate-x-1/2 bg-gray-200 md:block" aria-hidden="true"></div>
-            <div class="absolute bottom-0 top-0 start-8 w-0.5 bg-gray-200 md:hidden" aria-hidden="true"></div>
+        {{-- الخط يُرسم مع التمرير وتضيء الخطوات (resources/js/landing/timeline.js)؛ بلا سكربت يبقى الخطان الرماديان --}}
+        <div class="timeline relative mx-auto max-w-4xl" data-timeline>
+            <div data-timeline-fallback class="absolute bottom-0 left-1/2 top-0 hidden w-0.5 -translate-x-1/2 bg-gray-200 md:block" aria-hidden="true"></div>
+            <div data-timeline-fallback class="absolute bottom-0 top-0 start-8 w-0.5 bg-gray-200 md:hidden" aria-hidden="true"></div>
+
+            <svg data-timeline-svg class="pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible" aria-hidden="true">
+                <path data-track fill="none" class="stroke-gray-200" stroke-width="3" stroke-linecap="round" />
+                <path data-draw fill="none" class="stroke-primary" stroke-width="3" stroke-linecap="round" />
+            </svg>
 
             <ol class="space-y-12 md:space-y-24">
                 @foreach ($steps as $i => [$icon, $title, $text])
                     @php $flip = $i % 2 === 1; @endphp
-                    <li class="relative flex flex-col items-center gap-8 md:flex-row {{ $flip ? 'md:flex-row-reverse' : '' }}">
+                    <li data-step class="timeline-step relative flex flex-col items-center gap-8 md:flex-row {{ $flip ? 'md:flex-row-reverse' : '' }}">
                         <div class="w-full flex-1 ps-20 text-start md:w-auto {{ $flip ? 'md:pe-12 md:ps-0' : 'md:ps-12 md:text-end' }}">
-                            <div class="relative rounded-2xl border border-amber-100 bg-amber-50/50 p-6 transition-shadow hover:shadow-md">
+                            <div class="timeline-card relative rounded-2xl border border-amber-100 bg-amber-50/50 p-6 hover:shadow-md">
                                 {{-- سهم البطاقة يتجه نحو الخط الزمني --}}
                                 <span class="absolute top-1/2 hidden h-4 w-4 -translate-y-1/2 rotate-45 border-amber-100 bg-amber-50 md:block {{ $flip ? '-right-2 border-r border-t' : '-left-2 border-b border-l' }}" aria-hidden="true"></span>
                                 <h3 class="mb-3 text-xl font-bold text-gray-900">{{ $title }}</h3>
@@ -263,7 +315,7 @@
                             </div>
                         </div>
 
-                        <div class="absolute start-0 z-10 grid h-16 w-16 shrink-0 place-items-center rounded-full border-4 border-amber-500 bg-white shadow-lg shadow-amber-200/50 md:relative md:start-auto">
+                        <div data-dot class="timeline-dot absolute start-0 z-10 grid h-16 w-16 shrink-0 place-items-center rounded-full border-4 border-amber-500 bg-white shadow-lg shadow-amber-200/50 md:relative md:start-auto">
                             <x-public.icon :name="$icon" class="h-6 w-6 text-amber-600" />
                             <span class="absolute -left-2 -top-2 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-gray-900 text-xs font-bold text-white">{{ sprintf('%02d', $i + 1) }}</span>
                         </div>
@@ -464,3 +516,7 @@
 </section>
 
 @endsection
+
+@push('scripts')
+    @vite('resources/js/landing.js')
+@endpush
