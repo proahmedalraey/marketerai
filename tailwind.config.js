@@ -21,9 +21,20 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['"IBM Plex Sans Arabic"', ...defaultTheme.fontFamily.sans],
+                // الصفحات العامة وصفحات الدخول فقط
+                cairo: ['Cairo', ...defaultTheme.fontFamily.sans],
             },
 
             colors: {
+                // برتقالي الصفحات العامة: DEFAULT للمساحات والنص الكبير (3.4:1 — يكفي للنص ≥ 18.66px عريض)،
+                // و strong للأزرار ذات النص الصغير، و ink للنص البرتقالي الصغير (كلاهما ≥ 4.5:1 على الأبيض)
+                primary: {
+                    DEFAULT: '#FA4F00',
+                    hover:   '#E04600',
+                    strong:  '#D24100',
+                    ink:     '#C2410C',
+                },
+
                 brand: {
                     50:  token('brand-50'),
                     100: token('brand-100'),
@@ -92,6 +103,7 @@ export default {
                 'slide-in':  { from: { transform: 'translateX(100%)' }, to: { transform: 'none' } },
                 shimmer:     { '100%': { transform: 'translateX(-200%)' } },
                 'pulse-dot': { '0%,100%': { opacity: '.35', transform: 'scale(.85)' }, '50%': { opacity: '1', transform: 'scale(1)' } },
+                'float-y':   { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
             },
 
             animation: {
@@ -101,6 +113,7 @@ export default {
                 'slide-in': 'slide-in .26s cubic-bezier(0.16,1,0.3,1) both',
                 shimmer:    'shimmer 1.6s infinite',
                 'pulse-dot':'pulse-dot 1.2s ease-in-out infinite',
+                'float-y':  'float-y 3.5s ease-in-out infinite',
             },
         },
     },

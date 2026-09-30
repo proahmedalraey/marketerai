@@ -15,6 +15,12 @@ import registerVoiceover from './voiceover';
 const THEME_KEY = 'theme';
 
 const applyTheme = (value) => {
+    // الصفحات العامة وصفحات الدخول مصممة فاتحة فقط (data-theme-lock على <html>)
+    if (document.documentElement.dataset.themeLock === 'light') {
+        document.documentElement.classList.remove('dark');
+        return;
+    }
+
     const dark = value === 'dark'
         || (value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
