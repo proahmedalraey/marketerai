@@ -8,6 +8,7 @@ use App\Http\Controllers\ContentGeneratorController;
 use App\Http\Controllers\ContentPlanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImageStudioController;
+use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\MediaFolderController;
 use App\Http\Controllers\PlatformSettingsController;
 use App\Http\Controllers\ProductController;
@@ -17,7 +18,9 @@ use App\Http\Controllers\StoreFactsController;
 use App\Http\Controllers\VoiceoverController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+// الصفحات العامة
+Route::get('/', [MarketingController::class, 'home'])->name('home');
+Route::get('/about', [MarketingController::class, 'about'])->name('about');
 
 Route::middleware(['auth', 'brand.ready'])->group(function () {
 
