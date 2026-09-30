@@ -12,7 +12,7 @@
         <h2 id="vo-language-title" class="text-[15px] font-bold text-fg">اللغة واللهجة</h2>
         <span class="vo-head-check"><x-icon name="check" class="w-3.5 h-3.5" /></span>
         <span class="text-xs text-fg-subtle truncate" x-text="languageSummary"></span>
-        <x-icon name="chevron-up" class="ms-auto w-5 h-5 text-fg-subtle transition-transform duration-200" x-bind:class="! open.language && 'rotate-180'" />
+        @include('content.voiceover._toggle', ['open' => 'open.language', 'class' => 'ms-auto'])
     </button>
 
     <div x-show="open.language" class="border-t border-line px-4 sm:px-6 py-5 space-y-4">

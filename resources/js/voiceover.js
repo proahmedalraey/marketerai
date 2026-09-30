@@ -432,6 +432,26 @@ export default function registerVoiceover(Alpine) {
             return this.missing.length === 0;
         },
 
+        // ---------- مسار الخطوات ----------
+        /** اكتمال كل قسم بترتيب الصفحة؛ الترتيب نفسه يحدد «الخطوة الحالية». */
+        get steps() {
+            return {
+                style: this.style !== 'custom' || this.customStyle.trim() !== '',
+                content: this.hasText && !this.overLimit,
+                language: this.language === 'en' ? !!this.accent : !!this.dialect,
+                voice: !!this.voice,
+            };
+        },
+
+        /** done: اكتملت · current: أول ما ينقص (يُبرز) · todo: ناقصة بعدها */
+        stepState(step) {
+            const steps = this.steps;
+
+            if (steps[step]) return 'done';
+
+            return Object.keys(steps).find((key) => !steps[key]) === step ? 'current' : 'todo';
+        },
+
         minutesFor(text) {
             return Math.max(1, Math.ceil(countWords(text) / this.wordsPerMinute));
         },
