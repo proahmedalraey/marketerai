@@ -226,8 +226,11 @@ class PlatformSettingsController extends Controller
     }
 
     /**
-     * اختبار التعليق الصوتي لمستوى جودة بعينه: تسجيل كلمة واحدة بنموذجه.
+     * اختبار التعليق الصوتي لمستوى جودة بعينه: تسجيل جملة قصيرة بنموذجه.
      * يكشف أيضاً نفاد الحصة: الحساب المجاني 10 طلبات نطق يومياً لكل نموذج.
+     *
+     * جملة لا كلمة: «مرحباً» وحدها أعادت رداً بلا صوت (finishReason: OTHER) مرتين متتاليتين
+     * في تجربة التاجر 2026-09-30 — نماذج النطق تتعثر مع المدخل القصير جداً.
      */
     protected function testSpeech(Request $request, AiManager $ai): RedirectResponse
     {
@@ -247,9 +250,9 @@ class PlatformSettingsController extends Controller
 
         try {
             $response = $ai->generateSpeech(new SpeechRequest(
-                transcript: 'مرحباً',
+                transcript: 'مرحباً بك، هذا اختبار سريع للتعليق الصوتي في منصتك.',
                 voice: 'Kore',
-                direction: 'in Arabic',
+                direction: 'in neutral white Saudi and Gulf Arabic, friendly and clear',
                 model: $model,
                 operation: 'settings.test',
             ), null, $provider);
@@ -260,6 +263,8 @@ class PlatformSettingsController extends Controller
                 $e instanceof ProviderException && $e->quotaExhausted => ' — انتهت الحصة اليومية لهذا النموذج. الحساب المجاني يسمح بـ10 طلبات نطق يومياً لكل نموذج: فعّل الفوترة في Google AI Studio، أو اختر لهذا المستوى نموذجاً آخر.',
                 $status === 404 => " — النموذج «{$model}» غير متاح لحسابك؛ اختر نموذجاً آخر من القائمة واحفظ.",
                 $status === 401, $status === 403 => ' — المفتاح غير صحيح أو ملغى؛ الصق مفتاحاً جديداً في قسم Gemini.',
+                // رد 200 بلا صوت بعد الإعادة التلقائية: عثرة عند المزود لا خطأ في المفتاح
+                $status === 200 && str_contains($e->getMessage(), 'لم يُعد Gemini صوتاً') => ' — أعاد النموذج رداً بلا صوت رغم الإعادة. عثرة عابرة عند Google غالباً: جرّب بعد دقيقة، وإن تكررت فاختر لهذا المستوى نموذجاً آخر.',
                 default => '',
             };
 
