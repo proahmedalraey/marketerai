@@ -183,14 +183,20 @@ class VoiceCatalog
     }
 
     /**
-     * صورة المذيع (voiceover:avatars يولّدها في public/images/voices/<key>.jpg)، أو avatar صريح
-     * في الإعداد. بلا صورة = null فتظهر أيقونة الحرف الأول. بصمة وقت الملف تكسر الكاش عند إعادة التوليد.
+     * صورة المذيع بالأولوية: avatar صريح في الإعداد، ثم صورة فوتوغرافية (voiceover:avatars → <key>.jpg)،
+     * ثم الرسم المرفق مع الكود (<key>.svg). بلا أيٍّ منها = null فيظهر الحرف الأول.
+     * بصمة وقت الملف تكسر الكاش حين تُستبدل الصورة.
      */
     protected function avatarUrl(string $key, array $voice): ?string
     {
-        $path = $voice['avatar'] ?? "images/voices/{$key}.jpg";
-        $file = public_path($path);
+        $candidates = array_filter([$voice['avatar'] ?? null, "images/voices/{$key}.jpg", "images/voices/{$key}.svg"]);
 
-        return File::exists($file) ? asset($path).'?v='.File::lastModified($file) : null;
+        foreach ($candidates as $path) {
+            if (File::exists($file = public_path($path))) {
+                return asset($path).'?v='.File::lastModified($file);
+            }
+        }
+
+        return null;
     }
 }

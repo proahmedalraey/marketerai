@@ -191,7 +191,7 @@ php artisan media:thumbnails    # مصغّرات للصور القديمة (ال
 
 ```bash
 php artisan voiceover:samples --language=all   # عينات «استمع» لكل مذيع (--model لنموذج بعينه، --force لإعادتها)
-php artisan voiceover:avatars                  # صور المذيعين في public/images/voices (تحتاج رصيد صور مدفوعاً)
+php artisan voiceover:avatars                  # صور فوتوغرافية للمذيعين تحل محل الرسوم المرفقة (تحتاج رصيد صور مدفوعاً)
 php artisan voiceover:prune                    # حذف ما تجاوز 30 يوماً ولم يُحفظ (مجدول يومياً)
 ```
 

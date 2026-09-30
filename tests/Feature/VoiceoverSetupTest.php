@@ -141,9 +141,14 @@ class VoiceoverSetupTest extends TestCase
         $this->assertFileExists($file);
         $this->assertLessThanOrEqual(320, getimagesize($file)[0]);
 
+        // الرسم المرفق مع الكود احتياط الصورة، والصورة الفوتوغرافية تسبقه
+        File::put("{$public}/images/voices/khalid.svg", '<svg/>');
+        File::put("{$public}/images/voices/sara.svg", '<svg/>');
+
         $cards = collect(app(VoiceCatalog::class)->voiceCards())->keyBy('key');
         $this->assertStringContainsString('images/voices/khalid.jpg?v=', $cards['khalid']['avatar']);
-        $this->assertNull($cards['sara']['avatar'], 'بلا صورة: الحرف الأول');
+        $this->assertStringContainsString('images/voices/sara.svg?v=', $cards['sara']['avatar']);
+        $this->assertNull($cards['reem']['avatar'], 'بلا صورة ولا رسم: الحرف الأول');
 
         File::deleteDirectory($public);
     }
