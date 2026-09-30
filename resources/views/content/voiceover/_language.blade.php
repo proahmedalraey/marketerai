@@ -30,10 +30,16 @@
         <div x-show="language === 'ar'" class="space-y-2" role="radiogroup" aria-label="اللهجة العربية">
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 @foreach ($firstRow as $key)
-                    <button type="button" role="radio" class="vo-option" :aria-checked="dialect === '{{ $key }}' ? 'true' : 'false'" @click="chooseDialect('{{ $key }}')">
+                    @php $hasVariants = (bool) $studio['dialects'][$key]['variants']; @endphp
+
+                    <button
+                        type="button" role="radio" class="vo-option" :aria-checked="dialect === '{{ $key }}' ? 'true' : 'false'" @click="chooseDialect('{{ $key }}')"
+                        @if ($hasVariants) aria-controls="vo-variants-{{ $key }}" :aria-expanded="dialect === '{{ $key }}' ? 'true' : 'false'" @endif
+                    >
                         {{ $studio['dialects'][$key]['label'] }}
-                        @if ($studio['dialects'][$key]['variants'])
-                            <span class="ms-1.5 w-1 h-1 rounded-full bg-current opacity-60" aria-hidden="true"></span>
+                        @if ($hasVariants)
+                            {{-- لهجاتها الفرعية منطوية تحتها: تنفتح حين تُختار --}}
+                            <x-icon name="chevron-down" class="ms-auto w-4 h-4 opacity-60 transition-transform duration-200" x-bind:class="dialect === '{{ $key }}' && 'rotate-180'" />
                         @endif
                     </button>
                 @endforeach
@@ -41,14 +47,17 @@
 
             @foreach ($studio['dialects'] as $key => $dialect)
                 @if ($dialect['variants'])
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 ps-3 border-s-2 transition-colors"
-                         :class="dialect === '{{ $key }}' ? 'border-fg' : 'border-line-strong'"
-                         aria-label="لهجات {{ $dialect['label'] }}">
+                    <div
+                        id="vo-variants-{{ $key }}"
+                        x-show="dialect === '{{ $key }}'" x-cloak
+                        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                        class="grid grid-cols-2 sm:grid-cols-3 gap-2 ps-3 border-s-2 border-fg"
+                        role="group" aria-label="لهجات {{ $dialect['label'] }}"
+                    >
                         @foreach ($dialect['variants'] as $variantKey => $variantLabel)
                             <button
                                 type="button" role="radio" class="vo-option"
-                                :class="dialect !== '{{ $key }}' && 'vo-option-muted'"
-                                :aria-checked="dialect === '{{ $key }}' && variant === '{{ $variantKey }}' ? 'true' : 'false'"
+                                :aria-checked="variant === '{{ $variantKey }}' ? 'true' : 'false'"
                                 @click="chooseVariant('{{ $variantKey }}')"
                             >{{ $variantLabel }}</button>
                         @endforeach

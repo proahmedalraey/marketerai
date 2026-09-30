@@ -642,7 +642,6 @@
     }
 
     .vo-option[aria-checked="true"] { @apply border-fg ring-1 ring-fg font-semibold; }
-    .vo-option-muted { @apply bg-muted/70 text-fg-muted; }
 
     /* بطاقة مذيع */
     .vo-voice {
