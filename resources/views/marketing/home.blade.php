@@ -215,7 +215,7 @@
                 @foreach ($tour as $i => [$key, $title, $caption, $alt])
                     <figure data-slide role="group" aria-roledescription="شاشة" aria-label="{{ $i + 1 }} من {{ count($tour) }}: {{ $title }}"
                             aria-hidden="{{ $i ? 'true' : 'false' }}"
-                            class="absolute inset-0 transition-opacity duration-700 ease-out {{ $i ? 'opacity-0' : '' }}">
+                            class="tour-slide absolute inset-0 overflow-hidden transition-opacity duration-500 ease-out {{ $i ? 'opacity-0' : 'is-on' }}">
                         <img src="{{ asset('images/marketing/tour-'.$key.'.webp') }}" alt="{{ $alt }}"
                              width="2880" height="1620" loading="lazy" decoding="async"
                              class="h-full w-full object-cover object-top">
@@ -253,9 +253,9 @@
 <section data-assembly class="assembly" aria-labelledby="assembly-title">
     <div data-assembly-stage class="assembly-stage">
         <div data-assembly-header class="assembly-header absolute inset-x-4 top-[18%] text-center md:top-[22%]">
-            <span class="rounded-full bg-white/10 px-3 py-1 text-sm font-bold text-amber-300">الحل الشامل</span>
-            <p class="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">فريق تسويق كامل… باشتراك واحد؟</p>
-            <p class="mx-auto mt-4 max-w-xl text-lg text-gray-300">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق… مرّر لتراهم يجتمعون.</p>
+            <span class="rounded-full bg-white px-3 py-1 text-sm font-bold text-primary-ink shadow-sm ring-1 ring-orange-200">الحل الشامل</span>
+            <p class="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight text-gray-900 md:text-5xl">فريق تسويق كامل… باشتراك واحد؟</p>
+            <p class="mx-auto mt-4 max-w-xl text-lg text-gray-600">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق… مرّر لتراهم يجتمعون.</p>
         </div>
 
         <div data-assembly-final class="relative mx-auto max-w-4xl text-center">
@@ -400,8 +400,8 @@
                     $shown = array_slice($features, 0, $plan['visible']);
                     $more = array_slice($features, $plan['visible']);
                 @endphp
-                {{-- على الجوال تأتي السنوية أولًا: الخيار الموصى به قبل البديل --}}
-                <article class="relative flex flex-col rounded-3xl bg-white p-6 sm:p-8 {{ $yearly ? 'order-first border-2 border-amber-500 shadow-xl shadow-amber-100/60 md:order-none' : 'border border-gray-200 transition-colors hover:border-amber-400' }}">
+                {{-- على الجوال تأتي السنوية أولًا: الخيار الموصى به قبل البديل، بوهج يدور على إطارها وطفو بطيء (app.css: .plan-featured) --}}
+                <article class="relative flex flex-col rounded-3xl p-6 sm:p-8 {{ $yearly ? 'plan-featured order-first md:order-none' : 'border border-gray-200 bg-white transition-colors hover:border-amber-400' }}">
                     @if ($yearly && Offer::yearlySaving() > 0)
                         <span class="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-gray-900 px-4 py-1 text-xs font-bold text-white">{{ Offer::yearlySavingLabel() }}</span>
                     @endif

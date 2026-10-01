@@ -6,13 +6,23 @@
  * لا تدور إلا والعرض ظاهر ولا أحد يتفاعل معه: تتوقف مع التبويب المخفي، والمرور بالفأرة،
  * ودخول لوحة المفاتيح (نمط WAI للعروض المتحركة)، وخروج العرض من الشاشة.
  */
-export function clock({ root, target = root, duration, paused = false, onProgress, onEnd, onPauseChange = () => {} }) {
+export function clock({
+    root,
+    target = root,
+    duration,
+    paused = false,
+    onProgress,
+    onEnd,
+    onPauseChange = () => {},
+    onRunningChange = () => {}, // لما يتبع الساعة نفسها (حركة CSS تتوقف وتستأنف معها)
+}) {
     let elapsed = 0;
     let last = 0;
     let raf = 0;
     let hovering = false;
     let focused = false;
     let onScreen = false;
+    let wasRunning = null;
 
     const running = () => !paused && !hovering && !focused && onScreen && !document.hidden;
 
@@ -35,6 +45,11 @@ export function clock({ root, target = root, duration, paused = false, onProgres
     };
 
     const sync = () => {
+        if (running() !== wasRunning) {
+            wasRunning = running();
+            onRunningChange(wasRunning);
+        }
+
         if (running() && !raf) {
             last = performance.now();
             raf = requestAnimationFrame(frame);

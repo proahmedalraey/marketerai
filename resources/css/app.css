@@ -848,7 +848,7 @@
     .assembly { --hole: 2.1rem; }
     @screen md { .assembly { --hole: 3.4rem; } }
 
-    .assembly-stage { @apply relative overflow-hidden bg-amber-50 px-4 py-24; transition: background-color .35s ease; }
+    .assembly-stage { @apply relative overflow-hidden bg-amber-50 px-4 py-24; }
     .assembly-header { display: none; }
 
     .assembly-hole {
@@ -874,8 +874,25 @@
 
     .assembly.is-animated { height: 400svh; }
     .assembly.is-animated .assembly-stage { @apply sticky top-0 flex items-center justify-center py-0; height: 100svh; }
-    .assembly.is-animated.is-dark .assembly-stage { @apply bg-gray-900; }
     .assembly.is-animated .assembly-header { display: block; }
+
+    /* «فوضى» البداية بألوان الصفحة لا بالأسود: خلفية برتقالية فاتحة عليها شبكة نقاط ووهج،
+       تتلاشى كلها (--chaos من 1 إلى 0 يضبطه assembly.js) بينما تتجمع الأدوات فتصفو الخلفية */
+    .assembly.is-animated .assembly-stage {
+        background-color: color-mix(in srgb, #FFEDD5 calc(var(--chaos, 0) * 100%), #FFFBEB);
+    }
+    .assembly.is-animated .assembly-stage::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(ellipse 70% 55% at 50% 100%, rgb(250 79 0 / .16), transparent 70%),
+            radial-gradient(rgb(250 79 0 / .2) 1.3px, transparent 1.5px) 0 0 / 22px 22px;
+        -webkit-mask-image: radial-gradient(ellipse at 50% 55%, #000 35%, transparent 85%);
+        mask-image: radial-gradient(ellipse at 50% 55%, #000 35%, transparent 85%);
+        opacity: var(--chaos, 0);
+    }
 
     .assembly.is-animated .assembly-chip {
         width: var(--tile);
@@ -943,6 +960,26 @@
     /* الأشرطة تمتلئ من اليمين كما تُقرأ */
     .story-bar { transform: scaleX(0); transform-origin: right; }
 
+    /* ---------- الصفحة الرئيسية: الجولة (resources/js/landing/showcase.js) ----------
+       اللقطة المعروضة تقترب ببطء طوال مدتها، متوقفة ما لم تدر الساعة (.is-running)؛
+       والمغادرة تُجمَّد عند تقريبها حتى يكتمل تلاشيها فلا «تقفز» لحجمها أمام العين. */
+    .tour-slide img { transform-origin: 50% 0; }
+    .tour-slide.is-on img,
+    .tour-slide.is-leaving img { animation: tour-zoom var(--tour-duration, 4s) linear both; animation-play-state: paused; }
+    [data-showcase].is-running .tour-slide.is-on img { animation-play-state: running; }
+
+    /* ---------- الصفحة الرئيسية: الباقة الموصى بها ----------
+       وهج برتقالي ذهبي يدور على إطارها، وتطفو ببطء كأنها تدعو لاختيارها.
+       الإطار خلفيتان: أبيض داخل الحشوة، وتدرج مخروطي يدور (--plan-angle) في منطقة الحد. */
+    .plan-featured {
+        border: 2px solid transparent;
+        background:
+            linear-gradient(#fff, #fff) padding-box,
+            conic-gradient(from var(--plan-angle), #FDE68A 0deg, #FDE68A 220deg, #FBBF24 270deg, #FA4F00 315deg, #FFD27A 340deg, #FDE68A 360deg) border-box;
+        box-shadow: 0 28px 50px -24px rgb(250 79 0 / .35);
+        animation: plan-orbit 4s linear infinite, plan-float 4s ease-in-out infinite;
+    }
+
     /* ---------- الصفحة الرئيسية: الأسئلة الشائعة ----------
        الإجابة تنساب عند الفتح حيث يدعم المتصفح ::details-content، وتظهر فورًا في غيره. */
     .faq-item { interpolate-size: allow-keywords; }
@@ -976,6 +1013,18 @@
 @keyframes reveal-fallback { to { opacity: 1; } }
 
 @keyframes thread-flow { to { stroke-dashoffset: -16.1; } }
+
+@keyframes tour-zoom { from { transform: scale(1); } to { transform: scale(1.06); } }
+
+/* زاوية تدرج إطار الباقة قابلة للتحريك (حيث لا يُدعم @property يبقى الإطار المتدرج ثابتًا) */
+@property --plan-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes plan-orbit { to { --plan-angle: 360deg; } }
+@keyframes plan-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
 /* الخروج (20%→24%) يتزامن مع دخول العبارة التالية (0%→4% من دورتها المتأخرة 20%)، فلا لحظة فارغة */
 @keyframes tool-tick {
