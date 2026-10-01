@@ -70,7 +70,7 @@
         ['هل أستطيع تعديل المحتوى بعد إنشائه؟', 'بالتأكيد. كل نص قابل للتعديل، وفي الكاروسيل تعدّل كل شريحة أو تطلب إعادة كتابتها بتوجيه منك.'],
         ['هل يخترع مسوق AI أرقامًا أو عروضًا؟', 'لا. بوابة الصدق تفحص كل نص بعد كتابته، وتمنع أي رقم أو ادعاء أو كود خصم لم تُدخله في بيانات متجرك.'],
         ['هل أستطيع تغيير باقتي لاحقًا؟', 'نعم، يمكنك الانتقال بين الباقة الشهرية والسنوية متى أردت.'],
-        ['كيف أتواصل مع الدعم الفني؟', 'راسلنا عبر قنوات التواصل أسفل الصفحة، ونرد عليك في أقرب وقت.'],
+        ['كيف أتواصل مع الدعم الفني؟', 'من قسم «تواصل معنا» أسفل الصفحة اختر «خدمة العملاء»، ونرد عليك في أقرب وقت.'],
     ];
 
     // زر أساسي كبير: نص 19px عريض يجعل برتقالي الهوية مقروءًا بمعيار النص الكبير
@@ -251,8 +251,8 @@
     <div data-assembly-stage class="assembly-stage">
         <div data-assembly-header class="assembly-header absolute inset-x-4 top-[18%] text-center md:top-[22%]">
             <span class="rounded-full bg-white/10 px-3 py-1 text-sm font-bold text-amber-300">الحل الشامل</span>
-            <p class="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">خمس أدوات… وخمسة اشتراكات؟</p>
-            <p class="mx-auto mt-4 max-w-xl text-lg text-gray-300">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق، كلٌّ في مكان مختلف.</p>
+            <p class="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">فريق تسويق كامل… باشتراك واحد؟</p>
+            <p class="mx-auto mt-4 max-w-xl text-lg text-gray-300">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق… مرّر لتراهم يجتمعون.</p>
         </div>
 
         <div class="mx-auto max-w-4xl text-center">
@@ -366,45 +366,74 @@
 </section>
 
 {{-- ================= الأسعار ================= --}}
-<section id="pricing" class="scroll-mt-20 bg-white py-24">
+<section id="pricing" class="scroll-mt-20 bg-white py-16 md:py-24">
     <div class="mx-auto max-w-7xl px-4 md:px-6">
-        <div class="mb-16 text-center">
+        <div class="mb-12 text-center md:mb-16">
             <h2 data-reveal class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">اختر الباقة المناسبة لك</h2>
             <p class="text-lg text-gray-500">ابدأ بالشهرية بمرونة كاملة، أو وفّر مع السنوية.</p>
         </div>
 
-        <div class="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
+        <div class="mx-auto grid max-w-5xl grid-cols-1 gap-10 md:grid-cols-2 md:gap-8">
             @foreach (['monthly', 'yearly'] as $key)
                 @php
                     $plan = config("marketing.plans.$key");
                     $yearly = $key === 'yearly';
+                    $features = array_map([Offer::class, 'feature'], $plan['features']);
+                    $shown = array_slice($features, 0, $plan['visible']);
+                    $more = array_slice($features, $plan['visible']);
                 @endphp
-                <article class="relative flex flex-col rounded-2xl bg-white p-8 {{ $yearly ? 'border-2 border-amber-500 shadow-xl' : 'border border-gray-200 transition-colors hover:border-amber-400' }}">
+                {{-- على الجوال تأتي السنوية أولًا: الخيار الموصى به قبل البديل --}}
+                <article class="relative flex flex-col rounded-3xl bg-white p-6 sm:p-8 {{ $yearly ? 'order-first border-2 border-amber-500 shadow-xl shadow-amber-100/60 md:order-none' : 'border border-gray-200 transition-colors hover:border-amber-400' }}">
                     @if ($yearly && Offer::yearlySaving() > 0)
-                        <span class="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-200 px-4 py-1 text-xs font-bold tracking-wider text-gray-700">{{ Offer::yearlySavingLabel() }}</span>
+                        <span class="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-gray-900 px-4 py-1 text-xs font-bold text-white">{{ Offer::yearlySavingLabel() }}</span>
                     @endif
 
-                    <h3 class="mb-2 text-xl font-bold text-gray-900">{{ $plan['label'] }}</h3>
-                    <p class="mb-6 text-sm text-gray-500">{{ $plan['hint'] }}</p>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">{{ $plan['label'] }}</h3>
+                            <p class="mt-1 text-sm text-gray-500">{{ $plan['hint'] }}</p>
+                        </div>
+                        @if ($yearly)
+                            <span class="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">الأكثر توفيرًا</span>
+                        @endif
+                    </div>
 
-                    <div class="mb-2 flex items-baseline gap-1">
-                        <span class="text-4xl font-bold text-gray-900">{{ $yearly ? Offer::yearlyPerMonth() : Offer::monthly() }}</span>
+                    <div class="mt-6 flex items-baseline gap-1.5">
+                        <span class="text-5xl font-bold text-gray-900">{{ $yearly ? Offer::yearlyPerMonth() : Offer::monthly() }}</span>
                         <span class="text-gray-500">/ شهريًا</span>
                     </div>
-                    <p class="mb-8 text-xs text-gray-500">{{ $yearly ? 'تُدفع '.Offer::yearly().' كل 12 شهرًا' : 'تُدفع شهريًا' }}</p>
+                    <p class="mt-2 text-sm text-gray-500">
+                        @if ($yearly)
+                            تُدفع {{ Offer::yearly() }} كل 12 شهرًا · <span class="font-semibold text-green-700">توفّر {{ Offer::yearlySavingAmount() }}</span>
+                        @else
+                            تُدفع شهريًا
+                        @endif
+                    </p>
 
-                    <ul class="mb-8 flex-1 space-y-4">
-                        @foreach ($plan['features'] as $item)
-                            <li class="flex items-center gap-3">
-                                <span class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-green-100 text-green-600">
-                                    <x-public.icon name="check" class="h-3 w-3" stroke="3" />
-                                </span>
-                                <span class="text-sm font-medium text-gray-600">{{ $item }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
+                    <div class="my-8 flex-1 border-t border-gray-100 pt-8" x-data="{ more: false }">
+                        <ul class="space-y-4">
+                            @foreach ($shown as $item)
+                                <x-public.check-item>{{ $item }}</x-public.check-item>
+                            @endforeach
+                        </ul>
 
-                    <a href="{{ route('register', ['plan' => $key]) }}" class="mt-auto block w-full rounded-xl bg-gray-900 py-4 text-center text-sm font-bold text-white transition-colors hover:bg-gray-800">
+                        @if ($more)
+                            {{-- بلا سكربت تظهر كل المزايا ويختفي الزر؛ مع Alpine تُطوى الإضافية خلفه --}}
+                            <ul id="plan-more-{{ $key }}" x-show="more" x-transition.opacity.duration.300ms class="mt-4 space-y-4">
+                                @foreach ($more as $item)
+                                    <x-public.check-item>{{ $item }}</x-public.check-item>
+                                @endforeach
+                            </ul>
+
+                            <button type="button" x-cloak @click="more = !more" :aria-expanded="more.toString()" aria-controls="plan-more-{{ $key }}"
+                                    class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-gray-50 px-4 text-sm font-bold text-gray-700 ring-1 ring-gray-200 transition-colors hover:bg-gray-100">
+                                <span x-text="more ? 'إخفاء المزايا الإضافية' : 'عرض كل المزايا (+{{ count($more) }})'">عرض كل المزايا (+{{ count($more) }})</span>
+                                <x-public.icon name="chevron-down" class="h-4 w-4 transition-transform duration-300" x-bind:class="more && 'rotate-180'" />
+                            </button>
+                        @endif
+                    </div>
+
+                    <a href="{{ route('register', ['plan' => $key]) }}" class="block w-full rounded-xl bg-gray-900 py-4 text-center text-sm font-bold text-white transition-colors hover:bg-gray-800">
                         {{ $yearly ? 'اشترك بأفضل قيمة' : 'اشترك شهريًا' }}
                     </a>
                     <a href="{{ route('register', ['plan' => $key, 'trial' => 1]) }}" class="mt-3 block w-full rounded-xl border border-green-300 bg-green-100 py-3 text-center font-medium text-green-700 transition-all hover:border-green-400 hover:bg-green-200">
@@ -501,14 +530,18 @@
             <p class="text-lg text-gray-600">إجابات سريعة عن أكثر ما يسألنا عنه التجار.</p>
         </div>
 
+        {{-- name="faq" يجعلها مجموعة واحدة: فتح سؤال يغلق السابق دون سكربت --}}
         <div class="space-y-4">
             @foreach ($faq as [$question, $answer])
-                <details class="group overflow-hidden rounded-xl border border-gray-200 bg-white px-6">
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-start text-sm font-medium text-gray-900 [&::-webkit-details-marker]:hidden">
-                        {{ $question }}
-                        <x-public.icon name="chevron-down" class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 group-open:rotate-180" />
+                <details name="faq" class="faq-item group rounded-2xl border border-gray-200 bg-white px-5 transition-shadow duration-300 open:border-amber-200 open:shadow-lg open:shadow-amber-100/60 md:px-6">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-start text-[15px] font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
+                        <span>{{ $question }}</span>
+                        <span class="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-gray-700 shadow-md shadow-gray-900/10 ring-1 ring-gray-100 transition-colors duration-300 group-open:bg-primary group-open:text-white group-open:ring-primary" aria-hidden="true">
+                            <span class="absolute h-0.5 w-3.5 rounded-full bg-current"></span>
+                            <span class="absolute h-3.5 w-0.5 rounded-full bg-current transition-transform duration-300 group-open:rotate-90 group-open:scale-0"></span>
+                        </span>
                     </summary>
-                    <p class="pb-5 text-sm leading-relaxed text-gray-600">{{ $answer }}</p>
+                    <p class="pb-5 text-sm leading-loose text-gray-600">{{ $answer }}</p>
                 </details>
             @endforeach
         </div>

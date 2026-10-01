@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 // الصفحات العامة
 Route::get('/', [MarketingController::class, 'home'])->name('home');
 Route::get('/about', [MarketingController::class, 'about'])->name('about');
+Route::get('/contact', [MarketingController::class, 'contact'])->name('contact');
 Route::get('/privacy', [MarketingController::class, 'legal'])->defaults('page', 'privacy')->name('privacy');
 Route::get('/refund-policy', [MarketingController::class, 'legal'])->defaults('page', 'refund')->name('refund');
 

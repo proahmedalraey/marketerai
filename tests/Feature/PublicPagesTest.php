@@ -13,7 +13,7 @@ class PublicPagesTest extends TestCase
 
     public static function publicPages(): array
     {
-        return [['/'], ['/about'], ['/privacy'], ['/refund-policy'], ['/login'], ['/register']];
+        return [['/'], ['/about'], ['/contact'], ['/privacy'], ['/refund-policy'], ['/login'], ['/register']];
     }
 
     /** @dataProvider publicPages */
@@ -41,6 +41,42 @@ class PublicPagesTest extends TestCase
             ->assertSee('data-assembly', false)
             ->assertSee('كلها في مسوق AI.')
             ->assertSee('data-timeline', false);
+    }
+
+    public function test_contact_links_never_lead_nowhere(): void
+    {
+        config(['marketing.contact.email' => null, 'marketing.contact.whatsapp' => null]);
+
+        // بلا قنوات مضبوطة: كل جهة تقود إلى قسمها في صفحة التواصل
+        $this->get('/')
+            ->assertSee('تواصل معنا')
+            ->assertSee(route('contact').'#sales', false)
+            ->assertSee(route('contact').'#complaints', false);
+        $this->get('/contact')->assertSee('قنوات التواصل قيد الإعداد');
+
+        // واتساب مضبوط: الرابط يفتح المحادثة برسالة الجهة جاهزة
+        config(['marketing.contact.whatsapp' => '+966 50 000 0000']);
+        $this->get('/')->assertSee('https://wa.me/966500000000?text='.rawurlencode(config('marketing.channels.sales.message')), false);
+    }
+
+    public function test_social_icons_show_only_configured_accounts_to_visitors(): void
+    {
+        config(['marketing.social.instagram' => 'https://instagram.com/marketer.ai']);
+
+        $this->get('/')
+            ->assertSee('https://instagram.com/marketer.ai', false)
+            ->assertDontSee('MARKETING_TIKTOK'); // المكان المُعلَّم للحساب الفارغ للبيئة المحلية فقط
+    }
+
+    public function test_faq_and_plans_are_compact_and_truthful(): void
+    {
+        $points = number_format(config('credits.monthly_allowance'));
+
+        $this->get('/')
+            ->assertSee('name="faq"', false)                     // فتح سؤال يغلق السابق
+            ->assertSee("{$points} نقطة كل شهر — تكفي حتى")      // الرقم من config/credits.php
+            ->assertSee('عرض كل المزايا (+5)')
+            ->assertSee('فريق تسويق كامل… باشتراك واحد؟');
     }
 
     public function test_home_sends_signed_in_users_to_the_dashboard(): void

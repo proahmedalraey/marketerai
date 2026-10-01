@@ -28,6 +28,11 @@ class MarketingController extends Controller
         return view('marketing.about');
     }
 
+    public function contact(): View
+    {
+        return view('marketing.contact');
+    }
+
     public function legal(string $page): View
     {
         abort_unless(isset(self::LEGAL_PAGES[$page]), 404);

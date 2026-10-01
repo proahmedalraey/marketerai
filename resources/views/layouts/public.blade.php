@@ -93,60 +93,93 @@
 </main>
 
 {{-- ====== التذييل ====== --}}
-@php $contact = config('marketing.contact'); @endphp
-<footer class="border-t border-amber-100 bg-gray-50 pb-8 pt-16">
+{{-- الجوال: الشعار في الوسط، والمجموعات مطوية تُفتح باللمس، ثم أيقونات السوشيال أفقيًا ثم الحقوق.
+     الحاسوب: أعمدة مفتوحة دائمًا، والحقوق يمينًا والأيقونات يسارًا. --}}
+@php
+    $footerGroups = [
+        'links' => ['روابط سريعة', [
+            ['الرئيسية', route('home')],
+            ['المميزات', route('home').'#features'],
+            ['الأسعار', route('home').'#pricing'],
+            ['كيف نعمل', route('home').'#how'],
+            ['من نحن', route('about')],
+            ['الوكلاء والشركاء المعتمدون', route('home').'#partners'],
+        ]],
+        'contact' => ['تواصل معنا', collect(\App\Support\Contact::channels())->map(fn ($channel) => [$channel['label'], $channel['href']])->values()->all()],
+        'legal' => ['قانوني', [
+            ['سياسة الخصوصية', route('privacy')],
+            ['سياسة الاسترجاع والإلغاء', route('refund')],
+        ]],
+    ];
+    $socials = \App\Support\Contact::socials();
+@endphp
+<footer class="border-t border-amber-100 bg-gray-50 pb-8 pt-14 md:pt-16">
     <div class="mx-auto max-w-7xl px-4 md:px-6">
-        <div class="mb-12 grid gap-10 md:grid-cols-4">
-            <div class="md:col-span-2">
+        <div class="grid gap-8 md:mb-12 md:grid-cols-5 md:gap-10">
+            <div class="text-center md:col-span-2 md:text-start">
                 <a href="{{ route('home') }}" class="mb-4 inline-flex" aria-label="{{ config('marketing.name') }}"><x-public.logo /></a>
-                <p class="max-w-sm leading-relaxed text-gray-500">{{ config('marketing.tagline') }}</p>
+                <p class="mx-auto max-w-sm leading-relaxed text-gray-500 md:mx-0">{{ config('marketing.tagline') }}</p>
             </div>
 
-            <div>
-                <h2 class="mb-4 font-bold text-gray-900">روابط سريعة</h2>
-                <ul class="space-y-3">
-                    @foreach ([
-                        ['الرئيسية', route('home')],
-                        ['المميزات', route('home').'#features'],
-                        ['الأسعار', route('home').'#pricing'],
-                        ['كيف نعمل', route('home').'#how'],
-                        ['من نحن', route('about')],
-                        ['الوكلاء والشركاء المعتمدون', route('home').'#partners'],
-                    ] as [$label, $url])
-                        <li><a href="{{ $url }}" class="text-gray-500 transition-colors hover:text-primary-ink">{{ $label }}</a></li>
-                    @endforeach
-                </ul>
-            </div>
+            {{-- على الحاسوب يذوب هذا الغلاف (contents) فتصير كل مجموعة عمودًا في الشبكة --}}
+            <div class="divide-y divide-gray-200 border-y border-gray-200 md:contents">
+                @foreach ($footerGroups as $id => [$title, $links])
+                    <div x-data="{ open: false }">
+                        <h2 class="mb-4 hidden font-bold text-gray-900 md:block">{{ $title }}</h2>
 
-            <div>
-                <h2 class="mb-4 font-bold text-gray-900">قانوني</h2>
-                <ul class="space-y-3">
-                    <li><a href="{{ route('privacy') }}" class="text-gray-500 transition-colors hover:text-primary-ink">سياسة الخصوصية</a></li>
-                    <li><a href="{{ route('refund') }}" class="text-gray-500 transition-colors hover:text-primary-ink">سياسة الاسترجاع والإلغاء</a></li>
-                </ul>
+                        <button type="button" @click="open = !open" :aria-expanded="open.toString()" aria-controls="footer-{{ $id }}"
+                                class="flex w-full items-center justify-between gap-4 py-4 text-start font-bold text-gray-900 md:hidden">
+                            {{ $title }}
+                            <span class="relative grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-md shadow-gray-900/10 ring-1 transition-colors duration-300"
+                                  :class="open ? 'bg-primary text-white ring-primary' : 'bg-white text-gray-700 ring-gray-100'" aria-hidden="true">
+                                <span class="absolute h-0.5 w-3 rounded-full bg-current"></span>
+                                <span class="absolute h-3 w-0.5 rounded-full bg-current transition-transform duration-300" :class="open && 'rotate-90 scale-0'"></span>
+                            </span>
+                        </button>
+
+                        {{-- الطي بصفوف الشبكة (0fr → 1fr) فينساب الارتفاع دون قياسه؛ الحاسوب مفتوح دائمًا --}}
+                        <div id="footer-{{ $id }}" class="grid transition-[grid-template-rows] duration-300 ease-out md:!grid-rows-[1fr]"
+                             :class="open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'">
+                            <div class="overflow-hidden">
+                                <ul class="space-y-1 pb-4 md:space-y-3 md:pb-0">
+                                    @foreach ($links as [$label, $url])
+                                        <li>
+                                            <a href="{{ $url }}" class="inline-block py-1.5 text-gray-500 transition-colors hover:text-primary-ink md:py-0"
+                                               @if (str_starts_with($url, 'https://wa.me')) target="_blank" rel="noopener" @endif>{{ $label }}</a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
 
-        <div class="flex flex-col items-center justify-between gap-4 border-t border-gray-200 pt-8 md:flex-row">
+        <div class="mt-8 flex flex-col-reverse items-center justify-between gap-6 md:mt-0 md:flex-row md:border-t md:border-gray-200 md:pt-8">
             <p class="text-sm text-gray-500">جميع الحقوق محفوظة © {{ date('Y') }} {{ config('marketing.name') }}</p>
 
-            <div class="flex items-center gap-2">
-                @if ($contact['email'])
-                    <a href="mailto:{{ $contact['email'] }}" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-blue-100 hover:text-blue-700">
-                        <x-public.icon name="mail" class="h-4 w-4" /><span class="sr-only">البريد الإلكتروني</span>
-                    </a>
-                @endif
-                @if ($contact['whatsapp'])
-                    <a href="https://wa.me/{{ preg_replace('/\D/', '', $contact['whatsapp']) }}" target="_blank" rel="noopener" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-green-100 hover:text-green-700">
-                        <x-public.icon name="thread" class="h-4 w-4" /><span class="sr-only">واتساب</span>
-                    </a>
-                @endif
-                @if ($contact['instagram'])
-                    <a href="{{ $contact['instagram'] }}" target="_blank" rel="noopener" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-600 transition-colors duration-200 hover:bg-pink-100 hover:text-pink-700">
-                        <x-public.icon name="instagram" class="h-4 w-4" /><span class="sr-only">إنستغرام</span>
-                    </a>
-                @endif
-            </div>
+            @if ($socials)
+                <ul class="flex flex-wrap items-center justify-center gap-2.5" aria-label="حساباتنا على السوشيال ميديا">
+                    @foreach ($socials as $social)
+                        <li>
+                            @if ($social['href'])
+                                <a href="{{ $social['href'] }}" target="_blank" rel="noopener"
+                                   class="grid h-11 w-11 place-items-center rounded-full bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 transition-colors duration-200 hover:bg-primary hover:text-white hover:ring-primary md:h-10 md:w-10">
+                                    <x-public.icon :name="$social['icon']" class="h-4 w-4" />
+                                    <span class="sr-only">{{ $social['label'] }}</span>
+                                </a>
+                            @else
+                                {{-- البيئة المحلية فقط: مكان الحساب ظاهر ومُعلَّم بمتغيره حتى يُضبط رابطه --}}
+                                <span title="{{ $social['label'] }} — اضبط {{ $social['env'] }} في ملف ‎.env"
+                                      class="grid h-11 w-11 place-items-center rounded-full border border-dashed border-gray-300 text-gray-400 md:h-10 md:w-10">
+                                    <x-public.icon :name="$social['icon']" class="h-4 w-4" />
+                                </span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </div>
     </div>
 </footer>

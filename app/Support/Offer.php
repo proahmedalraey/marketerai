@@ -56,6 +56,26 @@ final class Offer
         return 'وفّر '.self::ltr(self::yearlySaving().'%');
     }
 
+    /** ما يوفّره الدفع السنوي مقابل 12 دفعة شهرية، بالعملة. */
+    public static function yearlySavingAmount(): string
+    {
+        $monthlyTotal = (float) config('marketing.offer.monthly_price') * 12;
+
+        return self::money(max(0, $monthlyTotal - (float) config('marketing.offer.yearly_price')));
+    }
+
+    /** نص ميزة الباقة بعد تعويض :points و :posts من حصة النقاط وتكلفة المنشور الفعليتين. */
+    public static function feature(string $text): string
+    {
+        $points = (int) config('credits.monthly_allowance');
+        $postCost = (float) (config('credits.costs')['content.post'] ?? 1) ?: 1;
+
+        return strtr($text, [
+            ':points' => number_format($points),
+            ':posts' => number_format((int) floor($points / $postCost)),
+        ]);
+    }
+
     public static function trialDays(): int
     {
         return (int) config('marketing.offer.trial_days');
