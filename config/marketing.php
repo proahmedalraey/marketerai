@@ -28,15 +28,16 @@ return [
         'note' => 'ضماننا: إن لم يناسبك المحتوى خلال فترة التجربة، نعيد لك مبلغك كاملًا.',
     ],
 
-    // أدوات مشهد «كل الأدوات في منصة واحدة»، ونفسها في الشريط المتبدّل بالترويسة والتذييل:
-    // name على البطاقة الكبيرة، line في جملة المشهد، verb في الشريط، color فئات Tailwind للبطاقة
-    // (tailwind.config.js يفحص هذا الملف كي تُبنى هذه الفئات). الشريط مضبوط على 5 أدوات (app.css: .tool-ticker)
+    // أدوات مشهد «كل الأدوات في منصة واحدة»، ونفسها في الشريط المتبدّل:
+    // name على البطاقة الكبيرة، line في جملة المشهد، verb في شريط الترويسة، phrase في شريط التذييل،
+    // color فئات Tailwind للبطاقة (tailwind.config.js يفحص هذا الملف كي تُبنى هذه الفئات).
+    // الشريط مضبوط على 5 أدوات (app.css: .tool-ticker)
     'tools' => [
-        ['icon' => 'pen', 'name' => 'كاتب المحتوى', 'line' => 'اكتب،', 'verb' => 'اكتب', 'color' => 'bg-primary text-white'],
-        ['icon' => 'image', 'name' => 'مصمم الصور', 'line' => 'صمّم،', 'verb' => 'صمّم', 'color' => 'bg-amber-300 text-gray-900'],
-        ['icon' => 'mic', 'name' => 'المعلّق الصوتي', 'line' => 'علّق،', 'verb' => 'علّق', 'color' => 'bg-rose-300 text-gray-900'],
-        ['icon' => 'calendar', 'name' => 'مخطط الشهر', 'line' => 'خطّط،', 'verb' => 'خطّط', 'color' => 'bg-emerald-300 text-gray-900'],
-        ['icon' => 'shield-check', 'name' => 'مدقق الصدق', 'line' => 'وانشر بثقة', 'verb' => 'انشر بثقة', 'color' => 'bg-sky-300 text-gray-900'],
+        ['icon' => 'pen', 'name' => 'كاتب المحتوى', 'line' => 'اكتب،', 'verb' => 'اكتب', 'phrase' => 'اكتب منشورات تبيع', 'color' => 'bg-primary text-white'],
+        ['icon' => 'image', 'name' => 'مصمم الصور', 'line' => 'صمّم،', 'verb' => 'صمّم', 'phrase' => 'صمّم صور منتجاتك', 'color' => 'bg-amber-300 text-gray-900'],
+        ['icon' => 'mic', 'name' => 'المعلّق الصوتي', 'line' => 'علّق،', 'verb' => 'علّق', 'phrase' => 'علّق صوتيًا على فيديوهاتك', 'color' => 'bg-rose-300 text-gray-900'],
+        ['icon' => 'calendar', 'name' => 'مخطط الشهر', 'line' => 'خطّط،', 'verb' => 'خطّط', 'phrase' => 'خطّط محتواك الشهري', 'color' => 'bg-emerald-300 text-gray-900'],
+        ['icon' => 'shield-check', 'name' => 'مدقق الصدق', 'line' => 'وانشر بثقة', 'verb' => 'انشر بثقة', 'phrase' => 'انشر بثقة في قنوات متعددة', 'color' => 'bg-sky-300 text-gray-900'],
     ],
 
     // وسيلتا التواصل المباشر. «تواصل معنا» يفتح واتساب برسالة القناة، وإلا البريد بعنوانها،

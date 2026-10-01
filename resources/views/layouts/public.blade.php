@@ -65,8 +65,18 @@
         </div>
 
         <div class="flex items-center gap-1.5 md:hidden">
-            {{-- أداة وفعلها من مشهد التجميع يتبدّلان، والنقر يبدأ التسجيل --}}
+            {{-- أداة وفعلها من مشهد التجميع يتبدّلان، والنقر يبدأ التسجيل.
+                 يخفت مع التمرير حين يقترب التذييل (وفيه شريط العبارات) فلا يتكرر الشريطان معًا:
+                 يبدأ الخفوت حين يطل التذييل من أسفل الشاشة، ويكتمل بعد 260px — قبل أن يصل شريط التذييل --}}
             <a href="{{ route('register') }}" aria-label="ابدأ مع {{ config('marketing.name') }}: اكتب، صمّم، علّق، خطّط، وانشر بثقة"
+               x-data="{ fade: 1 }"
+               x-init="
+                   const footer = document.querySelector('footer');
+                   const update = () => { fade = Math.min(1, Math.max(0, 1 + (footer.getBoundingClientRect().top - innerHeight) / 260)); };
+                   update();
+                   addEventListener('scroll', update, { passive: true });
+                   addEventListener('resize', update);"
+               :style="{ opacity: fade, transform: `scale(${0.92 + fade * 0.08})`, visibility: fade > 0 ? 'visible' : 'hidden' }"
                class="inline-flex min-h-11 items-center rounded-full bg-white px-3 text-sm font-bold text-gray-900 shadow-sm ring-1 ring-gray-200">
                 <x-public.tool-ticker />
             </a>
@@ -128,10 +138,10 @@
                 <a href="{{ route('home') }}" class="mb-4 inline-flex" aria-label="{{ config('marketing.name') }}"><x-public.logo /></a>
                 <p class="mx-auto max-w-sm leading-relaxed text-gray-500 md:mx-0">{{ config('marketing.tagline') }}</p>
 
-                {{-- نفس شريط الترويسة: «اكتب مع مسوق AI»، «صمّم مع مسوق AI»… --}}
-                <a href="{{ route('register') }}" aria-label="ابدأ مع {{ config('marketing.name') }}: اكتب، صمّم، علّق، خطّط، وانشر بثقة"
+                {{-- فكرة شريط الترويسة نفسها بعبارات فائدة: «خطّط محتواك الشهري»، «انشر بثقة في قنوات متعددة»… --}}
+                <a href="{{ route('register') }}" aria-label="ابدأ مع {{ config('marketing.name') }}: {{ collect(config('marketing.tools'))->pluck('phrase')->join('، ') }}"
                    class="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-4 font-bold text-gray-900 shadow-sm ring-1 ring-gray-200 transition-shadow hover:shadow-md">
-                    <x-public.tool-ticker size="md" :suffix="'مع '.config('marketing.name')" />
+                    <x-public.tool-ticker size="md" text="phrase" />
                 </a>
             </div>
 

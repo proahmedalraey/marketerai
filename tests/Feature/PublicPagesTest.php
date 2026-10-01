@@ -90,11 +90,15 @@ class PublicPagesTest extends TestCase
             $this->assertStringContainsString($platform['label'], $html);
         }
 
-        // الشريط المتبدّل في الترويسة والتذييل: أفعال الأدوات الخمسة، ورابطه يبدأ التسجيل
+        // الشريط المتبدّل: أفعال قصيرة في الترويسة، وعبارات فائدة في التذييل (لا «مع مسوق AI» مكررة)
         $this->assertSame(2, substr_count($html, 'class="tool-ticker"'));
         foreach (config('marketing.tools') as $tool) {
             $this->assertStringContainsString($tool['verb'], $html);
+            $this->assertStringContainsString($tool['phrase'], $html);
         }
+
+        // شريط الترويسة يخفت مع اقتراب التذييل
+        $this->assertStringContainsString("document.querySelector('footer')", $html);
     }
 
     public function test_home_sends_signed_in_users_to_the_dashboard(): void
