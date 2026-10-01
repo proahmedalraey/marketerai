@@ -64,12 +64,20 @@
             @endauth
         </div>
 
-        <button type="button" class="grid h-11 w-11 place-items-center rounded-full text-gray-600 md:hidden"
-                @click="open = !open" :aria-expanded="open.toString()" aria-controls="mobile-nav">
-            <x-public.icon name="menu" class="h-6 w-6" x-show="!open" />
-            <x-public.icon name="close" class="h-6 w-6" x-show="open" x-cloak />
-            <span class="sr-only">القائمة</span>
-        </button>
+        <div class="flex items-center gap-1.5 md:hidden">
+            {{-- أداة وفعلها من مشهد التجميع يتبدّلان، والنقر يبدأ التسجيل --}}
+            <a href="{{ route('register') }}" aria-label="ابدأ مع {{ config('marketing.name') }}: اكتب، صمّم، علّق، خطّط، وانشر بثقة"
+               class="inline-flex min-h-11 items-center rounded-full bg-white px-3 text-sm font-bold text-gray-900 shadow-sm ring-1 ring-gray-200">
+                <x-public.tool-ticker />
+            </a>
+
+            <button type="button" class="grid h-11 w-11 place-items-center rounded-full text-gray-600"
+                    @click="open = !open" :aria-expanded="open.toString()" aria-controls="mobile-nav">
+                <x-public.icon name="menu" class="h-6 w-6" x-show="!open" />
+                <x-public.icon name="close" class="h-6 w-6" x-show="open" x-cloak />
+                <span class="sr-only">القائمة</span>
+            </button>
+        </div>
     </div>
 
     <nav id="mobile-nav" x-show="open" x-cloak x-transition.opacity @click.outside="open = false"
@@ -119,6 +127,12 @@
             <div class="text-center md:col-span-2 md:text-start">
                 <a href="{{ route('home') }}" class="mb-4 inline-flex" aria-label="{{ config('marketing.name') }}"><x-public.logo /></a>
                 <p class="mx-auto max-w-sm leading-relaxed text-gray-500 md:mx-0">{{ config('marketing.tagline') }}</p>
+
+                {{-- نفس شريط الترويسة: «اكتب مع مسوق AI»، «صمّم مع مسوق AI»… --}}
+                <a href="{{ route('register') }}" aria-label="ابدأ مع {{ config('marketing.name') }}: اكتب، صمّم، علّق، خطّط، وانشر بثقة"
+                   class="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-4 font-bold text-gray-900 shadow-sm ring-1 ring-gray-200 transition-shadow hover:shadow-md">
+                    <x-public.tool-ticker size="md" :suffix="'مع '.config('marketing.name')" />
+                </a>
             </div>
 
             {{-- على الحاسوب يذوب هذا الغلاف (contents) فتصير كل مجموعة عمودًا في الشبكة --}}

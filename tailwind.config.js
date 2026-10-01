@@ -15,6 +15,8 @@ export default {
         './resources/views/**/*.blade.php',
         './resources/js/**/*.js',
         './app/**/*.php',
+        // ألوان أدوات الصفحة الرئيسية معرّفة هنا (marketing.tools)
+        './config/marketing.php',
     ],
 
     theme: {

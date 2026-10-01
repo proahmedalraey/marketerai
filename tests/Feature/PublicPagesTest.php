@@ -79,6 +79,24 @@ class PublicPagesTest extends TestCase
             ->assertSee('فريق تسويق كامل… باشتراك واحد؟');
     }
 
+    public function test_publish_threads_reach_the_platforms_we_write_for(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+
+        // ختام المشهد: المنصات الثماني من config/content.php، والخيوط تبدأ من «وانشر بثقة»
+        $this->assertSame(count(config('content.platforms')), substr_count($html, 'data-assembly-platform'));
+        $this->assertStringContainsString('data-assembly-publish-from', $html);
+        foreach (config('content.platforms') as $platform) {
+            $this->assertStringContainsString($platform['label'], $html);
+        }
+
+        // الشريط المتبدّل في الترويسة والتذييل: أفعال الأدوات الخمسة، ورابطه يبدأ التسجيل
+        $this->assertSame(2, substr_count($html, 'class="tool-ticker"'));
+        foreach (config('marketing.tools') as $tool) {
+            $this->assertStringContainsString($tool['verb'], $html);
+        }
+    }
+
     public function test_home_sends_signed_in_users_to_the_dashboard(): void
     {
         $user = User::create(['name' => 'تاجر', 'email' => 'merchant@example.com', 'password' => 'secret123']);

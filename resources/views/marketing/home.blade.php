@@ -27,13 +27,16 @@
         ['story-dates', null, 'تمر وفنجان قهوة على صينية نحاسية'],
     ];
 
-    // أدوات مشهد «كل الأدوات في منصة واحدة»: الأيقونة، اسم الأداة، فعلها في الجملة، لونها
-    $tools = [
-        ['pen', 'كاتب المحتوى', 'اكتب،', 'bg-primary text-white'],
-        ['image', 'مصمم الصور', 'صمّم،', 'bg-amber-300 text-gray-900'],
-        ['mic', 'المعلّق الصوتي', 'علّق،', 'bg-rose-300 text-gray-900'],
-        ['calendar', 'مخطط الشهر', 'خطّط،', 'bg-emerald-300 text-gray-900'],
-        ['shield-check', 'مدقق الصدق', 'وانشر بثقة', 'bg-sky-300 text-gray-900'],
+    // ألوان شعارات المنصات في ختام مشهد التجميع (أدوات المشهد نفسها في config/marketing.php: tools)
+    $platformColors = [
+        'instagram' => 'bg-white text-[#E4405F]',
+        'tiktok' => 'bg-white text-gray-900',
+        'x' => 'bg-white text-gray-900',
+        'facebook' => 'bg-white text-[#1877F2]',
+        'linkedin' => 'bg-white text-[#0A66C2]',
+        'youtube' => 'bg-white text-[#FF0000]',
+        'pinterest' => 'bg-white text-[#E60023]',
+        'snapchat' => 'bg-[#FFFC00] text-gray-900',
     ];
 
     $features = [
@@ -255,27 +258,42 @@
             <p class="mx-auto mt-4 max-w-xl text-lg text-gray-300">كاتب ومصمم ومعلّق صوتي ومخطط ومدقق… مرّر لتراهم يجتمعون.</p>
         </div>
 
-        <div class="mx-auto max-w-4xl text-center">
-            <p data-assembly-seg class="mb-8 inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800">كل أدوات التسويق في منصة واحدة</p>
+        <div data-assembly-final class="relative mx-auto max-w-4xl text-center">
+            {{-- الخيوط تُرسم هنا من «وانشر بثقة» إلى المنصات (assembly.js)؛ بلا سكربت تظهر المنصات بلا خيوط --}}
+            <svg data-assembly-threads class="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true"></svg>
 
-            <h2 id="assembly-title" class="text-[2rem] font-bold leading-[1.5] text-gray-900 md:text-6xl md:leading-[1.4]">
+            <p data-assembly-seg class="relative mb-6 inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800 md:mb-8">كل أدوات التسويق في منصة واحدة</p>
+
+            <h2 id="assembly-title" class="relative text-[2rem] font-bold leading-[1.5] text-gray-900 md:text-6xl md:leading-[1.4]">
                 {{-- الأداة وفعلها وحدة واحدة: التفاف السطر لا يفصل الأيقونة عن كلمتها --}}
-                @foreach ($tools as [$icon, $name, $verb, $colors])
+                @foreach (config('marketing.tools') as $tool)
                     <span class="whitespace-nowrap">
                         <span class="assembly-hole" aria-hidden="true">
-                            <span data-assembly-chip class="assembly-chip {{ $colors }}">
-                                <x-public.icon :name="$icon" class="size-1/2" stroke="2" />
-                                <span data-assembly-label class="assembly-label">{{ $name }}</span>
+                            <span data-assembly-chip class="assembly-chip {{ $tool['color'] }}">
+                                <x-public.icon :name="$tool['icon']" class="size-1/2" stroke="2" />
+                                <span data-assembly-label class="assembly-label">{{ $tool['name'] }}</span>
                             </span>
                         </span>
-                        <span data-assembly-seg>{{ $verb }}</span>
+                        <span data-assembly-seg @if ($loop->last) data-assembly-publish-from @endif>{{ $tool['line'] }}</span>
                     </span>
                 @endforeach
-                <br class="hidden md:inline">
-                <span data-assembly-seg class="text-primary">كلها في مسوق AI.</span>
             </h2>
 
-            <div data-assembly-outro class="mt-10">
+            {{-- المنصات الثماني التي يكتب لها مسوق AI (config/content.php)، تمتد إليها الخيوط من «وانشر بثقة» --}}
+            {{-- الثماني في سطر واحد حتى على الجوال، كي لا يعبر خيط بين الأيقونات إلى سطر ثانٍ --}}
+            <ul class="relative mx-auto mt-12 flex max-w-xl justify-center gap-1.5 sm:gap-2.5 md:mt-16 md:gap-4" aria-label="المنصات التي يكتب لها مسوق AI">
+                @foreach (config('content.platforms') as $key => $platform)
+                    <li data-assembly-platform class="grid h-9 w-9 shrink-0 place-items-center rounded-full shadow-md ring-1 ring-gray-100 sm:h-10 sm:w-10 md:h-12 md:w-12 {{ $platformColors[$key] ?? 'bg-white text-gray-900' }}">
+                        <x-public.icon :name="$platform['icon']" class="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span class="sr-only">{{ $platform['label'] }}</span>
+                    </li>
+                @endforeach
+            </ul>
+            <p data-assembly-at="0.885" class="relative mt-3 text-sm text-gray-500">بصيغة كل منصة وطولها</p>
+
+            <p data-assembly-at="0.905" class="relative mt-6 text-[2rem] font-bold leading-snug text-primary md:mt-8 md:text-5xl">كلها في مسوق AI.</p>
+
+            <div data-assembly-outro class="relative mt-6 md:mt-8">
                 <p class="text-lg text-gray-600 md:text-xl">كل ذلك مقابل <span class="font-bold text-primary-ink">{{ Offer::monthly() }} شهريًا</span> فقط.</p>
                 <a href="{{ route('register') }}" class="{{ $btnPrimary }} mt-6">ابدأ مع مسوق AI</a>
             </div>

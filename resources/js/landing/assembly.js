@@ -17,7 +17,22 @@ export function assembly(section) {
     const holes = chips.map((chip) => chip.parentElement);
     const labels = chips.map((chip) => chip.querySelector('[data-assembly-label]'));
     const segments = [...section.querySelectorAll('[data-assembly-seg]')];
+    const lates = [...section.querySelectorAll('[data-assembly-at]')];
     const outro = section.querySelector('[data-assembly-outro]');
+
+    // «وانشر بثقة» ← خيط لكل منصة: خيط أساسي يُرسم مع التمرير، وفوقه نقاط تسري بعد اكتماله
+    const final = section.querySelector('[data-assembly-final]');
+    const svg = section.querySelector('[data-assembly-threads]');
+    const publishFrom = section.querySelector('[data-assembly-publish-from]');
+    const platforms = [...section.querySelectorAll('[data-assembly-platform]')];
+    const threads = platforms.map(() => {
+        const base = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const flow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        base.setAttribute('class', 'assembly-thread');
+        flow.setAttribute('class', 'assembly-flow');
+        svg.append(base, flow);
+        return { base, flow, length: 0 };
+    });
 
     section.classList.add('is-animated');
 
@@ -68,6 +83,33 @@ export function assembly(section) {
 
         top = section.getBoundingClientRect().top + window.scrollY;
         runway = Math.max(1, section.offsetHeight - height);
+
+        measureThreads();
+    };
+
+    // المنحنى ينزل من منتصف «وانشر بثقة» ويتفرّع إلى أعلى كل منصة
+    const measureThreads = () => {
+        platforms.forEach((platform) => { platform.style.transform = ''; }); // القياس بلا تكبير الظهور
+
+        const box = final.getBoundingClientRect();
+        svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+
+        const from = publishFrom.getBoundingClientRect();
+        const ox = from.left - box.left + from.width / 2;
+        const oy = from.bottom - box.top + 4;
+
+        threads.forEach((thread, i) => {
+            const to = platforms[i].getBoundingClientRect();
+            const tx = to.left - box.left + to.width / 2;
+            const ty = to.top - box.top - 6;
+            const bend = (ty - oy) * 0.55;
+            const d = `M ${ox} ${oy} C ${ox} ${oy + bend}, ${tx} ${ty - bend}, ${tx} ${ty}`;
+
+            thread.base.setAttribute('d', d);
+            thread.flow.setAttribute('d', d);
+            thread.length = thread.base.getTotalLength();
+            thread.base.style.strokeDasharray = `${thread.length}`;
+        });
     };
 
     const render = (p) => {
@@ -81,7 +123,7 @@ export function assembly(section) {
 
         const rise = range(p, 0, 0.25);
         const gather = ease(range(p, 0.25, 0.5));
-        const fly = range(p, 0.5, 0.72);
+        const fly = range(p, 0.5, 0.7);
         const lift = -0.3 * height;
 
         chips.forEach((chip, i) => {
@@ -107,12 +149,29 @@ export function assembly(section) {
             labels[i].style.opacity = `${clamp((size - 2 * hole) / (tile - 2 * hole))}`;
         });
 
-        // ٤) مقاطع الجملة تظهر بترتيب القراءة، ثم السعر والزر
+        // ٤) مقاطع الجملة تظهر بترتيب القراءة
         segments.forEach((segment, i) => {
-            segment.style.opacity = `${range(p, 0.72 + i * 0.028, 0.75 + i * 0.028)}`;
+            segment.style.opacity = `${range(p, 0.7 + i * 0.02, 0.73 + i * 0.02)}`;
         });
 
-        const end = range(p, 0.9, 0.97);
+        // ٥) الخيوط تمتد من «وانشر بثقة» واحدًا تلو الآخر، وكل منصة تظهر حين يصلها خيطها
+        threads.forEach((thread, i) => {
+            thread.base.style.strokeDashoffset = `${thread.length * (1 - ease(range(p, 0.82 + i * 0.008, 0.86 + i * 0.008)))}`;
+        });
+        platforms.forEach((platform, i) => {
+            const shown = ease(range(p, 0.85 + i * 0.008, 0.87 + i * 0.008));
+            platform.style.opacity = `${shown}`;
+            platform.style.transform = `scale(${0.6 + 0.4 * shown})`;
+        });
+        section.classList.toggle('is-flowing', p >= 0.93);
+
+        // ٦) «بصيغة كل منصة» و«كلها في مسوق AI.» كلٌّ عند موعده، ثم السعر والزر
+        lates.forEach((element) => {
+            const at = parseFloat(element.dataset.assemblyAt);
+            element.style.opacity = `${range(p, at, at + 0.025)}`;
+        });
+
+        const end = range(p, 0.93, 0.98);
         outro.style.opacity = `${end}`;
         outro.style.transform = `translateY(${(1 - end) * 16}px)`;
         outro.style.visibility = end > 0 ? 'visible' : 'hidden';
