@@ -32,6 +32,10 @@ class PublicPagesTest extends TestCase
         // الحركة تحسين فوق محتوى كامل: بلا سكربت (أو مع «تقليل الحركة») يبقى النص والصور والروابط
         $this->get('/')
             ->assertOk()
+            ->assertSee('data-stories', false)
+            ->assertSee('images/marketing/story-pour.jpg', false)
+            ->assertSee('تبحث عن نكهة تميز قهوتك الحين؟')
+            ->assertSee('<h1 data-reveal', false)
             ->assertSee('data-showcase', false)
             ->assertSee('images/marketing/tour-writer.webp', false)
             ->assertSee('data-assembly', false)

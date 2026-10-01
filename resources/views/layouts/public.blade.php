@@ -13,6 +13,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap">
 
+    {{-- قبل الرسم: من لم يطلب تقليل الحركة تُخفى عناوينه المتحركة حتى تظهر سطرًا سطرًا (app.css: .motion-ok) --}}
+    <script>
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('motion-ok');
+        }
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 

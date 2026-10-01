@@ -18,6 +18,15 @@
         ['voiceover', 'الصوت', 'تعليق صوتي بلهجة جمهورك', 'التعليق الصوتي: أنماط الإلقاء ونص جاهز للتسجيل'],
     ];
 
+    // ستوريات ولّدتها المنصة لمتجر الحساب التجريبي: صورة من الاستوديو مع النص الذي كُتب لها نفسها
+    // (public/images/marketing/story-*.jpg مقصوصة 9:16). استُبعدت الشرائح التي فيها أسعار وأرقام تواصل.
+    $stories = [
+        ['story-pour', 'تبحث عن نكهة تميز قهوتك الحين؟ سيروب المستكة اليوناني هو الحل.', 'باريستا يصب سيروب المستكة في فنجان قهوة'],
+        ['story-mastic', 'مناسب للقهوة الساخنة والباردة والماتشا والآيس كريم للمقاهي والبيت.', 'عبوة سيروب المستكة بجانب كأس ماتشا لاتيه مثلّج'],
+        ['story-white-chocolate', 'وش الفرق؟ الشوكولاتة البيضاء في كوبك تتغير مع صوص واحد', 'عبوة صوص الشوكولاتة البيضاء بجانب كوب لاتيه'],
+        ['story-dates', null, 'تمر وفنجان قهوة على صينية نحاسية'],
+    ];
+
     // أدوات مشهد «كل الأدوات في منصة واحدة»: الأيقونة، اسم الأداة، فعلها في الجملة، لونها
     $tools = [
         ['pen', 'كاتب المحتوى', 'اكتب،', 'bg-primary text-white'],
@@ -84,7 +93,7 @@
                         محتوى بهويتك.. يبيع عنك.
                     </span>
 
-                    <h1 class="text-4xl font-bold leading-tight text-gray-900 md:text-5xl lg:text-6xl">
+                    <h1 data-reveal class="text-4xl font-bold leading-tight text-gray-900 md:text-5xl lg:text-6xl">
                         منتجاتك تستاهل<br>
                         <span class="relative inline-block text-primary">
                             محتوى يبيعها
@@ -120,39 +129,67 @@
                 </div>
             </div>
 
-            {{-- مولّد المحتوى يعمل: بطاقة مائلة وشارة عائمة --}}
-            <div class="relative w-full lg:w-1/2" aria-hidden="true">
-                <div class="relative z-10 mx-auto max-w-xl">
-                    <div class="relative rotate-2 rounded-2xl border border-gray-100 bg-white p-2 shadow-2xl transition-transform duration-500 hover:rotate-0">
-                        <div class="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50">
-                            <div class="absolute inset-0 bg-gradient-to-tr from-amber-50 to-white opacity-50"></div>
-                            <div class="relative p-8 text-center">
-                                <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-primary">
-                                    <x-public.icon name="upload" class="h-7 w-7" />
-                                </span>
-                                <p class="mb-2 text-xl font-bold text-gray-800">مسوّقك الذكي يعمل</p>
-                                <p class="text-sm text-gray-500">يجهّز خطة محتوى لشهر كامل…</p>
-                                <div class="mt-4 flex justify-center gap-1.5">
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-amber-400"></span>
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:150ms]"></span>
-                                    <span class="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:300ms]"></span>
-                                </div>
-                            </div>
-                        </div>
+            {{-- ستوريات حقيقية من الحساب التجريبي تتقدّم داخل جوال (resources/js/landing/stories.js) --}}
+            <div class="relative w-full lg:w-1/2">
+                <div class="relative mx-auto w-[17rem] sm:w-[19rem]">
+                    <div class="absolute -inset-12 -z-10 rounded-full bg-amber-200/40 blur-3xl" aria-hidden="true"></div>
 
-                        <div class="absolute -bottom-6 -right-6 rounded-xl border border-gray-100 bg-white p-4 shadow-xl motion-safe:animate-float-y">
-                            <div class="flex items-center gap-3">
-                                <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-600">
-                                    <x-public.icon name="check-circle" class="h-5 w-5" />
-                                </span>
-                                <div>
-                                    <p class="font-bold text-gray-800">جاهز للنشر</p>
-                                    <p class="text-xs font-semibold text-green-700">30 منشورًا لهذا الشهر</p>
-                                </div>
+                    <div class="relative rotate-2 rounded-[2.75rem] bg-gray-900 p-2.5 shadow-2xl shadow-gray-900/30 transition-transform duration-500 hover:rotate-0"
+                         data-stories role="region" aria-roledescription="ستوريات" aria-label="أمثلة ستوري ولّدها مسوق AI">
+                        <div class="relative aspect-[9/16] overflow-hidden rounded-[2.2rem] bg-gray-800">
+                            @foreach ($stories as $i => [$image, $text, $alt])
+                                <figure data-story class="story-frame {{ $i ? '' : 'is-active' }}" aria-hidden="{{ $i ? 'true' : 'false' }}">
+                                    <img src="{{ asset('images/marketing/'.$image.'.jpg') }}" alt="{{ $alt }}" width="720" height="1280"
+                                         class="story-img" decoding="async" fetchpriority="{{ $i ? 'low' : 'high' }}">
+                                    <span class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" aria-hidden="true"></span>
+                                    @if ($text)
+                                        <figcaption class="story-text absolute inset-x-5 bottom-20 text-start text-lg font-bold leading-snug text-white [text-shadow:0_2px_10px_rgb(0_0_0/0.45)]">{{ $text }}</figcaption>
+                                    @endif
+                                </figure>
+                            @endforeach
+
+                            {{-- رأس الستوري: أشرطة التقدّم وحساب المتجر --}}
+                            <div class="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-black/50 to-transparent" aria-hidden="true"></div>
+                            <div class="absolute inset-x-3 top-3 z-20 flex gap-1" aria-hidden="true">
+                                @foreach ($stories as $story)
+                                    <span class="h-[3px] flex-1 overflow-hidden rounded-full bg-white/35">
+                                        <span data-story-bar class="story-bar block h-full w-full rounded-full bg-white"></span>
+                                    </span>
+                                @endforeach
+                            </div>
+                            <div class="absolute inset-x-3 top-6 z-20 flex items-center gap-2 text-white" aria-hidden="true">
+                                <img src="{{ asset('images/marketing/story-avatar.jpg') }}" alt="" width="96" height="96" class="h-8 w-8 rounded-full object-cover ring-2 ring-white/80">
+                                <span class="text-sm font-bold">إمدادات القهوة</span>
+                                <span class="text-xs text-white/75">إنستغرام</span>
+                            </div>
+
+                            {{-- خانة الرد: شكل الستوري فقط --}}
+                            <div class="absolute inset-x-4 bottom-4 z-20 flex items-center gap-3 text-white" aria-hidden="true">
+                                <span class="flex-1 rounded-full border border-white/60 px-4 py-2 text-sm text-white/85">أرسل رسالة</span>
+                                <x-public.icon name="heart" class="h-6 w-6" />
+                                <x-public.icon name="send" class="h-6 w-6" />
+                            </div>
+
+                            {{-- النقر: النصف الأيسر يتقدّم والأيمن يرجع — اتجاه القراءة العربية --}}
+                            <button type="button" data-story-next class="absolute inset-y-0 left-0 z-30 w-1/2" aria-label="الستوري التالية"></button>
+                            <button type="button" data-story-prev class="absolute inset-y-0 right-0 z-30 w-1/2" aria-label="الستوري السابقة"></button>
+                        </div>
+                    </div>
+
+                    <div class="absolute -bottom-6 -right-10 z-20 rounded-xl border border-gray-100 bg-white p-4 shadow-xl motion-safe:animate-float-y" aria-hidden="true">
+                        <div class="flex items-center gap-3">
+                            <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-600">
+                                <x-public.icon name="check-circle" class="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p class="font-bold text-gray-800">ستوري جاهز للنشر</p>
+                                <p class="text-xs font-semibold text-green-700">بلهجة جمهور المتجر</p>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <p class="mt-12 text-center text-sm text-gray-500">أمثلة حقيقية ولّدها مسوق AI لمتجر إمدادات القهوة</p>
             </div>
         </div>
     </div>
@@ -251,7 +288,7 @@
     <div class="mx-auto max-w-7xl px-4 md:px-6">
         <div class="mb-16 text-center">
             <span class="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800">ماذا يشمل اشتراكك؟</span>
-            <h2 class="mb-4 mt-6 text-3xl font-bold text-gray-900 md:text-5xl">
+            <h2 data-reveal class="mb-4 mt-6 text-3xl font-bold text-gray-900 md:text-5xl">
                 أدواتك كلها
                 <span class="relative inline-block text-primary">
                     في مكان واحد
@@ -288,7 +325,7 @@
 <section id="how" class="scroll-mt-20 overflow-hidden bg-white py-24">
     <div class="mx-auto max-w-7xl px-4 md:px-6">
         <div class="mb-20 text-center">
-            <h2 class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">كيف يعمل مسوق AI؟</h2>
+            <h2 data-reveal class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">كيف يعمل مسوق AI؟</h2>
             <p class="text-lg text-gray-500">خمس خطوات تفصلك عن أول منشور جاهز.</p>
         </div>
 
@@ -332,7 +369,7 @@
 <section id="pricing" class="scroll-mt-20 bg-white py-24">
     <div class="mx-auto max-w-7xl px-4 md:px-6">
         <div class="mb-16 text-center">
-            <h2 class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">اختر الباقة المناسبة لك</h2>
+            <h2 data-reveal class="mb-6 text-3xl font-bold text-gray-900 md:text-5xl">اختر الباقة المناسبة لك</h2>
             <p class="text-lg text-gray-500">ابدأ بالشهرية بمرونة كاملة، أو وفّر مع السنوية.</p>
         </div>
 
@@ -487,7 +524,7 @@
                 <span class="text-sm font-medium">ابدأ رحلتك اليوم</span>
             </span>
 
-            <h2 class="mb-6 text-3xl font-bold leading-tight text-gray-900 md:text-5xl">
+            <h2 data-reveal class="mb-6 text-3xl font-bold leading-tight text-gray-900 md:text-5xl">
                 جاهز تحوّل منتجاتك إلى<br>
                 <span class="text-primary">محتوى يبيع؟</span>
             </h2>
