@@ -1,0 +1,738 @@
+{
+  "about": "مجموعة تقييم مولّد ملف الهوية: 30 نشاطاً تغطي نماذج البيع (جملة، تجزئة، الاثنان، خدمة للأفراد وللمنشآت)، والقنوات، والنطاق، وجودة البيانات، والفخاخ. التوقعات مكتوبة قبل أول تشغيل (2026-09-29). شغّلها: php artisan brand:eval-profile --dataset=tests/Evals/brand-profile.json --repeat=3 --judge --json=storage/app/evals/brand-profile.json",
+  "cases": [
+    {
+      "key": "abaya",
+      "about": "عبايات — تجزئة، متجر إلكتروني و3 فروع، وقيد «لا جملة»، والتفصيل خيار لا كل النشاط",
+      "meta": {"sector": "أزياء", "model": "retail", "channels": ["online", "branches"], "scope": "multi_city", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "دار لمار للعبايات",
+        "store_url": "https://darlamar.store",
+        "one_liner": "نصمم ونبيع عبايات يومية وعبايات مناسبات جاهزة، ونفصّل حسب المقاس عند الطلب، عبر متجرنا الإلكتروني وفروعنا في الرياض وجدة والدمام",
+        "advantages": "تفصيل حسب المقاس خلال 7 أيام عمل\nأقمشة كريب ونيدا يابانية\nشحن لجميع مناطق المملكة\nاستبدال العبايات الجاهزة خلال 14 يوماً\nقياس مجاني في الفروع",
+        "audience": "النساء من 20 إلى 45 سنة في السعودية يبحثن عن عباية عملية للدوام وأخرى أنيقة للمناسبات",
+        "notes": "لا نبيع بالجملة. العبايات المفصّلة لا تُستبدل"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["الرياض"], "in": "descriptions", "label": "مدن الفروع"},
+          {"any": ["جدة"], "in": "descriptions", "label": "مدن الفروع"},
+          {"any": ["الدمام"], "in": "descriptions", "label": "مدن الفروع"},
+          {"any": ["جاهزة", "الجاهزة"], "in": "all", "label": "العبايات الجاهزة جزء من النشاط"}
+        ],
+        "absent": [
+          {"any": ["جملة"], "in": "activity_type", "label": "التاجر نفى الجملة"}
+        ]
+      }
+    },
+    {
+      "key": "coffee_roastery",
+      "about": "قهوة مختصة — تجزئة، متجر إلكتروني و5 فروع كافيه واشتراك شهري ودورات",
+      "meta": {"sector": "أغذية ومشروبات", "model": "retail", "channels": ["online", "branches"], "scope": "multi_city", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "محمصة وادي البن",
+        "store_url": "https://wadialbun.store",
+        "one_liner": "محمصة قهوة مختصة نبيع الحبوب المحمصة وأدوات التحضير أونلاين، ولدينا 5 فروع كافيه في الرياض وبريدة",
+        "advantages": "نحمّص يومياً في محمصتنا في الرياض\nحبوب مختصة من إثيوبيا وكولومبيا واليمن\nاشتراك شهري يوصل الحبوب لبيتك\nدورات باريستا للمبتدئين في فرع الرياض",
+        "audience": "محبو القهوة المختصة الذين يحضّرونها في البيت، وزوار الكافيهات من الشباب والموظفين",
+        "notes": "لا نذكر أسعار الدورات في المحتوى"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["اشتراك"], "in": "descriptions", "label": "الاشتراك الشهري"},
+          {"any": ["بريدة"], "in": "descriptions", "label": "مدن الفروع"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "cafe_supplies",
+      "about": "مستلزمات كافيهات — جملة وتجزئة، للمنشآت والأفراد، متجر إلكتروني و3 فروع، ووكالة علامة",
+      "meta": {"sector": "مستلزمات تجارية", "model": "both", "channels": ["online", "branches"], "scope": "multi_city", "data": "complete", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "بيت الباريستا للتجهيزات",
+        "store_url": "https://baristahouse.com.sa",
+        "one_liner": "نورّد مستلزمات الكافيهات والمطاعم من سيروبات وصوصات وبودرة وأكواب وأدوات باريستا، بالجملة للمنشآت وبالتجزئة للأفراد، عبر متجرنا وفروعنا في الرياض والخرج وبريدة",
+        "advantages": "وكلاء معتمدون لسيروبات فانيلا بلو في السعودية\nأسعار جملة خاصة للكافيهات بحد أدنى 10 كراتين\nتوصيل مجاني للمنشآت داخل الرياض\nاستشارة مجانية لتجهيز منيو المشروبات للكافيهات الجديدة",
+        "audience": "أصحاب الكافيهات والمطاعم والمخابز، ومحبو تحضير المشروبات في البيت",
+        "notes": "التوصيل المجاني للمنشآت فقط وداخل الرياض فقط"
+      },
+      "expect": {
+        "classification": "both",
+        "mentions": [
+          {"any": ["جملة", "الجملة"], "in": "technical", "label": "البيع بالجملة"},
+          {"any": ["تجزئة", "التجزئة", "الأفراد", "للأفراد"], "in": "technical", "label": "البيع بالتجزئة"},
+          {"any": ["الكافيهات", "كافيه"], "in": "descriptions", "label": "جمهور المنشآت"}
+        ],
+        "absent": [
+          {"any": ["توصيل مجاني لجميع", "توصيل مجاني لكل"], "in": "descriptions", "label": "التوصيل المجاني مقيد بالمنشآت والرياض"}
+        ]
+      }
+    },
+    {
+      "key": "dates_family",
+      "about": "تمور — جملة وتجزئة، 4 فروع ومتجر، أرقام وسنة تأسيس، وهدايا الشركات وموسم رمضان",
+      "meta": {"sector": "أغذية", "model": "both", "channels": ["online", "branches"], "scope": "national", "data": "numbers", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "تمور نخلة القصيم",
+        "store_url": "https://nakhlatalqassim.com",
+        "one_liner": "مزرعة ومصنع تمور منذ 1985 نبيع السكري والخلاص والمجدول بالتجزئة وبالجملة للمحلات والفنادق، ولدينا 4 فروع في بريدة وعنيزة والرياض ومتجر إلكتروني",
+        "advantages": "تمور من مزارعنا في القصيم مباشرة\nتغليف فاخر لهدايا الشركات مع طباعة الشعار\nشحن لجميع مناطق المملكة\nعروض خاصة لكميات رمضان للجمعيات الخيرية",
+        "audience": "العائلات، والشركات التي تبحث عن هدايا، والمحلات والفنادق التي تشتري بالجملة، والجمعيات الخيرية في رمضان",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "both",
+        "mentions": [
+          {"any": ["جملة", "الجملة"], "in": "technical", "label": "البيع بالجملة"},
+          {"any": ["القصيم"], "in": "descriptions", "label": "المنشأ"},
+          {"any": ["هدايا", "الهدايا"], "in": "descriptions", "label": "هدايا الشركات"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "oud_perfume",
+      "about": "عطور وعود — تجزئة، متجر إلكتروني ونون، شحن للخليج، وادعاء «الأفضل في الخليج» في المزايا، وكلمة ممنوعة",
+      "meta": {"sector": "عطور", "model": "retail", "channels": ["online", "marketplaces"], "scope": "gcc", "data": "complete", "traps": ["absolute_claim", "banned_word"]},
+      "brand": {"business_type": "good", "dialect": "saudi", "banned_words": ["رخيص"]},
+      "answers": {
+        "type": "good",
+        "project_name": "عود المسك الأسود",
+        "store_url": "https://blackmuskoud.com",
+        "one_liner": "نبيع دهن العود والبخور والعطور الشرقية المركبة عبر متجرنا الإلكتروني ومتجرنا على نون",
+        "advantages": "أفضل دهن عود في الخليج\nبخور كمبودي وهندي أصلي\nعينات 3 مل قبل شراء الحجم الكامل\nشحن لدول الخليج",
+        "audience": "الرجال والنساء من محبي العود والعطور الشرقية في السعودية والخليج",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["نون"], "in": "descriptions", "label": "قناة نون"},
+          {"any": ["الخليج"], "in": "descriptions", "label": "الشحن للخليج"}
+        ],
+        "absent": [
+          {"any": ["الأفضل", "أفضل دهن"], "in": "descriptions", "label": "ادعاء مطلق"},
+          {"any": ["رخيص"], "in": "all", "label": "كلمة ممنوعة"}
+        ]
+      }
+    },
+    {
+      "key": "dental_clinic",
+      "about": "عيادة أسنان — خدمة للأفراد، فرعان وحجز أونلاين، اسم خدمة طبي مشروع «علاج الجذور»، وقيد «لا وعود بنتائج»",
+      "meta": {"sector": "صحة", "model": "service_b2c", "channels": ["branches", "online"], "scope": "city", "data": "complete", "traps": ["medical", "negation", "regulated"]},
+      "brand": {"business_type": "service", "dialect": "msa"},
+      "answers": {
+        "type": "service",
+        "project_name": "مجمع ابتسامة الشمال لطب الأسنان",
+        "store_url": "https://smilenorth.clinic",
+        "one_liner": "مجمع طب أسنان يقدم التقويم الشفاف وتبييض الأسنان والزراعة وعلاج الجذور، بفرعين في شمال الرياض (الياسمين والملقا)",
+        "advantages": "حجز المواعيد أونلاين\nأطباء استشاريون في التقويم والزراعة\nعيادة أطفال مستقلة في فرع الياسمين\nمواعيد مسائية حتى 11 ليلاً",
+        "audience": "العائلات والموظفون في شمال الرياض",
+        "notes": "لا نعد بنتائج مضمونة، ولا نذكر الأسعار في المحتوى، ولا نستخدم صور قبل وبعد"
+      },
+      "expect": {
+        "classification": "service_b2c",
+        "mentions": [
+          {"any": ["علاج الجذور"], "in": "sales_summary", "label": "اسم الخدمة كما كتبه التاجر"},
+          {"any": ["الياسمين"], "in": "descriptions", "label": "الفروع"}
+        ],
+        "absent": [
+          {"any": ["مضمون", "مضمونة", "نضمن"], "in": "descriptions", "label": "وعد بنتيجة"}
+        ]
+      }
+    },
+    {
+      "key": "supplements",
+      "about": "مكملات غذائية — تجزئة أونلاين، ادعاء صحي في المزايا «يقوي المناعة»، وتسجيل رسمي",
+      "meta": {"sector": "صحة", "model": "retail", "channels": ["online"], "scope": "national", "data": "complete", "traps": ["medical", "regulated"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "فيتا لايف",
+        "store_url": "https://vitalife-sa.store",
+        "one_liner": "متجر إلكتروني للمكملات الغذائية والفيتامينات والبروتين",
+        "advantages": "منتجات مسجلة في هيئة الغذاء والدواء\nفيتامين سي يقوي المناعة\nبروتين مستورد من أمريكا\nتوصيل خلال 24 ساعة في الرياض",
+        "audience": "الرياضيون والمهتمون بالصحة من 18 إلى 50 سنة",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["هيئة الغذاء والدواء"], "in": "all", "label": "التسجيل الرسمي"}
+        ],
+        "absent": [
+          {"any": ["يقوي المناعة", "تقوي المناعة", "يعالج", "علاج", "شفاء"], "in": "descriptions", "label": "ادعاء علاجي"}
+        ]
+      }
+    },
+    {
+      "key": "women_gym",
+      "about": "نادٍ نسائي — خدمة للنساء، فرعان في جدة، ووعد مضمون في الملاحظات «خسارة 10 كيلو»",
+      "meta": {"sector": "رياضة", "model": "service_b2c", "channels": ["branches"], "scope": "city", "data": "complete", "traps": ["absolute_claim", "medical"]},
+      "brand": {"business_type": "service", "dialect": "saudi"},
+      "answers": {
+        "type": "service",
+        "project_name": "نادي رشاقة للسيدات",
+        "store_url": "",
+        "one_liner": "نادي رياضي نسائي في جدة فيه صالة حديد وكارديو وحصص يوغا وزومبا ومسبح، بفرعين في حي الروضة وأبحر الشمالية",
+        "advantages": "مدربات معتمدات\nحصص جماعية يومية\nحضانة أطفال داخل النادي\nاشتراك شهري أو ربع سنوي",
+        "audience": "النساء في جدة من 18 سنة فما فوق",
+        "notes": "نضمن لك خسارة 10 كيلو في أول شهر"
+      },
+      "expect": {
+        "classification": "service_b2c",
+        "mentions": [
+          {"any": ["جدة"], "in": "descriptions", "label": "المدينة"},
+          {"any": ["حضانة"], "in": "descriptions", "label": "حضانة الأطفال"}
+        ],
+        "absent": [
+          {"any": ["نضمن", "مضمون", "مضمونة", "10 كيلو"], "in": "descriptions", "label": "وعد صحي مضمون"}
+        ]
+      }
+    },
+    {
+      "key": "cloud_kitchen",
+      "about": "مطبخ أكلات شعبية — تجزئة، تطبيقات توصيل فقط، لا استلام، وكلمة ممنوعة، وصوت «طعم البيت»",
+      "meta": {"sector": "مطاعم", "model": "retail", "channels": ["delivery_apps"], "scope": "city", "data": "complete", "traps": ["negation", "banned_word"]},
+      "brand": {"business_type": "good", "dialect": "saudi", "banned_words": ["بيتي"]},
+      "answers": {
+        "type": "good",
+        "project_name": "سفرة جدتي",
+        "store_url": "",
+        "one_liner": "مطبخ سحابي في جدة نطبخ أكلات شعبية سعودية يومياً مثل الكبسة والمنتو والمعصوب، ونجهّز ولائم المناسبات",
+        "advantages": "طبخ يومي بمكونات طازجة\nمنيو يتغير حسب أيام الأسبوع\nولائم للمناسبات بطلب مسبق 48 ساعة",
+        "audience": "الموظفون والعائلات في جدة الذين يريدون أكلاً شعبياً بطعم البيت",
+        "notes": "التوصيل فقط عبر تطبيقات هنقرستيشن وجاهز، ولا يوجد استلام من المطبخ"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["هنقرستيشن"], "in": "descriptions", "label": "قنوات التوصيل"},
+          {"any": ["جاهز"], "in": "descriptions", "label": "قنوات التوصيل"}
+        ],
+        "absent": [
+          {"any": ["بيتي"], "in": "all", "label": "كلمة ممنوعة"}
+        ]
+      }
+    },
+    {
+      "key": "bakery_chain",
+      "about": "مخبز بـ15 فرعاً — تجزئة، فروع فقط بلا توصيل ولا متجر، وطلبات مناسبات",
+      "meta": {"sector": "أغذية", "model": "retail", "channels": ["branches"], "scope": "city", "data": "numbers", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "مخابز السنبلة الذهبية",
+        "store_url": "",
+        "one_liner": "مخبز يقدم الخبز البلدي والصامولي والمعجنات والكيك يومياً في 15 فرعاً بالرياض",
+        "advantages": "خبز طازج يخرج من الفرن كل صباح\nطلبات الولائم والمناسبات قبلها بيوم\nمعجنات بالجبن والزعتر واللحم",
+        "audience": "العائلات في الرياض ومنظمو المناسبات",
+        "notes": "لا يوجد توصيل ولا متجر إلكتروني، البيع من الفروع فقط"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["15"], "in": "descriptions", "label": "عدد الفروع"}
+        ],
+        "absent": [
+          {"any": ["نوصل", "يوصل", "متجرنا الإلكتروني", "اطلب أونلاين"], "in": "descriptions", "label": "لا توصيل ولا متجر"}
+        ]
+      }
+    },
+    {
+      "key": "furniture",
+      "about": "أثاث — تجزئة، متجر ومعرض وأمازون، تركيب مجاني مقيد بالرياض",
+      "meta": {"sector": "أثاث", "model": "retail", "channels": ["online", "branches", "marketplaces"], "scope": "multi_city", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "بيت الزان للأثاث",
+        "store_url": "https://beitalzan.com",
+        "one_liner": "نبيع كنب وغرف نوم وطاولات طعام بتصاميم عصرية، عبر معرضنا في الرياض ومتجرنا الإلكتروني وأمازون",
+        "advantages": "خشب زان طبيعي في غرف النوم\nتوصيل للرياض وجدة\nتركيب مجاني\nضمان سنتين على الهيكل",
+        "audience": "المتزوجون حديثاً والعائلات التي تجدد أثاث بيتها",
+        "notes": "التركيب مجاني داخل الرياض فقط، وفي جدة برسوم"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["أمازون"], "in": "descriptions", "label": "قناة أمازون"}
+        ],
+        "absent": [
+          {"any": ["جميع مناطق المملكة", "كل مناطق المملكة", "كل مدن المملكة"], "in": "descriptions", "label": "التوصيل للرياض وجدة فقط"}
+        ]
+      }
+    },
+    {
+      "key": "mobile_accessories",
+      "about": "إكسسوارات جوال — بيانات شحيحة، ادعاء «الأرخص» في الملاحظات، وكلمة ممنوعة",
+      "meta": {"sector": "إلكترونيات", "model": "retail", "channels": ["online", "branches"], "scope": "city", "data": "thin", "traps": ["absolute_claim", "banned_word"]},
+      "brand": {"business_type": "good", "dialect": "saudi", "banned_words": ["رخيص"]},
+      "answers": {
+        "type": "good",
+        "project_name": "تقنية بلس",
+        "store_url": "https://techplus-sa.store",
+        "one_liner": "إكسسوارات جوالات",
+        "advantages": "أسعار منافسة\nفرع في مكة",
+        "audience": "الشباب",
+        "notes": "نحن الأرخص في السعودية"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["مكة"], "in": "descriptions", "label": "الفرع"}
+        ],
+        "absent": [
+          {"any": ["الأرخص"], "in": "descriptions", "label": "ادعاء مطلق"},
+          {"any": ["رخيص"], "in": "all", "label": "كلمة ممنوعة"}
+        ]
+      }
+    },
+    {
+      "key": "food_distribution",
+      "about": "توزيع مواد غذائية — جملة فقط للمنشآت، مناديب وواتساب، ونفي البيع للأفراد",
+      "meta": {"sector": "توزيع", "model": "wholesale", "channels": ["sales_reps", "social"], "scope": "multi_city", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "مؤسسة الوفرة للتوزيع",
+        "store_url": "",
+        "one_liner": "نوزع المواد الغذائية الجافة والمعلبات والمشروبات بالجملة على البقالات والسوبرماركت والمطاعم في المنطقة الشرقية",
+        "advantages": "مناديب يزورون المحل أسبوعياً\nالطلب عبر واتساب\nدفع آجل للعملاء المعتمدين\nأكثر من 800 صنف",
+        "audience": "أصحاب البقالات والسوبرماركت والمطاعم في الدمام والخبر والأحساء",
+        "notes": "لا نبيع للأفراد"
+      },
+      "expect": {
+        "classification": "wholesale",
+        "mentions": [
+          {"any": ["جملة", "الجملة"], "in": "technical", "label": "البيع بالجملة"},
+          {"any": ["البقالات", "بقالة", "السوبرماركت"], "in": "descriptions", "label": "جمهور المنشآت"}
+        ],
+        "absent": [
+          {"any": ["المستهلك النهائي", "للأفراد", "تجزئة"], "in": "activity_type", "label": "لا بيع للأفراد"}
+        ]
+      }
+    },
+    {
+      "key": "packaging_factory",
+      "about": "مصنع عبوات — جملة للمنشآت، حد أدنى للطلب، شهادة جودة، وتصدير للخليج",
+      "meta": {"sector": "صناعة", "model": "wholesale", "channels": ["direct_sales", "online"], "scope": "gcc", "data": "numbers", "traps": []},
+      "brand": {"business_type": "good", "dialect": "msa"},
+      "answers": {
+        "type": "good",
+        "project_name": "مصنع الجودة للعبوات البلاستيكية",
+        "store_url": "https://aljawdapack.com",
+        "one_liner": "مصنع في المدينة الصناعية بجدة ينتج عبوات وعلب بلاستيكية للأغذية ومستحضرات التجميل والمنظفات للمصانع والشركات",
+        "advantages": "حد أدنى للطلب 5000 قطعة\nطباعة شعار العميل على العبوة\nشهادة ISO 9001\nشحن لدول الخليج",
+        "audience": "مصانع الأغذية ومستحضرات التجميل والمنظفات، والعلامات التجارية الناشئة",
+        "notes": "لا نبيع بالقطعة"
+      },
+      "expect": {
+        "classification": "wholesale",
+        "mentions": [
+          {"any": ["جملة", "الجملة", "للمصانع", "للشركات", "المنشآت", "مصنع"], "in": "technical", "label": "بيع للمنشآت"},
+          {"any": ["5000"], "in": "all", "label": "الحد الأدنى للطلب"}
+        ],
+        "absent": [
+          {"any": ["المستهلك النهائي", "للأفراد"], "in": "activity_type", "label": "ليس للأفراد"}
+        ]
+      }
+    },
+    {
+      "key": "kids_clothes_insta",
+      "about": "ملابس أطفال — تجزئة عبر انستقرام وواتساب فقط، بيانات عامية بأخطاء إملائية",
+      "meta": {"sector": "أزياء", "model": "retail", "channels": ["social"], "scope": "national", "data": "colloquial", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "دلوعتي كيدز",
+        "store_url": "https://instagram.com/dalouati.kids",
+        "one_liner": "نبيع ملابس اطفال بنات واولاد من عمر سنه لين 10 سنين، الطلب عن طريق الانستا والواتس",
+        "advantages": "قطن ١٠٠٪\nموديلات تركيه\nنشحن لكل مدن المملكه\nالمقاسات مضبوطه",
+        "audience": "الامهات",
+        "notes": "ما عندنا موقع ولا محل"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["واتساب", "الواتس", "واتس"], "in": "descriptions", "label": "قناة الطلب"},
+          {"any": ["انستقرام", "إنستغرام", "الانستا", "انستا"], "in": "descriptions", "label": "قناة الطلب"}
+        ],
+        "absent": [
+          {"any": ["فروعنا", "فرعنا", "زوري", "زورينا", "متجرنا الإلكتروني"], "in": "descriptions", "label": "لا محل ولا موقع"}
+        ]
+      }
+    },
+    {
+      "key": "flowers_gifts",
+      "about": "ورد وهدايا — تجزئة، متجر ومحل واحد، توصيل نفس اليوم مقيد بالرياض ووقت الطلب",
+      "meta": {"sector": "هدايا", "model": "retail", "channels": ["online", "branches"], "scope": "city", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "بتلة للورود",
+        "store_url": "https://petla.flowers",
+        "one_liner": "نصمم باقات ورد طبيعي وهدايا للمناسبات والتخرج والمواليد، عبر متجرنا ومحلنا في حي النرجس بالرياض",
+        "advantages": "توصيل في نفس اليوم داخل الرياض\nبطاقة إهداء مكتوبة بخط اليد\nتنسيق ورد لحفلات الاستقبال",
+        "audience": "من يبحث عن هدية سريعة وأنيقة في الرياض",
+        "notes": "التوصيل في نفس اليوم للطلبات قبل الساعة 4 عصراً فقط، ولا نوصل خارج الرياض"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["الرياض"], "in": "descriptions", "label": "نطاق التوصيل"}
+        ],
+        "absent": [
+          {"any": ["جميع مناطق المملكة", "كل مدن المملكة", "لجميع المدن"], "in": "descriptions", "label": "لا توصيل خارج الرياض"}
+        ]
+      }
+    },
+    {
+      "key": "mobile_carwash",
+      "about": "مغسلة سيارات متنقلة — خدمة للأفراد وأساطيل الشركات، حجز بالتطبيق وواتساب، مدينتان",
+      "meta": {"sector": "خدمات سيارات", "model": "service_both", "channels": ["app", "social"], "scope": "multi_city", "data": "complete", "traps": []},
+      "brand": {"business_type": "service", "dialect": "saudi"},
+      "answers": {
+        "type": "service",
+        "project_name": "لمعة المتنقلة",
+        "store_url": "https://lamaa.app",
+        "one_liner": "نغسل السيارات في موقعك في البيت أو الدوام، للأفراد ولأساطيل سيارات الشركات، في الرياض والخبر",
+        "advantages": "الحجز من التطبيق أو واتساب\nغسيل بمواد لا تحتاج ماء\nباقات شهرية للشركات\nتلميع داخلي وخارجي",
+        "audience": "الموظفون المشغولون، والشركات التي تملك أساطيل سيارات",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "service_both",
+        "mentions": [
+          {"any": ["الشركات", "للشركات", "أساطيل", "الأساطيل", "المنشآت"], "in": "technical", "label": "خدمة الشركات"},
+          {"any": ["الخبر"], "in": "descriptions", "label": "المدن"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "legal_consult",
+      "about": "استشارات قانونية — خدمة للأفراد والشركات، قطاع منظّم، ووعد «نضمن كسب القضية» في الملاحظات",
+      "meta": {"sector": "قانون", "model": "service_both", "channels": ["branches", "online"], "scope": "city", "data": "complete", "traps": ["absolute_claim", "regulated"]},
+      "brand": {"business_type": "service", "dialect": "msa"},
+      "answers": {
+        "type": "service",
+        "project_name": "مكتب ميزان للمحاماة والاستشارات القانونية",
+        "store_url": "https://mizanlaw.sa",
+        "one_liner": "مكتب محاماة في الرياض يقدم الاستشارات القانونية وصياغة العقود والترافع في القضايا التجارية والعمالية والأحوال الشخصية، للأفراد والشركات",
+        "advantages": "محامون مرخصون من وزارة العدل\nاستشارات عن بعد عبر مكالمة فيديو\nعقود سنوية للشركات لمتابعة شؤونها القانونية",
+        "audience": "الأفراد الذين يواجهون نزاعاً، والشركات الصغيرة والمتوسطة",
+        "notes": "نضمن لك كسب القضية"
+      },
+      "expect": {
+        "classification": "service_both",
+        "mentions": [
+          {"any": ["الشركات", "للشركات"], "in": "descriptions", "label": "جمهور الشركات"}
+        ],
+        "absent": [
+          {"any": ["نضمن", "مضمون", "كسب القضية"], "in": "descriptions", "label": "وعد قانوني مضمون"}
+        ]
+      }
+    },
+    {
+      "key": "training_institute",
+      "about": "معهد تدريب — خدمة للأفراد والشركات، حضوري وعن بعد، ادعاء اعتماد رسمي، وبيانات مطوّلة",
+      "meta": {"sector": "تعليم", "model": "service_both", "channels": ["branches", "online"], "scope": "city", "data": "verbose", "traps": ["regulated"]},
+      "brand": {"business_type": "service", "dialect": "msa"},
+      "answers": {
+        "type": "service",
+        "project_name": "معهد آفاق للتدريب",
+        "store_url": "https://afaq-training.sa",
+        "one_liner": "معهد تدريب في الدمام بدأ قبل سنوات بدورات اللغة الإنجليزية ثم توسع ليقدم اليوم دورات في المحاسبة وإدارة المشاريع والتسويق الرقمي والحاسب الآلي، حضورياً في مقرنا بحي الفيصلية وعن بعد عبر منصتنا، ونقدم أيضاً برامج تدريب مخصصة للشركات حسب احتياجها",
+        "advantages": "شهادات معتمدة من المؤسسة العامة للتدريب التقني والمهني\nمدربون لديهم خبرة عملية في مجالاتهم\nمواعيد مسائية تناسب الموظفين\nبرامج مخصصة للشركات",
+        "audience": "الخريجون والباحثون عن عمل، والموظفون الذين يريدون تطوير مهاراتهم، وأقسام الموارد البشرية في الشركات",
+        "notes": "لا نضمن التوظيف بعد الدورة"
+      },
+      "expect": {
+        "classification": "service_both",
+        "mentions": [
+          {"any": ["الدمام"], "in": "descriptions", "label": "المدينة"},
+          {"any": ["عن بعد", "عن بُعد"], "in": "descriptions", "label": "التدريب عن بعد"}
+        ],
+        "absent": [
+          {"any": ["نضمن", "مضمون", "وظيفة مضمونة", "توظيفك"], "in": "descriptions", "label": "لا ضمان توظيف"}
+        ]
+      }
+    },
+    {
+      "key": "beauty_salon",
+      "about": "صالون نسائي — خدمة للنساء، فرع وخدمة منزلية، كلمتان ممنوعتان، ولا أسعار",
+      "meta": {"sector": "تجميل", "model": "service_b2c", "channels": ["branches", "home_service"], "scope": "city", "data": "complete", "traps": ["banned_word", "negation"]},
+      "brand": {"business_type": "service", "dialect": "saudi", "banned_words": ["رخيص", "خصم"]},
+      "answers": {
+        "type": "service",
+        "project_name": "صالون لمسة جوري",
+        "store_url": "",
+        "one_liner": "صالون نسائي في حي الملز بالرياض نقدم قص وصبغ الشعر والبروتين والمكياج ورسم الحناء، ونقدم خدمة منزلية للعرائس",
+        "advantages": "خبيرات مكياج عرائس\nحجز عبر واتساب\nخدمة منزلية للعرائس ومرافقاتهن",
+        "audience": "النساء في الرياض، والعرائس قبل الزفاف",
+        "notes": "لا نذكر الأسعار"
+      },
+      "expect": {
+        "classification": "service_b2c",
+        "mentions": [
+          {"any": ["العرائس", "العروس", "عروس"], "in": "descriptions", "label": "جمهور العرائس"}
+        ],
+        "absent": [
+          {"any": ["رخيص", "خصم"], "in": "all", "label": "كلمات ممنوعة"}
+        ]
+      }
+    },
+    {
+      "key": "pet_store",
+      "about": "مستلزمات حيوانات — تجزئة، اسم إنجليزي، وبيانات متناقضة (متجر إلكتروني فقط ثم فرع)",
+      "meta": {"sector": "حيوانات أليفة", "model": "retail", "channels": ["online", "branches"], "scope": "city", "data": "contradictory", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "PetZone",
+        "store_url": "https://petzone.sa",
+        "one_liner": "متجر إلكتروني فقط لأكل القطط والكلاب والرمل والألعاب والإكسسوارات",
+        "advantages": "علامات عالمية مثل Royal Canin\nفرعنا في جدة مفتوح يومياً من 4 العصر\nتوصيل لجميع مدن المملكة",
+        "audience": "مربو القطط والكلاب في السعودية",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["PetZone"], "in": "descriptions", "label": "اسم العلامة"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "pos_saas",
+      "about": "نظام نقاط بيع — خدمة للمنشآت (برمجيات)، أونلاين فقط، تكامل وفوترة إلكترونية، وتجربة مجانية",
+      "meta": {"sector": "تقنية", "model": "service_b2b", "channels": ["online"], "scope": "national", "data": "complete", "traps": ["regulated"]},
+      "brand": {"business_type": "service", "dialect": "msa"},
+      "answers": {
+        "type": "service",
+        "project_name": "كاشير سحاب",
+        "store_url": "https://sahabpos.com",
+        "one_liner": "نظام نقاط بيع سحابي للمطاعم والكافيهات والمتاجر، يدير المبيعات والمخزون والفروع من لوحة واحدة",
+        "advantages": "متوافق مع الفوترة الإلكترونية من هيئة الزكاة والضريبة والجمارك\nربط مع سلة وزد\nتجربة مجانية 14 يوماً\nدعم فني عبر واتساب",
+        "audience": "أصحاب المطاعم والكافيهات والمتاجر الصغيرة والمتوسطة",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "service_b2b",
+        "mentions": [
+          {"any": ["المطاعم", "الكافيهات", "المتاجر", "المنشآت", "الشركات"], "in": "technical", "label": "جمهور المنشآت"},
+          {"any": ["الفوترة الإلكترونية"], "in": "descriptions", "label": "الفوترة الإلكترونية"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "handmade_crafts",
+      "about": "حرف يدوية — تجزئة عبر انستقرام ونون، بيانات مطوّلة وعشوائية وجمهور مبهم",
+      "meta": {"sector": "حرف يدوية", "model": "retail", "channels": ["social", "marketplaces"], "scope": "national", "data": "verbose", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "أنامل نجدية",
+        "store_url": "",
+        "one_liner": "بدأت الفكرة من جدتي الله يرحمها كانت تسوي السدو بيدها وأنا كنت أجلس جنبها وأتعلم، وبعد ما تخرجت من الجامعة قررت أحول هالشي لمشروع، ونسوي الحين مفارش وخداديات وشنط من السدو والخوص، ونبيع في انستقرام ونون، وأحياناً نشارك في البازارات",
+        "advantages": "كل قطعة مصنوعة يدوياً\nنقوش نجدية أصيلة\nنقبل الطلبات الخاصة بالألوان",
+        "audience": "الكل",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["السدو"], "in": "descriptions", "label": "الحرفة"},
+          {"any": ["نون"], "in": "descriptions", "label": "قناة نون"}
+        ],
+        "absent": []
+      }
+    },
+    {
+      "key": "nuts_sweets",
+      "about": "مكسرات وحلويات — جملة وتجزئة، فروع ومتجر، ومنافس بالاسم في الملاحظات",
+      "meta": {"sector": "أغذية", "model": "both", "channels": ["online", "branches"], "scope": "multi_city", "data": "complete", "traps": ["competitor"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "محامص الديوانية",
+        "store_url": "https://diwaniya-roastery.com",
+        "one_liner": "محمصة مكسرات وحلويات شرقية نبيع بالتجزئة في فروعنا بالرياض والقصيم ومتجرنا، وبالجملة للمحلات والمطاعم",
+        "advantages": "تحميص يومي للمكسرات\nحلويات معمول وبقلاوة بالسمن البلدي\nتغليف هدايا للمناسبات\nأسعار جملة للمحلات",
+        "audience": "العائلات في المناسبات والأعياد، والمحلات والمطاعم",
+        "notes": "مكسراتنا أفضل من محامص النجمة"
+      },
+      "expect": {
+        "classification": "both",
+        "mentions": [
+          {"any": ["جملة", "الجملة"], "in": "technical", "label": "البيع بالجملة"}
+        ],
+        "absent": [
+          {"any": ["النجمة"], "in": "all", "label": "اسم منافس"},
+          {"any": ["أفضل من"], "in": "descriptions", "label": "مقارنة بمنافس"}
+        ]
+      }
+    },
+    {
+      "key": "medical_supplies_b2b",
+      "about": "مستلزمات طبية — جملة للمستشفيات، كلمات طبية مشروعة (العلاج الطبيعي)، وترخيص",
+      "meta": {"sector": "صحة", "model": "wholesale", "channels": ["direct_sales"], "scope": "national", "data": "complete", "traps": ["medical", "regulated"]},
+      "brand": {"business_type": "good", "dialect": "msa"},
+      "answers": {
+        "type": "good",
+        "project_name": "الشفاء للتجهيزات الطبية",
+        "store_url": "https://alshifa-med.com",
+        "one_liner": "نورّد أجهزة ومستلزمات العلاج الطبيعي ومستلزمات غسيل الكلى والمستهلكات الطبية للمستشفيات والمراكز الطبية في المملكة",
+        "advantages": "ترخيص من الهيئة العامة للغذاء والدواء\nوكلاء لعلامات أوروبية\nصيانة وتدريب على الأجهزة بعد التوريد",
+        "audience": "إدارات المشتريات في المستشفيات والمراكز الطبية والعيادات",
+        "notes": "لا نبيع للأفراد"
+      },
+      "expect": {
+        "classification": "wholesale",
+        "mentions": [
+          {"any": ["العلاج الطبيعي"], "in": "sales_summary", "label": "اسم الفئة كما كتبها التاجر"},
+          {"any": ["المستشفيات"], "in": "descriptions", "label": "جمهور المنشآت"}
+        ],
+        "absent": [
+          {"any": ["المستهلك النهائي", "للأفراد"], "in": "activity_type", "label": "ليس للأفراد"}
+        ]
+      }
+    },
+    {
+      "key": "real_estate",
+      "about": "تسويق وإدارة عقارات — خدمة للأفراد والملاك، أرقام وترخيص، ووعد «عائد مضمون» في الملاحظات",
+      "meta": {"sector": "عقار", "model": "service_both", "channels": ["branches", "online"], "scope": "city", "data": "numbers", "traps": ["absolute_claim", "regulated"]},
+      "brand": {"business_type": "service", "dialect": "saudi"},
+      "answers": {
+        "type": "service",
+        "project_name": "دار الأركان للعقار",
+        "store_url": "https://arkanrealestate.sa",
+        "one_liner": "مكتب عقاري في الرياض نسوّق الشقق والفلل للبيع والإيجار، وندير العقارات نيابة عن ملاكها من تحصيل الإيجار إلى الصيانة",
+        "advantages": "مرخصون من الهيئة العامة للعقار (رخصة فال)\nأكثر من 300 وحدة تحت إدارتنا\nتقارير شهرية للملاك",
+        "audience": "الباحثون عن سكن للشراء أو الإيجار، وملاك العقارات الذين لا يملكون وقتاً لإدارتها",
+        "notes": "نقدم أفضل عائد استثماري مضمون للملاك"
+      },
+      "expect": {
+        "classification": "service_both",
+        "mentions": [
+          {"any": ["300"], "in": "all", "label": "عدد الوحدات"},
+          {"any": ["الملاك", "ملاك"], "in": "descriptions", "label": "جمهور الملاك"}
+        ],
+        "absent": [
+          {"any": ["مضمون", "نضمن", "أفضل عائد"], "in": "descriptions", "label": "وعد استثماري مضمون"}
+        ]
+      }
+    },
+    {
+      "key": "optics",
+      "about": "نظارات — تجزئة مع فحص نظر، 6 فروع ومتجر، والفحص يجريه أخصائي لا طبيب",
+      "meta": {"sector": "صحة وتجزئة", "model": "retail", "channels": ["online", "branches"], "scope": "multi_city", "data": "complete", "traps": ["medical", "negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "نظارات رؤية",
+        "store_url": "https://roya-optics.com",
+        "one_liner": "نبيع النظارات الطبية والشمسية والعدسات اللاصقة، ونفحص النظر مجاناً في فروعنا الستة في الدمام والخبر والجبيل، ولدينا متجر إلكتروني",
+        "advantages": "فحص نظر مجاني بأجهزة حديثة\nتجهيز العدسات خلال ساعة في أغلب الحالات\nماركات عالمية مثل Ray-Ban",
+        "audience": "العائلات والموظفون في المنطقة الشرقية",
+        "notes": "الفحص يجريه أخصائي بصريات وليس طبيب عيون"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["الجبيل"], "in": "descriptions", "label": "المدن"}
+        ],
+        "absent": [
+          {"any": ["طبيب عيون", "أطباء عيون", "طبيب", "أطباء"], "in": "descriptions", "label": "الفحص ليس طبياً"}
+        ]
+      }
+    },
+    {
+      "key": "mandi_restaurant",
+      "about": "مطعم مندي — تجزئة، 3 فروع وتطبيقات توصيل، مدخلات بلهجة عامية ثقيلة وأخطاء إملائية وأرقام هندية",
+      "meta": {"sector": "مطاعم", "model": "retail", "channels": ["branches", "delivery_apps"], "scope": "city", "data": "colloquial", "traps": []},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "مندي الطيبين",
+        "store_url": "",
+        "one_liner": "عندنا مندي ومظبي ومضغوط لحم ودجاج، فروعنا بالرياض ٣ فروع بالسويدي والنسيم والعزيزيه، وموجودين بكل تطبيقات التوصيل",
+        "advantages": "الحطب طبيعي مو غاز\nالرز بسمتي درجه اولى\nجلسات عوايل",
+        "audience": "العوايل والشباب اللي يحبون المندي",
+        "notes": "مانسوي بوفيه"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["مندي", "المندي"], "in": "descriptions", "label": "الطبق الرئيسي"},
+          {"any": ["الحطب", "حطب"], "in": "descriptions", "label": "الميزة الأولى"}
+        ],
+        "absent": [
+          {"any": ["بوفيه", "بوفيهات"], "in": "descriptions", "label": "لا بوفيه"}
+        ]
+      }
+    },
+    {
+      "key": "skincare_natural",
+      "about": "عناية بالبشرة — تجزئة أونلاين ونون، «طبيعي 100%»، وادعاء علاجي في المزايا «يعالج حب الشباب»",
+      "meta": {"sector": "تجميل", "model": "retail", "channels": ["online", "marketplaces"], "scope": "national", "data": "complete", "traps": ["medical"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "بشرة سدر",
+        "store_url": "https://besharasidr.com",
+        "one_liner": "منتجات عناية بالبشرة والشعر من السدر والعسل وزيت الأرغان، نبيعها عبر متجرنا وعلى نون",
+        "advantages": "مكونات طبيعية 100%\nكريم السدر يعالج حب الشباب والكلف\nبدون بارابين\nمصنوعة في السعودية",
+        "audience": "النساء من 18 إلى 40 سنة المهتمات بالمنتجات الطبيعية",
+        "notes": ""
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["السدر"], "in": "descriptions", "label": "المكون الأساسي"}
+        ],
+        "absent": [
+          {"any": ["يعالج", "تعالج", "علاج", "يشفي", "تتخلصين من حب الشباب"], "in": "descriptions", "label": "ادعاء علاجي"}
+        ]
+      }
+    },
+    {
+      "key": "gaming_cards",
+      "about": "بطاقات ألعاب رقمية — تجزئة أونلاين فقط، جمهور مراهقين، مصطلحات إنجليزية، ونفي بيع الحسابات",
+      "meta": {"sector": "ترفيه رقمي", "model": "retail", "channels": ["online"], "scope": "national", "data": "complete", "traps": ["negation"]},
+      "brand": {"business_type": "good", "dialect": "saudi"},
+      "answers": {
+        "type": "good",
+        "project_name": "شحن بلس",
+        "store_url": "https://shahnplus.gg",
+        "one_liner": "متجر إلكتروني نبيع بطاقات PlayStation وXbox وSteam وشحن شدات ببجي وجواهر فري فاير",
+        "advantages": "الكود يوصل على الإيميل خلال دقائق\nالدفع بمدى وآبل باي\nدعم فني على واتساب",
+        "audience": "اللاعبون من 13 إلى 30 سنة",
+        "notes": "لا نبيع حسابات ألعاب"
+      },
+      "expect": {
+        "classification": "retail",
+        "mentions": [
+          {"any": ["PlayStation", "بلايستيشن"], "in": "descriptions", "label": "المنصات"}
+        ],
+        "absent": [
+          {"any": ["حسابات جاهزة", "بيع الحسابات", "حسابات مميزة"], "in": "descriptions", "label": "لا بيع حسابات"}
+        ]
+      }
+    }
+  ]
+}

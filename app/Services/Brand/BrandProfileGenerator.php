@@ -121,9 +121,9 @@ class BrandProfileGenerator
 
         $previous = BrandProfile::forBrand($brand)->active()->first();
 
-        $draft = $this->draft($brand, $answers, $job);
+        $composed = $this->compose($brand, $answers, $job, $previous);
 
-        if ($draft['simple'] === null || $draft['detailed'] === null) {
+        if ($composed === null) {
             // الفشل يُرجع النقاط كاملة: لا يدفع المستخدم مقابل ملف ناقص
             $this->credits->refund($brand, (float) $job->credits_held, $job, self::OPERATION, 'إرجاع: مخرج ناقص');
             $job->markFailed('لم يُنتج النموذج الوصفين المطلوبين. أُرجعت النقاط.');
@@ -131,11 +131,7 @@ class BrandProfileGenerator
             return;
         }
 
-        $draft = $this->stabilize($draft, $previous, $answers, $brand);
-
-        [$draft, $report, $attempts] = $this->withQualityGate($brand, $answers, $draft, $job, $previous);
-
-        [$draft, $report] = $this->polish($brand, $answers, $draft, $report, $job);
+        ['draft' => $draft, 'report' => $report, 'attempts' => $attempts] = $composed;
 
         $profile = BrandProfile::createVersion($brand, [
             'answers' => $answers,
@@ -172,6 +168,31 @@ class BrandProfileGenerator
         $this->credits->settle($brand, $held, $held, $job, self::OPERATION);
 
         $job->markCompleted(['brand_profile_id' => $profile->id, 'version' => $profile->version]);
+    }
+
+    /**
+     * مسار التوليد كاملاً بلا حفظ ولا نقاط: مسودة ← تثبيت ← بوابة الجودة ← رئيس التحرير.
+     *
+     * run() يمر به، والتقييم (brand:eval-profile) يمر به حرفياً — فما يقيسه
+     * التقييم هو ما يصل للتاجر، لا نسخة مختصرة منه. null = لم يُنتج النموذج الوصفين.
+     *
+     * @return array{draft: array, report: ProfileQualityReport, first_report: ProfileQualityReport, attempts: int}|null
+     */
+    public function compose(Brand $brand, array $answers, ?GenerationJob $job = null, ?BrandProfile $previous = null): ?array
+    {
+        $draft = $this->draft($brand, $answers, $job);
+
+        if ($draft['simple'] === null || $draft['detailed'] === null) {
+            return null;
+        }
+
+        $draft = $this->stabilize($draft, $previous, $answers, $brand);
+        $first = $this->quality->check($draft, $answers, (array) $brand->banned_words);
+
+        [$draft, $report, $attempts] = $this->withQualityGate($brand, $answers, $draft, $job, $previous);
+        [$draft, $report] = $this->polish($brand, $answers, $draft, $report, $job);
+
+        return ['draft' => $draft, 'report' => $report, 'first_report' => $first, 'attempts' => $attempts];
     }
 
     /**
@@ -390,7 +411,7 @@ class BrandProfileGenerator
      *
      * @return array{0: array, 1: ProfileQualityReport, 2: int}
      */
-    protected function withQualityGate(Brand $brand, array $answers, array $draft, GenerationJob $job, ?BrandProfile $previous = null): array
+    protected function withQualityGate(Brand $brand, array $answers, array $draft, ?GenerationJob $job, ?BrandProfile $previous = null): array
     {
         $report = $this->quality->check($draft, $answers, (array) $brand->banned_words);
 
@@ -401,7 +422,7 @@ class BrandProfileGenerator
         try {
             $retry = $this->stabilize($this->draft($brand, $answers, $job, $report), $previous, $answers, $brand);
         } catch (\Throwable $e) {
-            Log::warning('تعذّر طلب تصحيح ملف الهوية؛ حُفظت المسودة الأولى', ['job' => $job->id, 'error' => $e->getMessage()]);
+            Log::warning('تعذّر طلب تصحيح ملف الهوية؛ حُفظت المسودة الأولى', ['job' => $job?->id, 'error' => $e->getMessage()]);
 
             return [$draft, $report, 2];
         }
