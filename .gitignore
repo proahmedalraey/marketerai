@@ -17,3 +17,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# ملفات أقراص الاختبار (Storage::fake) — تُنشأ وتُحذف مع كل تشغيل
+/storage/framework/testing/
