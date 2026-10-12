@@ -30,7 +30,12 @@
     @keydown.escape.window="scheduleOpen = false; mediaOpen = false; confirmingDelete = false"
 >
 
-    <div class="grid lg:grid-cols-[22rem_minmax(0,1fr)] gap-5 items-start">
+    <div class="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)] gap-5 items-start">
+
+        {{-- ================= التقويم ================= --}}
+        @include('content.partials.calendar-grid', [
+            'month' => $month, 'weeks' => $weeks, 'selectedDate' => $selectedDate, 'monthTotal' => $monthTotal, 'platforms' => $platforms,
+        ])
 
         {{-- ================= العمود الأيسر: بحث + قائمة اليوم أو تفاصيل عنصر ================= --}}
         <div class="space-y-4">
@@ -64,11 +69,6 @@
                 @include('content.partials.bulk-bar')
             @endif
         </div>
-
-        {{-- ================= الشبكة الشهرية ================= --}}
-        @include('content.partials.calendar-grid', [
-            'month' => $month, 'weeks' => $weeks, 'selectedDate' => $selectedDate, 'monthTotal' => $monthTotal, 'platforms' => $platforms,
-        ])
     </div>
 
     @include('content.partials.schedule-modal', ['platforms' => $platforms])
