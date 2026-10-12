@@ -149,7 +149,7 @@
             <div class="divide-y divide-gray-200 border-y border-gray-200 md:contents">
                 @foreach ($footerGroups as $id => [$title, $links])
                     <div x-data="{ open: false }">
-                        <h2 class="mb-4 hidden font-bold text-gray-900 md:block">{{ $title }}</h2>
+                        <h2 class="mb-4 hidden text-start font-bold text-gray-900 md:block">{{ $title }}</h2>
 
                         <button type="button" @click="open = !open" :aria-expanded="open.toString()" aria-controls="footer-{{ $id }}"
                                 class="flex w-full items-center justify-between gap-4 py-4 text-start font-bold text-gray-900 md:hidden">
@@ -168,7 +168,7 @@
                                 <ul class="space-y-1 pb-4 md:space-y-3 md:pb-0">
                                     @foreach ($links as [$label, $url])
                                         <li>
-                                            <a href="{{ $url }}" class="inline-block py-1.5 text-gray-500 transition-colors hover:text-primary-ink md:py-0"
+                                            <a href="{{ $url }}" class="inline-block py-1.5 text-[1.0625rem] text-gray-500 transition-colors hover:text-primary-ink md:py-0"
                                                @if (str_starts_with($url, 'https://wa.me')) target="_blank" rel="noopener" @endif>{{ $label }}</a>
                                         </li>
                                     @endforeach
