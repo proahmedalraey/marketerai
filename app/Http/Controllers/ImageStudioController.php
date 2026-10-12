@@ -103,7 +103,7 @@ class ImageStudioController extends Controller
             'folders' => MediaFolder::orderBy('name')->get(),
             'activeFolder' => $activeFolder,
             'pinnedOnly' => $pinnedOnly,
-            'products' => Product::where('is_active', true)->withCount('images')->get(),
+            'products' => Product::where('is_active', true)->with('images')->withCount('images')->get(),
             // إزالة الخلفية تحتاج OpenRouter (نموذج بخلفية شفافة)؛ بغيره يظهر البند معطّلاً بسببه
             'removeBackgroundAvailable' => $models->routable(),
             'removeBackgroundCost' => app(CreditService::class)->cost(ImageGenerationService::REMOVE_BACKGROUND_OPERATION),

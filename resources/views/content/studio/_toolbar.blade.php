@@ -35,11 +35,11 @@
         {{-- شريحة المرجع المختار --}}
         <div x-show="referenceMode" x-cloak class="flex items-center gap-2 px-1">
             <span class="relative shrink-0 w-9 h-9 rounded-lg overflow-hidden bg-muted grid place-items-center">
-                <img x-show="referenceAssetUrl" :src="referenceAssetUrl" class="w-full h-full object-cover" alt="">
-                <x-icon x-show="!referenceAssetUrl" name="package" class="w-4 h-4 text-fg-subtle" />
+                <img x-show="refProduct?.image || referenceAssetUrl" :src="refProduct?.image || referenceAssetUrl" class="w-full h-full object-cover" alt="">
+                <x-icon x-show="! (refProduct?.image || referenceAssetUrl)" name="package" class="w-4 h-4 text-fg-subtle" />
             </span>
             <span class="text-xs text-fg-muted flex-1 min-w-0 truncate">
-                <span x-show="referenceMode === 'product'">منتج مرجعي مختار</span>
+                <span x-show="referenceMode === 'product'" x-text="refProduct?.title || 'منتج مرجعي مختار'"></span>
                 <span x-show="referenceMode === 'gallery'">صورة من الاستوديو كمرجع</span>
                 <span x-show="referenceMode === 'upload'">صورة مرفوعة كمرجع</span>
             </span>
@@ -125,12 +125,18 @@
         {{-- صف الأدوات --}}
         <div class="flex flex-wrap items-center gap-1.5">
             <button
-                type="button" @click="useBrandIdentity = ! useBrandIdentity"
+                type="button" role="switch" @click="useBrandIdentity = ! useBrandIdentity"
+                :aria-checked="useBrandIdentity ? 'true' : 'false'"
                 :class="useBrandIdentity ? 'bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400 border-brand-300' : 'text-fg-muted border-line hover:bg-muted'"
                 class="chip border min-h-9 transition" title="حقن ألوان علامتك ونمطك البصري في البرومبت"
             >
                 <x-icon name="palette" class="w-3.5 h-3.5" />
-                تفعيل الهوية البصرية
+                الهوية البصرية
+                <span class="flex items-center ms-1 ps-2 border-s border-current/20" aria-hidden="true">
+                    <span :class="useBrandIdentity ? 'bg-brand-600' : 'bg-line-strong'" class="relative w-8 h-[18px] rounded-full transition shrink-0">
+                        <span :class="useBrandIdentity ? '-translate-x-3.5' : 'translate-x-0'" class="absolute top-0.5 start-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition"></span>
+                    </span>
+                </span>
             </button>
 
             <button type="button" @click="clearPrompt()" class="btn btn-ghost btn-icon" title="تفريغ البرومبت">
@@ -202,7 +208,7 @@
                     aria-label="نسبة الأبعاد"
                     class="chip border border-line text-fg min-h-9 hover:bg-muted transition"
                 >
-                    <span class="block w-3 h-3 border-2 border-current rounded-[2px]" aria-hidden="true"></span>
+                    <x-icon name="resize" class="w-3.5 h-3.5" />
                     <span class="tnum" x-text="autoRatio ? 'تلقائي' : aspectRatio"></span>
                     <x-icon name="chevron-down" class="w-3 h-3 text-fg-subtle" />
                 </button>
