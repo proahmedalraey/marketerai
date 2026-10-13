@@ -97,7 +97,7 @@
 
         {{-- ================= المحتوى ================= --}}
         <main id="main-content" class="flex-1 pb-safe">
-            <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 space-y-5">
+            <div class="mx-auto w-full @hasSection('wide') max-w-none @else max-w-6xl @endif px-4 sm:px-6 py-6 space-y-5">
 
                 @include('partials.flash')
 

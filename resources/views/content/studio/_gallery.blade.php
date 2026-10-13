@@ -4,7 +4,19 @@
     حجم الشبكة تفضيل عرض بحت (Alpine محلي). التحديد الجماعي (حذف/نقل) حالة في
     imageStudio (selecting/selected) لأن شريط إجراءاته وبطاقاته يتشاركانها.
 --}}
-<section x-data="{ foldersOpen: false, gridCols: 4 }">
+<section x-data="{
+    foldersOpen: false, gridCols: 4, manualCols: false,
+    init() {
+        // ما لم يحرّك التاجر المنزلقة، يتكيّف عدد الأعمدة مع عرض الشبكة (~280px للبطاقة)
+        this.$nextTick(() => {
+            const grid = this.$refs.grid;
+            if (! grid || ! window.ResizeObserver) return;
+            new ResizeObserver(() => {
+                if (! this.manualCols) this.gridCols = Math.min(8, Math.max(2, Math.round(grid.clientWidth / 280)));
+            }).observe(grid);
+        });
+    },
+}">
     <div class="flex flex-wrap items-center gap-2 mb-3">
         {{-- الكل / المجلدات --}}
         <div class="relative">
@@ -53,7 +65,7 @@
             {{-- حجم الشبكة: تفضيل عرض محلي، لا يُرسَل للخادم --}}
             <label class="hidden sm:flex items-center gap-2 px-2" title="حجم الشبكة">
                 <x-icon name="grid" class="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-                <input type="range" min="2" max="6" step="1" x-model.number="gridCols" class="card-size-range w-20">
+                <input type="range" min="2" max="8" step="1" x-model.number="gridCols" @input="manualCols = true" class="card-size-range w-20">
             </label>
         </form>
     </div>
@@ -138,7 +150,7 @@
     @else
         {{-- عمودان على الجوال (شريط الحجم مخفي هناك)، ومن sm يتبع اختيار المستخدم --}}
         <div class="grid grid-cols-2 sm:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))] gap-x-3 sm:gap-x-4 gap-y-6 pt-4"
-             style="--cols: 4" :style="`--cols: ${gridCols}`">
+             x-ref="grid" style="--cols: 4" :style="`--cols: ${gridCols}`">
             @foreach ($galleryEntries as $entry)
                 @if ($entry['type'] === 'carousel')
                     @include('content.studio._carousel-stack', ['item' => $entry['item']])

@@ -841,6 +841,203 @@
                focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-brand-600 focus:text-white
                focus:font-semibold focus:shadow-lg;
     }
+
+    /* ---------- الصفحة الرئيسية: «كل الأدوات في منصة واحدة» (resources/js/landing/assembly.js) ----------
+       بلا JavaScript أو مع «تقليل الحركة» يظهر المشهد الأخير ثابتًا: الأدوات صغيرة داخل الجملة.
+       .is-animated يضيفه السكربت: قسم طويل يثبت فيه المسرح، والأدوات بحجمها الكبير. */
+    .assembly { --hole: 2.1rem; }
+    @screen md { .assembly { --hole: 3.4rem; } }
+
+    .assembly-stage { @apply relative overflow-hidden bg-amber-50 px-4 py-24; }
+    .assembly-header { display: none; }
+
+    .assembly-hole {
+        @apply relative inline-block;
+        width: var(--hole);
+        height: var(--hole);
+        margin-inline: .12em;
+        vertical-align: -0.3em;
+    }
+
+    .assembly-chip {
+        @apply absolute z-10 grid place-items-center;
+        left: 50%;
+        top: 50%;
+        width: var(--hole);
+        height: var(--hole);
+        margin: calc(var(--hole) / -2) 0 0 calc(var(--hole) / -2);
+        border-radius: 24%;
+        box-shadow: 0 12px 28px -14px rgb(17 24 39 / .5);
+    }
+
+    .assembly-label { display: none; }
+
+    .assembly.is-animated { height: 400svh; }
+    .assembly.is-animated .assembly-stage { @apply sticky top-0 flex items-center justify-center py-0; height: 100svh; }
+    .assembly.is-animated .assembly-header { display: block; }
+
+    /* «فوضى» البداية بألوان الصفحة لا بالأسود: خلفية برتقالية فاتحة عليها شبكة نقاط ووهج،
+       تتلاشى كلها (--chaos من 1 إلى 0 يضبطه assembly.js) بينما تتجمع الأدوات فتصفو الخلفية */
+    .assembly.is-animated .assembly-stage {
+        background-color: color-mix(in srgb, #FFEDD5 calc(var(--chaos, 0) * 100%), #FFFBEB);
+    }
+    .assembly.is-animated .assembly-stage::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(ellipse 70% 55% at 50% 100%, rgb(250 79 0 / .16), transparent 70%),
+            radial-gradient(rgb(250 79 0 / .2) 1.3px, transparent 1.5px) 0 0 / 22px 22px;
+        -webkit-mask-image: radial-gradient(ellipse at 50% 55%, #000 35%, transparent 85%);
+        mask-image: radial-gradient(ellipse at 50% 55%, #000 35%, transparent 85%);
+        opacity: var(--chaos, 0);
+    }
+
+    .assembly.is-animated .assembly-chip {
+        width: var(--tile);
+        height: var(--tile);
+        margin: calc(var(--tile) / -2) 0 0 calc(var(--tile) / -2);
+    }
+
+    .assembly.is-animated .assembly-label {
+        @apply absolute inset-x-0 block text-center font-bold;
+        bottom: 9%;
+        font-size: calc(var(--tile) * .09);
+    }
+
+    @media (max-width: 639px) {
+        .assembly.is-animated { height: 340svh; }
+        .assembly.is-animated .assembly-label { display: none; }
+    }
+
+    /* «وانشر بثقة»: خيوط تُرسم من العبارة إلى المنصات، ثم نقاط تسري عليها كأن المحتوى ينتقل إليها */
+    .assembly-thread { fill: none; stroke: #FCD34D; stroke-width: 1.5; stroke-linecap: round; }
+    .assembly-flow {
+        fill: none;
+        stroke: #FA4F00;
+        stroke-width: 3.5;
+        stroke-linecap: round;
+        stroke-dasharray: 0.1 16;
+        opacity: 0;
+        transition: opacity .4s ease;
+    }
+    .assembly.is-flowing .assembly-flow { opacity: 1; animation: thread-flow 1.4s linear infinite; }
+
+    /* ---------- الترويسة والتذييل: أداة وفعلها يتبدّلان (components/public/tool-ticker) ----------
+       5 عبارات × 2.4 ثانية = دورة 12 ثانية؛ لكل عبارة خُمسها: تصعد وتثبت ثم تخرج للأعلى. */
+    .tool-ticker { display: inline-grid; place-items: center; overflow: hidden; }
+    .tool-ticker > * {
+        grid-area: 1 / 1;
+        opacity: 0;
+        animation: tool-tick 12s cubic-bezier(.16, 1, .3, 1) infinite;
+        animation-delay: calc(var(--i) * 2.4s);
+    }
+
+    /* ---------- الصفحة الرئيسية: «كيف يعمل» (resources/js/landing/timeline.js) ----------
+       الخطوة تبقى خافتة حتى يصلها الخط المرسوم؛ بلا سكربت تظهر كلها مضاءة. */
+    .timeline-dot { transition: border-color .4s ease, box-shadow .4s ease, transform .5s cubic-bezier(.16, 1, .3, 1); }
+    .timeline-dot svg { transition: color .4s ease; }
+    .timeline-card { transition: opacity .5s ease, transform .5s cubic-bezier(.16, 1, .3, 1), box-shadow .2s ease; }
+
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-dot { @apply border-gray-200 shadow-none; }
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-dot svg { @apply text-gray-300; }
+    .timeline.is-drawing .timeline-step:not(.is-lit) .timeline-card { opacity: .6; transform: translateY(12px); }
+
+    /* ---------- الصفحة الرئيسية: ستوريات البطل (resources/js/landing/stories.js) ----------
+       الإطار النشط فوق الذي يغادر، فينكشف عليه بقناع من اليمين بدل أن يظهر فراغ بينهما. */
+    .story-frame { @apply absolute inset-0 m-0 overflow-hidden; opacity: 0; visibility: hidden; }
+    .story-frame.is-active { z-index: 2; opacity: 1; visibility: visible; }
+    .story-frame.is-leaving { z-index: 1; opacity: 1; visibility: visible; }
+
+    .story-img { @apply h-full w-full object-cover; }
+    .story-frame.is-active .story-img { animation: story-reveal 1.1s cubic-bezier(.16, 1, .3, 1) both; }
+    .story-frame.is-leaving .story-img { transform: scale(1.06); transition: transform 1.1s cubic-bezier(.16, 1, .3, 1); }
+
+    .story-text { opacity: 0; transform: translateY(12px); transition: opacity .5s ease .35s, transform .6s cubic-bezier(.16, 1, .3, 1) .35s; }
+    .story-frame.is-active .story-text { opacity: 1; transform: none; }
+
+    /* الأشرطة تمتلئ من اليمين كما تُقرأ */
+    .story-bar { transform: scaleX(0); transform-origin: right; }
+
+    /* ---------- الصفحة الرئيسية: الجولة (resources/js/landing/showcase.js) ----------
+       اللقطة المعروضة تقترب ببطء طوال مدتها، متوقفة ما لم تدر الساعة (.is-running)؛
+       والمغادرة تُجمَّد عند تقريبها حتى يكتمل تلاشيها فلا «تقفز» لحجمها أمام العين. */
+    .tour-slide img { transform-origin: 50% 0; }
+    .tour-slide.is-on img,
+    .tour-slide.is-leaving img { animation: tour-zoom var(--tour-duration, 4s) linear both; animation-play-state: paused; }
+    [data-showcase].is-running .tour-slide.is-on img { animation-play-state: running; }
+
+    /* ---------- الصفحة الرئيسية: الباقة الموصى بها ----------
+       وهج برتقالي ذهبي يدور على إطارها، وتطفو ببطء كأنها تدعو لاختيارها.
+       الإطار خلفيتان: أبيض داخل الحشوة، وتدرج مخروطي يدور (--plan-angle) في منطقة الحد. */
+    .plan-featured {
+        border: 2px solid transparent;
+        background:
+            linear-gradient(#fff, #fff) padding-box,
+            conic-gradient(from var(--plan-angle), #FDE68A 0deg, #FDE68A 220deg, #FBBF24 270deg, #FA4F00 315deg, #FFD27A 340deg, #FDE68A 360deg) border-box;
+        box-shadow: 0 28px 50px -24px rgb(250 79 0 / .35);
+        animation: plan-orbit 4s linear infinite, plan-float 4s ease-in-out infinite;
+    }
+
+    /* ---------- الصفحة الرئيسية: الأسئلة الشائعة ----------
+       الإجابة تنساب عند الفتح حيث يدعم المتصفح ::details-content، وتظهر فورًا في غيره. */
+    .faq-item { interpolate-size: allow-keywords; }
+    .faq-item::details-content {
+        height: 0;
+        overflow: clip;
+        transition: height .35s cubic-bezier(.16, 1, .3, 1), content-visibility .35s allow-discrete;
+    }
+    .faq-item[open]::details-content { height: auto; }
+
+    /* ---------- الصفحة الرئيسية: العناوين سطرًا سطرًا (resources/js/landing/reveal.js) ----------
+       العنوان يُخفى قبل تقسيمه فقط حين تكون الحركة مسموحة (.motion-ok من <head>)،
+       ويظهر وحده بعد 2.5 ثانية لو تعطّل السكربت لأي سبب. */
+    .motion-ok [data-reveal]:not(.is-split) { opacity: 0; animation: reveal-fallback 0s linear 2.5s forwards; }
+
+    .reveal-line { display: block; overflow: hidden; padding-block: .1em .25em; margin-block: -.1em -.25em; }
+    .reveal-inner {
+        display: block;
+        transform: translateY(110%);
+        transition: transform .9s cubic-bezier(.16, 1, .3, 1);
+        transition-delay: calc(var(--i, 0) * 90ms);
+    }
+    .is-revealed .reveal-inner { transform: none; }
+}
+
+@keyframes story-reveal {
+    from { clip-path: inset(0 0 0 100%); transform: scale(1.12) rotate(1.5deg); }
+    to   { clip-path: inset(0); transform: none; }
+}
+
+@keyframes reveal-fallback { to { opacity: 1; } }
+
+@keyframes thread-flow { to { stroke-dashoffset: -16.1; } }
+
+@keyframes tour-zoom { from { transform: scale(1); } to { transform: scale(1.06); } }
+
+/* زاوية تدرج إطار الباقة قابلة للتحريك (حيث لا يُدعم @property يبقى الإطار المتدرج ثابتًا) */
+@property --plan-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes plan-orbit { to { --plan-angle: 360deg; } }
+@keyframes plan-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* الخروج (20%→24%) يتزامن مع دخول العبارة التالية (0%→4% من دورتها المتأخرة 20%)، فلا لحظة فارغة */
+@keyframes tool-tick {
+    0%        { opacity: 0; transform: translateY(80%); }
+    4%, 20%   { opacity: 1; transform: none; }
+    24%, 100% { opacity: 0; transform: translateY(-80%); }
+}
+
+/* تقليل الحركة: القاعدة العامة تُقصّر كل حركة إلى لحظة فتنتهي العبارات مختفية؛
+   هنا نلغي الحركة صراحةً ونُبقي العبارة الأولى ثابتة */
+@media (prefers-reduced-motion: reduce) {
+    .tool-ticker > * { animation: none !important; }
+    .tool-ticker > :first-child { opacity: 1; }
 }
 
 @layer utilities {

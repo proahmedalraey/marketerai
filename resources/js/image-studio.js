@@ -41,6 +41,7 @@ export default function registerImageStudio(Alpine) {
 
             referenceMode: config.referenceMode || null, // null | 'product' | 'gallery'
             productId: config.productId || '',
+            productsMap: config.productsMap || {},
             referenceAssetId: config.referenceAssetId || null,
             referenceAssetUrl: config.referenceAssetUrl || null,
 
@@ -413,6 +414,11 @@ export default function registerImageStudio(Alpine) {
                 this.enhancedFrom = null;
                 this.enhancedText = null;
                 this.enhanceError = '';
+            },
+
+            // المنتج المرجعي المختار (اسمه وصورته) لشريحة المرجع
+            get refProduct() {
+                return this.referenceMode === 'product' ? (this.productsMap[this.productId] ?? null) : null;
             },
 
             pickProduct(id) {

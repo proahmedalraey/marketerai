@@ -75,10 +75,18 @@
 
             <div class="max-h-56 overflow-y-auto space-y-0.5 mt-1">
                 @forelse ($products as $product)
+                    @php $thumb = ($product->images->firstWhere('is_reference', true) ?? $product->images->first())?->url(); @endphp
                     <button type="button" @click="pickProduct({{ $product->id }})"
                             x-show="! productQuery || @js(mb_strtolower($product->title)).includes(productQuery.toLowerCase())"
                             :class="productId == {{ $product->id }} && referenceMode === 'product' ? 'bg-muted' : 'hover:bg-muted'"
-                            class="flex items-center gap-2 w-full px-2.5 min-h-10 rounded-lg text-sm text-fg text-start">
+                            class="flex items-center gap-2.5 w-full px-2 py-1.5 min-h-12 rounded-lg text-sm text-fg text-start">
+                        @if ($thumb)
+                            <img src="{{ $thumb }}" alt="" loading="lazy" class="w-9 h-9 rounded-lg object-cover bg-muted border border-line shrink-0">
+                        @else
+                            <span class="grid place-items-center w-9 h-9 rounded-lg bg-muted text-fg-subtle shrink-0">
+                                <x-icon name="package" class="w-4 h-4" />
+                            </span>
+                        @endif
                         <span class="flex-1 truncate">{{ $product->title }}</span>
                         <x-icon name="check" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0"
                                 x-show="productId == {{ $product->id }} && referenceMode === 'product'" />

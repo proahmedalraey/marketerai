@@ -2,6 +2,7 @@
 @section('title', 'استوديو الصور')
 @section('subtitle', 'الشعار يُركَّب برمجياً بعد التوليد — لا نطلب من النموذج كتابة عربي داخل الصورة')
 
+@section('wide', '1')
 @section('content')
 
 @php
@@ -48,6 +49,10 @@
         'count' => (int) old('count', 1),
         'useBrandIdentity' => (bool) old('use_brand_identity', true),
         'productId' => old('product_id', ''),
+        'productsMap' => $products->mapWithKeys(fn ($product) => [$product->id => [
+            'title' => $product->title,
+            'image' => ($product->images->firstWhere('is_reference', true) ?? $product->images->first())?->url(),
+        ]]),
         'referenceAssetId' => $oldReferenceAsset?->id,
         'referenceAssetUrl' => $oldReferenceAsset?->url(),
         'referenceMode' => match (true) {
