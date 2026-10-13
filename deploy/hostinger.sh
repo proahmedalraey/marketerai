@@ -29,7 +29,7 @@ npm run build
 # وضع الصيانة قبل استبدال الكود: الزائر يرى 503 بدل أخطاء ملفات ناقصة، والعمّال لا يلتقطون مهام جديدة
 remote "cd $APP && php artisan down --retry=30"
 
-git archive --format=tar HEAD -- "${RUNTIME[@]}" \
+git -c core.autocrlf=false archive --format=tar HEAD -- "${RUNTIME[@]}" \
     | remote "cd $APP && rm -rf $REPLACED && tar -xf -"
 tar -cf - public/build | remote "cd $APP && rm -rf public/build && tar -xf -"
 
