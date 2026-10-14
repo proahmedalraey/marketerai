@@ -6,7 +6,7 @@
 # رفع الكود والأصول، composer، .env، كلمة مرور القاعدة، الهجرات، الكاش، وتجربة داخلية.
 # كلمة المرور تُكتب مخفية وتذهب عبر SSH إلى .env مباشرة: لا تظهر في سطر أوامر ولا سجل.
 # تحويل الدومين والـ cron خطوة منفصلة بعد التحقق. آمن لإعادة التشغيل.
-set -euo pipefail
+set -Eeuo pipefail
 
 HOST="u260325039@92.112.189.146"
 PORT=65002
@@ -18,7 +18,13 @@ cd "$(dirname "$0")/.."
 exec > >(tee "$LOG") 2>&1
 trap 'echo; echo "!! توقف بخطأ عند السطر $LINENO — السجل في $LOG"' ERR
 
-remote() { ssh -i "$KEY" -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$HOST" "$@"; }
+# على ويندوز نستخدم ssh المدمج في النظام: برنامج الحماية حجب ssh الخاص بـ Git وسمح بهذا
+SSH=ssh
+if [ -x /c/Windows/System32/OpenSSH/ssh.exe ]; then
+    SSH=/c/Windows/System32/OpenSSH/ssh.exe
+    KEY="$(cygpath -w "$KEY")"
+fi
+remote() { MSYS_NO_PATHCONV=1 "$SSH" -i "$KEY" -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$HOST" "$@"; }
 step() { echo; echo "== $*"; }
 
 step "فحص الخادم"

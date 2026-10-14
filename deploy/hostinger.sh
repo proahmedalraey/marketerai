@@ -4,7 +4,7 @@
 #
 # يُنشر آخر commit فقط (لا التعديلات غير المحفوظة) + public/build مبنيًا محليًا: لا Node على الاستضافة.
 # يفترض أن الإعداد الأول تم (.env وقاعدة البيانات والـ cron) — انظر قسم النشر في README.md.
-set -euo pipefail
+set -Eeuo pipefail
 
 HOST="u260325039@92.112.189.146"
 PORT=65002
@@ -16,7 +16,13 @@ RUNTIME=(app bootstrap config database lang public resources routes artisan comp
 # مجلدات متتبَّعة بالكامل: تُحذف قبل الفك كي لا يبقى ملف حُذف من المستودع (هجرة قديمة مثلًا)
 REPLACED="app config database lang resources routes"
 
-remote() { ssh -i "$KEY" -p "$PORT" -o BatchMode=yes "$HOST" "$@"; }
+# على ويندوز نستخدم ssh المدمج في النظام: برنامج الحماية حجب ssh الخاص بـ Git وسمح بهذا
+SSH=ssh
+if [ -x /c/Windows/System32/OpenSSH/ssh.exe ]; then
+    SSH=/c/Windows/System32/OpenSSH/ssh.exe
+    KEY="$(cygpath -w "$KEY")"
+fi
+remote() { MSYS_NO_PATHCONV=1 "$SSH" -i "$KEY" -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$HOST" "$@"; }
 
 cd "$(dirname "$0")/.."
 
