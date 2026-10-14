@@ -82,13 +82,13 @@ echo "كُتبت كلمة المرور في .env\n";
 PHP
 
 step "الاتصال بقاعدة البيانات u260325039_marketer"
-db_ok() { remote "cd $APP && php artisan db:show >/dev/null 2>&1"; }
+db_ok() { remote "cd $APP && php artisan db:show >/dev/null 2>&1" </dev/null; }
 tries=0
 until db_ok; do
     tries=$((tries + 1))
-    [ "$tries" -le 3 ] || { echo "تعذّر الاتصال بعد 3 محاولات"; remote "cd $APP && php artisan db:show 2>&1 | grep -m3 -E 'SQLSTATE|Exception|denied'" || true; exit 1; }
+    [ "$tries" -le 3 ] || { echo "تعذّر الاتصال بعد 3 محاولات"; remote "cd $APP && php artisan db:show 2>&1 | grep -m3 -E 'SQLSTATE|Exception|denied'" </dev/null || true; exit 1; }
     [ "$tries" -gt 1 ] && echo "لم ينجح الاتصال — أعد الكتابة."
-    read -rsp "اكتب كلمة مرور قاعدة البيانات (لن تظهر) ثم Enter: " DBPASS; echo
+    read -rsp "اكتب كلمة مرور قاعدة البيانات (لن تظهر) ثم Enter: " DBPASS </dev/tty; echo
     printf '%s\n' "$DBPASS" | remote "cd $APP && php ~/.marketer-set-db-password.php"
     unset DBPASS
 done
