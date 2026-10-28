@@ -130,6 +130,16 @@ return [
         'model' => env('AI_PROFILE_MODEL') ?: null,
     ],
 
+    /*
+    | المحكّم في تقييم ملف الهوية (brand:eval-profile --judge): يقرأ المدخلات والمخرج
+    | ويقتبس كل خطأ بنصه. من عائلة غير عائلة المولّد، وإلا حكم النموذج لأسلوبه.
+    | provider فارغ = مزود النص الافتراضي، والنموذج باسمه عند ذلك المزود.
+    */
+    'eval_judge' => [
+        'provider' => env('AI_EVAL_JUDGE_PROVIDER') ?: null,
+        'model' => env('AI_EVAL_JUDGE_MODEL', 'google/gemini-3.1-pro-preview'),
+    ],
+
     'proofread' => [
         'enabled' => (bool) env('AI_PROOFREAD', true),
         'provider' => env('AI_PROOFREAD_PROVIDER') ?: null,
